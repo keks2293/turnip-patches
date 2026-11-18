@@ -1420,6 +1420,135 @@ fail:
     vkDestroyImageView(dev, v, NULL);
 }
 
+/* CPU-FILL: read the raw bytes of the image memory from the CPU after the
+ * fill (no r2d readback at all) - the fill-side vs readback-side
+ * discriminator.  A LINEAR image in the memory type 0
+ * (DEVICE_LOCAL|HOST_VISIBLE|HOST_COHERENT): the image memory can be mapped
+ * from the CPU on this unified memory.  The fill A (the warm-up - the first
+ * fill has the ~2% zero defect, section 20), then the fill B (the one being
+ * measured).  If the memory is all B, the fill is byte-clean and the
+ * corruption is entirely in the r2d readback. */
+static void cpu_fill_probe(VkDevice dev, VkQueue q, VkCommandPool pool, const char *tag,
+                           unsigned w, unsigned h, uint32_t fillA, uint32_t fillB)
+{
+    VkImage img = VK_NULL_HANDLE;
+    VkDeviceMemory mem = VK_NULL_HANDLE;
+    VkBuffer fb = VK_NULL_HANDLE;
+    VkDeviceMemory fbm = VK_NULL_HANDLE;
+    VkDeviceSize bytes = (VkDeviceSize)w * h * 4;
+
+    VkImageCreateInfo ici = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                              .imageType = VK_IMAGE_TYPE_2D,
+                              .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+                              .extent = { w, h, 1 },
+                              .mipLevels = 1,
+                              .arrayLayers = 1,
+                              .samples = VK_SAMPLE_COUNT_1_BIT,
+                              .tiling = VK_IMAGE_TILING_LINEAR,
+                              .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT };
+    if (vkCreateImage(dev, &ici, NULL, &img) != VK_SUCCESS) {
+        printf("CP[%s] create image failed\n", tag);
+        return;
+    }
+    VkMemoryRequirements r;
+    vkGetImageMemoryRequirements(dev, img, &r);
+    if (alloc_mem(dev, r.size, 0, &mem) != VK_SUCCESS) {
+        printf("CP[%s] alloc image mem type 0 failed (size %zu)\n", tag, (size_t)r.size);
+        vkDestroyImage(dev, img, NULL);
+        return;
+    }
+    chk(vkBindImageMemory(dev, img, mem, 0), "CP: bind img mem");
+
+    VkBufferCreateInfo fbi = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                               .size = bytes,
+                               .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                               .sharingMode = VK_SHARING_MODE_EXCLUSIVE };
+    chk(vkCreateBuffer(dev, &fbi, NULL, &fb), "CP: create buffer");
+    VkMemoryRequirements fbr;
+    vkGetBufferMemoryRequirements(dev, fb, &fbr);
+    chk(alloc_mem(dev, fbr.size, 0, &fbm), "CP: alloc buffer mem");
+    chk(vkBindBufferMemory(dev, fb, fbm, 0), "CP: bind buffer mem");
+
+    VkBufferImageCopy bic = { .bufferOffset = 0, .bufferRowLength = w, .bufferImageHeight = 0,
+                              .imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
+                              .imageOffset = { 0, 0, 0 }, .imageExtent = { w, h, 1 } };
+    uint32_t vals[2] = { fillA, fillB };
+    for (int v = 0; v < 2; v++) {
+        unsigned char *p;
+        chk(vkMapMemory(dev, fbm, 0, fbr.size, 0, (void **)&p), "CP: map fill buffer");
+        uint32_t *pw = (uint32_t *)p;
+        for (VkDeviceSize i = 0; i < bytes / 4; i++)
+            pw[i] = vals[v];
+        vkUnmapMemory(dev, fbm);
+
+        VkCommandBuffer cb;
+        VkCommandBufferAllocateInfo cai = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                                            .commandPool = pool,
+                                            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                            .commandBufferCount = 1 };
+        chk(vkAllocateCommandBuffers(dev, &cai, &cb), "CP: alloc cb");
+        VkCommandBufferBeginInfo bbi = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                                         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
+        chk(vkBeginCommandBuffer(cb, &bbi), "CP: begin cb");
+        VkImageMemoryBarrier imb = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                                     .srcAccessMask = v == 0 ? 0 : VK_ACCESS_TRANSFER_WRITE_BIT,
+                                     .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                                     .oldLayout = v == 0 ? VK_IMAGE_LAYOUT_UNDEFINED
+                                                         : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                     .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                     .image = img,
+                                     .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+        vkCmdPipelineBarrier(cb,
+                             v == 0 ? VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT : VK_PIPELINE_STAGE_TRANSFER_BIT,
+                             VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &imb);
+        vkCmdCopyBufferToImage(cb, fb, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bic);
+        chk(vkEndCommandBuffer(cb), "CP: end cb");
+        VkSubmitInfo si = { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .commandBufferCount = 1,
+                            .pCommandBuffers = &cb };
+        chk(vkQueueSubmit(q, 1, &si, NULL), "CP: submit");
+        chk(vkQueueWaitIdle(q), "CP: wait");
+        vkFreeCommandBuffers(dev, pool, 1, &cb);
+    }
+
+    unsigned char *got;
+    chk(vkMapMemory(dev, mem, 0, r.size, 0, (void **)&got), "CP: map image mem");
+    uint32_t *gotw = (uint32_t *)got;
+    size_t total = (size_t)bytes / 4;
+    size_t nA = 0, nB = 0, n0 = 0, other = 0;
+    size_t firstA = (size_t)-1, first0 = (size_t)-1, firstOther = (size_t)-1;
+    for (size_t i = 0; i < total; i++) {
+        if (gotw[i] == fillB)
+            nB++;
+        else if (gotw[i] == fillA) {
+            if (firstA == (size_t)-1)
+                firstA = i;
+            nA++;
+        } else if (gotw[i] == 0) {
+            if (first0 == (size_t)-1)
+                first0 = i;
+            n0++;
+        } else {
+            if (firstOther == (size_t)-1)
+                firstOther = i;
+            other++;
+        }
+    }
+    const char *verdict = (nB == total)
+        ? "FILL BYTE-CLEAN: the memory is all B, the corruption is in the r2d readback"
+        : (nB + nA == total)
+            ? "the second fill did not overwrite all the A: the fill is broken"
+            : "A/B/zeros mixed: the fill is broken";
+    printf("CP[%s] %ux%u linear mem-type-0: B=%zu A=%zu zero=%zu other=%zu (%zu%% B)"
+           " firstA=%zu first0=%zu firstOther=%zu -> %s\n",
+           tag, w, h, nB, nA, n0, other, nB * 100 / total, firstA, first0, firstOther, verdict);
+    vkUnmapMemory(dev, mem);
+
+    vkDestroyBuffer(dev, fb, NULL);
+    vkFreeMemory(dev, fbm, NULL);
+    vkDestroyImage(dev, img, NULL);
+    vkFreeMemory(dev, mem, NULL);
+}
+
 static void probe_ubwc_class(VkDevice dev, VkQueue q, VkCommandPool pool, const char *tag,
                              VkFormat base, const VkFormat *list, unsigned n, unsigned bpt,
                              VkDeviceSize bytes0, unsigned w, unsigned h)
@@ -3841,6 +3970,20 @@ skip_b:
                              f_r32g32b32a32, ARRAY_SIZE(f_r32g32b32a32), 16, 0, 512, 64);
             probe_ubwc_class(dev, q, pool, "GEOM_RGBA32_64x512", VK_FORMAT_R32G32B32A32_SFLOAT,
                              f_r32g32b32a32, ARRAY_SIZE(f_r32g32b32a32), 16, 0, 64, 512);
+            /* Separates "both dims <= 128" from "total texels <= 16384":
+             * 256x64 has the same total as the failing 128x128 but only one
+             * dim is <= 128; 32x256 - the opposite shape. */
+            probe_ubwc_class(dev, q, pool, "GEOM_RGBA32_256x64", VK_FORMAT_R32G32B32A32_SFLOAT,
+                             f_r32g32b32a32, ARRAY_SIZE(f_r32g32b32a32), 16, 0, 256, 64);
+            probe_ubwc_class(dev, q, pool, "GEOM_RGBA32_32x256", VK_FORMAT_R32G32B32A32_SFLOAT,
+                             f_r32g32b32a32, ARRAY_SIZE(f_r32g32b32a32), 16, 0, 32, 256);
+
+            /* CPU-FILL. The fill side vs the readback side: the raw bytes of
+             * the image memory from the CPU (no r2d readback at all).  128x128
+             * is the failing GEOM shape, 256x256 the passing control. */
+            printf("\n=== CPU-FILL. fill side check (raw image memory, no r2d readback) ===\n");
+            cpu_fill_probe(dev, q, pool, "CPUFILL_128", 128, 128, 0xA5A5A5A5u, 0x5A5A5A5Au);
+            cpu_fill_probe(dev, q, pool, "CPUFILL_256", 256, 256, 0xA5A5A5A5u, 0x5A5A5A5Au);
 
             /* CEIL. The UBWC ceiling per format on its own.  This separates
              * two things the gate model mixes: "the format cannot do

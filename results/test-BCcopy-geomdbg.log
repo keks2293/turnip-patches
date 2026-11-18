@@ -1,0 +1,693 @@
+=== driver: /var/home/armada/opencode/build/out-geomdbg/freedreno_icd.json ===
+[GDBG-i2b] vkfmt=37 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x100026000 pitch=2048 size=0x01000200 info=0x00500330 tm=3 ubwc=0 flag=0x100026000 flagpitch=0x0 fmt=84 | dst: 0x100136000
+[GDBG-i2b] vkfmt=37 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10023a000 pitch=2048 size=0x01000200 info=0x00500330 tm=3 ubwc=0 flag=0x10023a000 flagpitch=0x0 fmt=84 | dst: 0x10033a000
+[GDBG-i2b] vkfmt=1000156003 ext=512x512 dstw=512 pitch=512 lsize=262144 | src: base=0x100543000 pitch=128 size=0x00400080 info=0x00500394 tm=3 ubwc=0 flag=0x100543000 flagpitch=0x0 fmt=136 | dst: 0x1005a3000
+[GDBG-i2b] vkfmt=1000156003 ext=512x512 dstw=512 pitch=512 lsize=262144 | src: base=0x100543000 pitch=128 size=0x00400080 info=0x00500394 tm=3 ubwc=0 flag=0x100543000 flagpitch=0x0 fmt=136 | dst: 0x1006e5000
+device: Turnip Adreno (TM) 740 (chip_id 0x43050a01)
+sparseProperties: std2DBlock=1 std2DMultisample=1 std3DBlock=0 alignedMip=0 nonResidentStrict=1
+features: sparseBinding=1 sparseResidencyBuffer=1 sparseResidencyImage2D=1 sparseResidencyAliased=1 shaderResourceResidency=1 shaderResourceMinLod=1
+image memreq: size=0x100000 align=0x10000 typeBits=0x7
+sparse req[0]: gran=128x128x1 flags=0x0 mipTailLod=1 size=0x0 off=0x100000
+filled bound granule (128 x 128 px) with 0x37
+vkQueueBindSparse: SUCCESS
+RESULT A: PASS - bound tile readback ok, unbound reads 0 (PRR)
+
+=== B. alias/cast: same memory as R32_UINT ===B: create no-list mutable sparse R32_UINT: FEATURE_NOT_PRESENT - SKIPPED
+
+=== C. MUTABLE sparse probe (RGBA8 + R32_UINT fmt list) ===getImageFormatProperties2(SPARSE_RESIDENCY,RGBA8): FORMAT_NOT_SUPPORTED
+vkCreateImage(MUTABLE+SPARSE_RESIDENCY,{RGBA8,R32_UINT}): SUCCESS
+  memreq: size=0x100000 align=0x10000
+  sparse[0]: gran=128x128x1 mipTailLod=1 off=0x100000
+C probe: PASS - MUTABLE sparse create OK + base-format RGBA8 readback clean, unbound 0
+
+=== D. view-cast probe (RGBA8 <-> R32_UINT, one image) ===  d0 y0 x0: read 0xffdddddd (want 0x37373737)
+  d0 y1 x0: read 0xffdddddd (want 0x37373737)
+  d0 y2 x0: read 0xffdddddd (want 0x37373737)
+  d0 y3 x0: read 0xffdddddd (want 0x37373737)
+  d0 y4 x0: read 0xffdddddd (want 0x37373737)
+  d0 y5 x0: read 0xffdddddd (want 0x37373737)
+  d0 y6 x0: read 0xffdddddd (want 0x37373737)
+  d0 y7 x0: read 0xffdddddd (want 0x37373737)
+  d0: 8888 TP decode TRANSFORMS constant 0x37 data on this image
+  d2 y0 x0: read 0x3f25a5a6 want 0x000000a5
+  d2 y1 x0: read 0xbfa5a5a6 want 0x000101a5
+  d2 y2 x0: read 0xbfa5a5a6 want 0x000202a5
+  d2 y3 x0: read 0xffe5e5a6 want 0x000303a5
+  d2 y4 x0: read 0xbfa5a5a6 want 0x000404a5
+  d2 y5 x0: read 0xbfa5a5a6 want 0x000505a5
+  d2 y6 x0: read 0xffe5e5a6 want 0x000606a5
+  d2 y7 x0: read 0xffe5e5a6 want 0x000707a5
+  d3: PASS - R32 view exact after d2; d2's transform lives in the 8888 read path only
+D probe: FAIL (int) - d1/d3 (R32-INT) exact, d2 (8888-INT) transformed
+                   -> int-8888 decode, not cast/layout corruption
+
+=== E. MUTABLE sparse, swap list {RGBA8, BGRA8} ===vkCreateImage(MUTABLE+SPARSE_RESIDENCY,{RGBA8,BGRA8}): FEATURE_NOT_PRESENT
+
+=== F. MUTABLE sparse, NO format list (vkd3d pattern) ===vkCreateImage(MUTABLE+SPARSE_RESIDENCY, no list): FEATURE_NOT_PRESENT
+
+=== N. planar NV12 + SPARSE_RESIDENCY, MUTABLE on/off ===N1 vkCreateImage(SPARSE_RESIDENCY, NV12, no MUTABLE): SUCCESS
+N1 memreq size=0x20000
+  N1: sparse req count=1
+  N1: gran=256x256x1
+  N1 readback: 0x37 x65536, zero x196608 - bind partially effective
+N2 vkCreateImage(SPARSE_RESIDENCY+MUTABLE, NV12, no list): SUCCESS
+  N2: sparse req count=1
+  N2: gran=256x256x1
+  N2 readback: 0x37 x65536, zero x196608 - bind partially effective
+N3 query(SPARSE_RESIDENCY, NV12, no MUTABLE): FORMAT_NOT_SUPPORTED
+N3 query(SPARSE_RESIDENCY+MUTABLE, NV12, no list): FORMAT_NOT_SUPPORTED
+
+=== V. all 72 vkd3d compatibility lists vs SPARSE+MUTABLE ===V[full] R32G32B32A32_TYPELESS    n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R32G32B32A32_UINT        n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R32G32B32A32_SINT        n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R32G32B32_TYPELESS       n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R32G32B32_UINT           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R32G32B32_SINT           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16G16B16A16_TYPELESS    n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16G16B16A16_UINT        n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16G16B16A16_SINT        n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16G16B16A16_UNORM       n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16G16B16A16_SNORM       n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R32G32_TYPELESS          n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R32G32_UINT              n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R32G32_SINT              n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R10G10B10A2_TYPELESS     n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R10G10B10A2_UINT         n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R10G10B10A2_UNORM        n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8G8_TYPELESS            n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8G8_UINT                n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8G8_SINT                n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8G8_UNORM               n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8G8_SNORM               n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8G8B8A8_TYPELESS        n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8G8B8A8_UINT            n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8G8B8A8_SINT            n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8G8B8A8_UNORM_SRGB      n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8G8B8A8_UNORM           n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8G8B8A8_SNORM           n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16G16_TYPELESS          n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16G16_UINT              n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16G16_SINT              n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16G16_UNORM             n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16G16_SNORM             n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R32_TYPELESS             n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R32_UINT                 n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R32_SINT                 n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16_TYPELESS             n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16_UINT                 n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16_SINT                 n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16_UNORM                n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R16_SNORM                n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8_TYPELESS              n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8_UINT                  n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8_SINT                  n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8_UNORM                 n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] R8_SNORM                 n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] B8G8R8A8_TYPELESS        n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] B8G8R8A8_UNORM           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] B8G8R8A8_UNORM_SRGB      n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] B8G8R8X8_TYPELESS        n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] B8G8R8X8_UNORM           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] B8G8R8X8_UNORM_SRGB      n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] B8G8R8A8_TYPELESS+UAV    n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] B8G8R8X8_TYPELESS+UAV    n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC1_TYPELESS             n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC1_UNORM                n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC1_UNORM_SRGB           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC2_TYPELESS             n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC2_UNORM                n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC2_UNORM_SRGB           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC3_TYPELESS             n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC3_UNORM                n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC3_UNORM_SRGB           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC4_TYPELESS             n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC5_TYPELESS             n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC6H_TYPELESS            n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC7_TYPELESS             n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC7_UNORM                n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] BC7_UNORM_SRGB           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] NV12                     n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] P010                     n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] P016                     n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[full] TOTAL: rejected by the SPARSE+MUTABLE combination 0/72, fail without sparse too 72, query/create gaps 0, accepted 0
+V[vkd3d] R32G32B32A32_TYPELESS    n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R32G32B32A32_UINT        n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R32G32B32A32_SINT        n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R32G32B32_TYPELESS       n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R32G32B32_UINT           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R32G32B32_SINT           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16G16B16A16_TYPELESS    n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16G16B16A16_UINT        n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16G16B16A16_SINT        n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16G16B16A16_UNORM       n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16G16B16A16_SNORM       n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R32G32_TYPELESS          n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R32G32_UINT              n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R32G32_SINT              n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R10G10B10A2_TYPELESS     n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R10G10B10A2_UINT         n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R10G10B10A2_UNORM        n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8G8_TYPELESS            n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8G8_UINT                n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8G8_SINT                n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8G8_UNORM               n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8G8_SNORM               n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8G8B8A8_TYPELESS        n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8G8B8A8_UINT            n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8G8B8A8_SINT            n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8G8B8A8_UNORM_SRGB      n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8G8B8A8_UNORM           n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8G8B8A8_SNORM           n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16G16_TYPELESS          n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16G16_UINT              n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16G16_SINT              n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16G16_UNORM             n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16G16_SNORM             n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R32_TYPELESS             n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R32_UINT                 n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R32_SINT                 n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16_TYPELESS             n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16_UINT                 n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16_SINT                 n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16_UNORM                n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R16_SNORM                n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8_TYPELESS              n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8_UINT                  n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8_SINT                  n=4 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8_UNORM                 n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] R8_SNORM                 n=3 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] B8G8R8A8_TYPELESS        n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] B8G8R8A8_UNORM           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] B8G8R8A8_UNORM_SRGB      n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] B8G8R8X8_TYPELESS        n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] B8G8R8X8_UNORM           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] B8G8R8X8_UNORM_SRGB      n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] B8G8R8A8_TYPELESS+UAV    n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] B8G8R8X8_TYPELESS+UAV    n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC1_TYPELESS             n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC1_UNORM                n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC1_UNORM_SRGB           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC2_TYPELESS             n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC2_UNORM                n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC2_UNORM_SRGB           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC3_TYPELESS             n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC3_UNORM                n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC3_UNORM_SRGB           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  [GDBG-i2b] vkfmt=1000156003 ext=128x128 dstw=128 pitch=128 lsize=16384 | src: base=0x100543000 pitch=128 size=0x00400080 info=0x00500394 tm=3 ubwc=0 flag=0x100543000 flagpitch=0x0 fmt=136 | dst: 0x10054f000
+[GDBG-i2b] vkfmt=37 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x1008e7000 pitch=2048 size=0x01000200 info=0x00501330 tm=3 ubwc=1 flag=0x1008e5000 flagpitch=0x8001 fmt=84 | dst: 0x100de9000
+(not the gate: sparse itself is forbidden)
+V[vkd3d] BC4_TYPELESS             n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC5_TYPELESS             n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC6H_TYPELESS            n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC7_TYPELESS             n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC7_UNORM                n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] BC7_UNORM_SRGB           n=2 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] NV12                     n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=SUCCESS     sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] P010                     n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] P016                     n=5 sparse+mut=FORMAT_NOT_SUPPORTED mut=FORMAT_NOT_SUPPORTED sparse=FORMAT_NOT_SUPPORTED  (not the gate: sparse itself is forbidden)
+V[vkd3d] TOTAL: rejected by the SPARSE+MUTABLE combination 0/72, fail without sparse too 72, query/create gaps 0, accepted 0
+
+=== W. NV12 + MUTABLE: plane 0 layout and round trip ===  W: vkCreateImage(NV12 MUTABLE, no list): SUCCESS
+  W: memreq size=0x6000 (NOT an indicator of linear: tiled without UBWC gives the same)
+  W: PLANE_0 of NV12   : offset=0 size=16384 rowPitch=128 arrayPitch=16384
+  W: R8_UNORM image   : offset=0 size=16384 rowPitch=128 arrayPitch=16384
+  W: layouts match (not an indicator of linear/tiled, see comment)
+  W: PLANE_0 round trip: byte-exact vs fill
+G0 query(SPARSE_RESIDENCY+MUTABLE {RGBA8,BGRA8}): FORMAT_NOT_SUPPORTED
+G0 query(SPARSE_RESIDENCY+MUTABLE, no list):      FORMAT_NOT_SUPPORTED
+G0 query(SPARSE_RESIDENCY, non-mutable, control): FORMAT_NOT_SUPPORTED
+
+=== G/H/K. trigger controls (tiled vs sparse vs mutable) ===G: vkCreateImage(OPTIMAL RGBA8, non-sparse): SUCCESS
+G: memreq size=0x102000 (0x100000 = plain tiled 512x512 8888; larger => UBWC metadata)
+H: vkCreateImage(OPTIMAL MUTABLE {RGBA8,R32_UINT}, non-sparse): SUCCESS
+H: memreq size=0x100000 (no UBWC metadata)
+K: vkCreateImage(SPARSE non-mutable RGBA8): SUCCESS
+K: gran=128x128x1
+M: vkCreateImage(LINEAR RGBA8): SUCCESS
+M: memreq size=0x100000 (LINEAR 512x512 8888 = 0x100000)
+Q: vkCreateImage(OPTIMAL BGRA8, non-sparse): SUCCESS
+  G y0 x0: read 0x3f25a5a6 want 0x000000a5
+  G y1 x0: read 0xbfa5a5a6 want 0x000101a5
+  G y2 x0: read 0xbfa5a5a6 want 0x000202a5
+  G y3 x0: read 0xffe5e5a6 want 0x000303a5
+  G y4 x0: read 0xbfa5a5a6 want 0x000404a5
+  G y5 x0: read 0xbfa5a5a6 want 0x000505a5
+  G y6 x0: read 0xffe5e5a6 want 0x000606a5
+  G y7 x0: read 0xffe5e5a6 want 0x000707a5
+G probe: FAIL - non-sparse tiled 8888 INT shader read TRANSFORMED
+          (int-sampler decode; tiling/sparse state irrelevant)
+G2 (R2D readback of G): EXACT - R2D 8888 self-consistent (raw); TP 8888 view is the odd one out
+  H d2' y0 x0: read 0x3f25a5a6 want 0x000000a5
+  H d2' y1 x0: read 0xbfa5a5a6 want 0x000101a5
+  H d2' y2 x0: read 0xbfa5a5a6 want 0x000202a5
+  H d2' y3 x0: read 0xffe5e5a6 want 0x000303a5
+  H d2' y4 x0: read 0xbfa5a5a6 want 0x000404a5
+  H d2' y5 x0: read 0xbfa5a5a6 want 0x000505a5
+  H d2' y6 x0: read 0xffe5e5a6 want 0x000606a5
+  H d2' y7 x0: read 0xffe5e5a6 want 0x000707a5
+H probe: FAIL (int) - d2' (8888-INT) TRANSFORMED without sparse while
+          d1' (R32-INT) exact -> int-8888 decode; sparse/mutable/tiling irrelevant
+  K y0 x0: read 0x3f25a5a6 want 0x000000a5
+  K y1 x0: read 0xbfa5a5a6 want 0x000101a5
+  K y2 x0: read 0xbfa5a5a6 want 0x000202a5
+  K y3 x0: read 0xffe5e5a6 want 0x000303a5
+  K y4 x0: re[GDBG-i2b] vkfmt=44 ext=128x128 dstw=128 pitch=512 lsize=65536 | src: base=0x100eeb000 pitch=2048 size=0x01000200 info=0x00500330 tm=3 ubwc=0 flag=0x100eeb000 flagpitch=0x0 fmt=105 | dst: 0x100ffb000
+[GDBG-i2b] vkfmt=44 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10100b000 pitch=2048 size=0x01000200 info=0x00500430 tm=0 ubwc=0 flag=0x10100b000 flagpitch=0x0 fmt=105 | dst: 0x10110b000
+[GDBG-i2b] vkfmt=44 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10120d000 pitch=2048 size=0x01000200 info=0x00501330 tm=3 ubwc=1 flag=0x10120b000 flagpitch=0x8001 fmt=105 | dst: 0x10130d000
+[GDBG-i2b] vkfmt=37 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101811000 pitch=2048 size=0x01000200 info=0x00500030 tm=0 ubwc=0 flag=0x101811000 flagpitch=0x0 fmt=84 | dst: 0x10150d000
+ad 0xbfa5a5a6 want 0x000404a5
+  K y5 x0: read 0xbfa5a5a6 want 0x000505a5
+  K y6 x0: read 0xffe5e5a6 want 0x000606a5
+  K y7 x0: read 0xffe5e5a6 want 0x000707a5
+K probe: FAIL (int) - SPARSE non-mutable 8888-INT read TRANSFORMED
+          (same int-8888 pattern; sparse irrelevant)
+  M y0 x0: read 0x3f25a5a6 want 0x000000a5
+  M y1 x0: read 0xbfa5a5a6 want 0x000101a5
+  M y2 x0: read 0xbfa5a5a6 want 0x000202a5
+  M y3 x0: read 0xffe5e5a6 want 0x000303a5
+  M y4 x0: read 0xbfa5a5a6 want 0x000404a5
+  M y5 x0: read 0xbfa5a5a6 want 0x000505a5
+  M y6 x0: read 0xffe5e5a6 want 0x000606a5
+  M y7 x0: read 0xffe5e5a6 want 0x000707a5
+M probe: FAIL (int) - LINEAR 8888-INT read TRANSFORMED too
+          (tiling irrelevant; int-sampler decode)
+  Q y0 x0: read 0xa5a60000 want 0x000000a5
+  Q y1 x0: read 0xbfa68181 want 0x000101a5
+  Q y2 x0: read 0xbda68181 want 0x000202a5
+  Q y3 x0: read 0xfde6c1c1 want 0x000303a5
+  Q y4 x0: read 0xbda68181 want 0x000404a5
+  Q y5 x0: read 0xbda6a1a1 want 0x000505a5
+  Q y6 x0: read 0xfde6c1c1 want 0x000606a5
+  Q y7 x0: read 0xfde6e1e1 want 0x000707a5
+Q probe: FAIL (int) - BGRA8 INT read TRANSFORMED too
+          (int-8888 decode bug is format-agnostic: RGBA + BGRA both hit)
+N probe: PASS - float 8888 read exact; int-sampler path is the odd one out
+O probe: PASS - sparse non-mutable 8888 FLOAT read exact
+P probe: PASS - D class (vkd3d cast pattern) FLOAT read exact
+R: vkCreateImage(OPTIMAL R8G8B8A8_UINT, non-sparse): SUCCESS
+R probe: PASS - REAL R8G8B8A8_UINT int read exact -> 8-bit int sampling works;
+          G/H/K/M/Q 'transform' is the invalid UNORM+usampler combo (UB / test artifact)
+
+=== trigger matrix (D-d2: transformed) ===
+  G  tiled, non-sparse, non-mutable 8888, INT:  TRANSFORMED
+  H  tiled, non-sparse, mutable {RGBA8,R32}:    d1'(R32) exact / d2'(8888) TRANSFORMED
+  K  tiled, sparse, non-mutable 8888, INT:      TRANSFORMED
+  M  linear 8888, INT (tiling control):         TRANSFORMED
+  Q  BGRA8 (WXYZ swap), INT:                    TRANSFORMED
+  R  REAL R8G8B8A8_UINT, INT (valid path):     exact
+  N  float sampler on G (game path):            exact
+  O  float sampler on K (sparse):               exact
+  P  float on D class (sparse+mutable):         exact
+  => ROOT CAUSE: the 'transform' is the INVALID combo UNORM-image + usampler
+     (format-class mismatch -> undefined behavior, a test artifact).
+     R (REAL R8G8B8A8_UINT + usampler) is EXACT -> real 8-bit int sampling
+     WORKS on A740. No driver/HW bug, no Mesa fix. D3D12 int path (real
+     UINT) is clean; 12_0 gate-lift safe.
+S  query(SPARSE+MUTABLE {BGRA8_UNORM,BGRA8_UINT}): FORMAT_NOT_SUPPORTED
+S  vkCreateImage(MUTABLE+SPARSE {BGRA8_UNORM,BGRA8_UINT}): SUCCESS
+S  sparse gran=128x128x1
+S-tr transfer readback: 0/16384 mismatches (raw bytes vs fill2) - fill+bind exact
+S probe: PASS - uniform-swap BGRA+UINT sparse+mutable: create OK, UINT view exact, UNORM view exact (tiled+sparse)
+S2 query(SPARSE+MUTABLE {BGRA8,RGBA8}, mixed swap): FORMAT_NOT_SUPPORTED
+S2 query(SPARSE+MUTABLE, no list):                  FORMAT_NOT_SUPPORTED
+S2 vkCreateImage(MUTABLE+SPARSE {BGRA8,RGBA8}): FEATURE_NOT_PRESENT
+S2 vkCreateImage(MUTABLE+SPARSE, no list):       FEATURE_NOT_PRESENT
+S3 vkCreateImage(OPTIMAL MUTABLE {BGRA8_UNORM,RGBA8_UNORM}): SUCCESS
+S3 memreq size=0x100000 (no UBWC metadata: linear or plain tiled)
+S3-tr transfer readback: 0/262144 mismatches (raw bytes vs fill2) - bytes round-trip exact
+S3 probe: PASS - no UBWC (linear or plain tiled); base view=EXACT, RGBA cross view=identity EXACT (== fill2) [id=0 sw=261120], raw=EXACT
+T  vkCreateImage(OPTIMAL MUTABLE {BGRA8_UNORM,BGRA8_UINT}): SUCCESS
+T  memreq size=0x102000 (0x102000 => tiled + UBWC metadata, P6/0006)
+T-tr transfer readback: 0/262144 mismatches (raw bytes vs fill2) - bytes round-trip exact through UBWC
+T probe: PASS - UBWC+tiled (memreq 0x102000); UINT view read=EXACT, UNORM view read=EXACT, raw roundtrip=EXACT
+U[CTRL_RGBA8] n=1 4B/texel  memreq: lin=0x100000 nonmut=0x102000 list=0x102000  -> format itself UBWC=yes, list kept=yes
+U[CTRL_RGBA8] linear roundtrip: 0/262144 words EXACT
+U[CTRL_RGBA8] line[GDBG-i2b] vkfmt=37 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10160f000 pitch=2048 size=0x01000200 info=0x00501330 tm=3 ubwc=1 flag=0x10160d000 flagpitch=0x8001 fmt=84 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=37 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101711000 pitch=2048 size=0x01000200 info=0x00501330 tm=3 ubwc=1 flag=0x10170f000 flagpitch=0x8001 fmt=84 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=44 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101811000 pitch=2048 size=0x01000200 info=0x00500430 tm=0 ubwc=0 flag=0x101811000 flagpitch=0x0 fmt=105 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=44 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10160f000 pitch=2048 size=0x01000200 info=0x00501330 tm=3 ubwc=1 flag=0x10160d000 flagpitch=0x8001 fmt=105 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=44 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101711000 pitch=2048 size=0x01000200 info=0x00501330 tm=3 ubwc=1 flag=0x10170f000 flagpitch=0x8001 fmt=105 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=98 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101811000 pitch=2048 size=0x01000200 info=0x0050004b tm=0 ubwc=0 flag=0x101811000 flagpitch=0x0 fmt=13 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=98 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10160f000 pitch=2048 size=0x01000200 info=0x0050134b tm=3 ubwc=1 flag=0x10160d000 flagpitch=0x8001 fmt=13 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=98 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101711000 pitch=2048 size=0x01000200 info=0x0050134b tm=3 ubwc=1 flag=0x10170f000 flagpitch=0x8001 fmt=13 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=100 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101811000 pitch=2048 size=0x01000200 info=0x0050004a tm=0 ubwc=0 flag=0x101811000 flagpitch=0x0 fmt=21 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=100 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10160f000 pitch=2048 size=0x01000200 info=0x0050134a tm=3 ubwc=1 flag=0x10160d000 flagpitch=0x8001 fmt=21 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=100 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101711000 pitch=2048 size=0x01000200 info=0x0050134a tm=3 ubwc=1 flag=0x10170f000 flagpitch=0x8001 fmt=21 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=81 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101811000 pitch=2048 size=0x01000200 info=0x00500046 tm=0 ubwc=0 flag=0x101811000 flagpitch=0x0 fmt=46 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=81 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10160f000 pitch=2048 size=0x01000200 info=0x00501346 tm=3 ubwc=1 flag=0x10160d000 flagpitch=0x8001 fmt=46 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=81 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101711000 pitch=2048 size=0x01000200 info=0x00501346 tm=3 ubwc=1 flag=0x10170f000 flagpitch=0x8001 fmt=46 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=83 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101811000 pitch=2048 size=0x01000200 info=0x00500045 tm=0 ubwc=0 flag=0x101811000 flagpitch=0x0 fmt=54 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=83 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10160f000 pitch=2048 size=0x01000200 info=0x00501345 tm=3 ubwc=1 flag=0x10160d000 flagpitch=0x8001 fmt=54 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=83 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101711000 pitch=2048 size=0x01000200 info=0x00501345 tm=3 ubwc=1 flag=0x10170f000 flagpitch=0x8001 fmt=54 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=101 ext=512x512 dstw=512 pitch=4096 lsize=2097152 | src: base=0x101c11000 pitch=4096 size=0x01000200 info=0x00500068 tm=0 ubwc=0 flag=0x101c11000 flagpitch=0x0 fmt=14 | dst: 0x10160d000
+ar dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_RGBA8_linear.bin
+U[CTRL_RGBA8] nonmut roundtrip: 0/262144 words EXACT
+U[CTRL_RGBA8] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_RGBA8_nonmut.bin
+U[CTRL_RGBA8] list roundtrip: 0/262144 words EXACT
+U[CTRL_RGBA8] list dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_RGBA8_list.bin
+U[CTRL_BGRA8] n=1 4B/texel  memreq: lin=0x100000 nonmut=0x102000 list=0x102000  -> format itself UBWC=yes, list kept=yes
+U[CTRL_BGRA8] linear roundtrip: 0/262144 words EXACT
+U[CTRL_BGRA8] linear dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_BGRA8_linear.bin
+U[CTRL_BGRA8] nonmut roundtrip: 0/262144 words EXACT
+U[CTRL_BGRA8] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_BGRA8_nonmut.bin
+U[CTRL_BGRA8] list roundtrip: 0/262144 words EXACT
+U[CTRL_BGRA8] list dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_BGRA8_list.bin
+T[CTRL_BGRA8/linear] dump: /tmp/opencode/dumps/geomdbg_U_CTRL_BGRA8_linear.bin
+T[CTRL_BGRA8/linear] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+T[CTRL_BGRA8/nonmut] dump: /tmp/opencode/dumps/geomdbg_U_CTRL_BGRA8_nonmut.bin
+T[CTRL_BGRA8/nonmut] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+T[CTRL_BGRA8/list] dump: /tmp/opencode/dumps/geomdbg_U_CTRL_BGRA8_list.bin
+T[CTRL_BGRA8/list] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+U[CTRL_R32_UINT] n=1 4B/texel  memreq: lin=0x100000 nonmut=0x102000 list=0x102000  -> format itself UBWC=yes, list kept=yes
+U[CTRL_R32_UINT] linear roundtrip: 0/262144 words EXACT
+U[CTRL_R32_UINT] linear dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R32_UINT_linear.bin
+U[CTRL_R32_UINT] nonmut roundtrip: 0/262144 words EXACT
+U[CTRL_R32_UINT] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R32_UINT_nonmut.bin
+U[CTRL_R32_UINT] list roundtrip: 0/262144 words EXACT
+U[CTRL_R32_UINT] list dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R32_UINT_list.bin
+U[CTRL_R32_SFLOAT] n=1 4B/texel  memreq: lin=0x100000 nonmut=0x102000 list=0x102000  -> format itself UBWC=yes, list kept=yes
+U[CTRL_R32_SFLOAT] linear roundtrip: 0/262144 words EXACT
+U[CTRL_R32_SFLOAT] linear dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R32_SFLOAT_linear.bin
+U[CTRL_R32_SFLOAT] nonmut roundtrip: 0/262144 words EXACT
+U[CTRL_R32_SFLOAT] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R32_SFLOAT_nonmut.bin
+U[CTRL_R32_SFLOAT] list roundtrip: 0/262144 words EXACT
+U[CTRL_R32_SFLOAT] list dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R32_SFLOAT_list.bin
+U[CTRL_R16G16_UINT] n=1 4B/texel  memreq: lin=0x100000 nonmut=0x102000 list=0x102000  -> format itself UBWC=yes, list kept=yes
+U[CTRL_R16G16_UINT] linear roundtrip: 0/262144 words EXACT
+U[CTRL_R16G16_UINT] linear dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R16G16_UINT_linear.bin
+U[CTRL_R16G16_UINT] nonmut roundtrip: 0/262144 words EXACT
+U[CTRL_R16G16_UINT] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R16G16_UINT_nonmut.bin
+U[CTRL_R16G16_UINT] list roundtrip: 0/262144 words EXACT
+U[CTRL_R16G16_UINT] list dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R16G16_UINT_list.bin
+U[CTRL_R16G16_SFLOAT] n=1 4B/texel  memreq: lin=0x100000 nonmut=0x102000 list=0x102000  -> format itself UBWC=yes, list kept=yes
+U[CTRL_R16G16_SFLOAT] linear roundtrip: 0/262144 words EXACT
+U[CTRL_R16G16_SFLOAT] linear dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R16G16_SFLOAT_linear.bin
+U[CTRL_R16G16_SFLOAT] nonmut roundtrip: 0/262144 words EXACT
+U[CTRL_R16G16_SFLOAT] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R16G16_SFLOAT_nonmut.bin
+U[CTRL_R16G16_SFLOAT] list roundtrip: 0/262144 words EXACT
+U[CTRL_R16G16_SFLOAT] list dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R16G16_SFLOAT_list.bin
+U[CTRL_R32G32_UINT] n=1 8B/texel  memreq: lin=0x200000 nonmut=0x202000 list=0x202000  -> format itself UBWC=yes, list kept=yes
+U[CTRL_R32G32_UINT] linear roundtrip: 0/524288 [GDBG-i2b] vkfmt=101 ext=512x512 dstw=512 pitch=4096 lsize=2097152 | src: base=0x10180f000 pitch=4096 size=0x01000200 info=0x00501368 tm=3 ubwc=1 flag=0x10180d000 flagpitch=0x8001 fmt=14 | dst: 0x10160d000
+[GDBG-i2b] vkfmt=101 ext=512x512 dstw=512 pitch=4096 lsize=2097152 | src: base=0x101a11000 pitch=4096 size=0x01000200 info=0x00501368 tm=3 ubwc=1 flag=0x101a0f000 flagpitch=0x8001 fmt=14 | dst: 0x10160d000
+[GDBG-i2b] vkfmt=103 ext=512x512 dstw=512 pitch=4096 lsize=2097152 | src: base=0x101c11000 pitch=4096 size=0x01000200 info=0x00500067 tm=0 ubwc=0 flag=0x101c11000 flagpitch=0x0 fmt=22 | dst: 0x10160d000
+[GDBG-i2b] vkfmt=103 ext=512x512 dstw=512 pitch=4096 lsize=2097152 | src: base=0x10180f000 pitch=4096 size=0x01000200 info=0x00501367 tm=3 ubwc=1 flag=0x10180d000 flagpitch=0x8001 fmt=22 | dst: 0x10160d000
+[GDBG-i2b] vkfmt=103 ext=512x512 dstw=512 pitch=4096 lsize=2097152 | src: base=0x101a11000 pitch=4096 size=0x01000200 info=0x00501367 tm=3 ubwc=1 flag=0x101a0f000 flagpitch=0x8001 fmt=22 | dst: 0x10160d000
+[GDBG-i2b] vkfmt=100 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101811000 pitch=2048 size=0x01000200 info=0x0050004a tm=0 ubwc=0 flag=0x101811000 flagpitch=0x0 fmt=21 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=100 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10160f000 pitch=2048 size=0x01000200 info=0x0050134a tm=3 ubwc=1 flag=0x10160d000 flagpitch=0x8001 fmt=21 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=100 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101711000 pitch=2048 size=0x01000200 info=0x0050134a tm=3 ubwc=1 flag=0x10170f000 flagpitch=0x8001 fmt=21 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=83 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101811000 pitch=2048 size=0x01000200 info=0x00500045 tm=0 ubwc=0 flag=0x101811000 flagpitch=0x0 fmt=54 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=83 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10160f000 pitch=2048 size=0x01000200 info=0x00501345 tm=3 ubwc=1 flag=0x10160d000 flagpitch=0x8001 fmt=54 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=83 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x101711000 pitch=2048 size=0x01000200 info=0x00501345 tm=3 ubwc=1 flag=0x10170f000 flagpitch=0x8001 fmt=54 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=103 ext=512x512 dstw=512 pitch=4096 lsize=2097152 | src: base=0x101c11000 pitch=4096 size=0x01000200 info=0x00500067 tm=0 ubwc=0 flag=0x101c11000 flagpitch=0x0 fmt=22 | dst: 0x10160d000
+[GDBG-i2b] vkfmt=103 ext=512x512 dstw=512 pitch=4096 lsize=2097152 | src: base=0x10180f000 pitch=4096 size=0x01000200 info=0x00501367 tm=3 ubwc=1 flag=0x10180d000 flagpitch=0x8001 fmt=22 | dst: 0x10160d000
+[GDBG-i2b] vkfmt=103 ext=512x512 dstw=512 pitch=4096 lsize=2097152 | src: base=0x101a11000 pitch=4096 size=0x01000200 info=0x00501367 tm=3 ubwc=1 flag=0x101a0f000 flagpitch=0x8001 fmt=22 | dst: 0x10160d000
+[GDBG-i2b] vkfmt=97 ext=512x512 dstw=512 pitch=4096 lsize=2097152 | src: base=0x101c11000 pitch=4096 size=0x01000200 info=0x00500062 tm=0 ubwc=0 flag=0x101c11000 flagpitch=0x0 fmt=56 | dst: 0x10160d000
+[GDBG-i2b] vkfmt=97 ext=512x512 dstw=512 pitch=4096 lsize=2097152 | src: base=0x10180f000 pitch=4096 size=0x01000200 info=0x00501362 tm=3 ubwc=1 flag=0x10180d000 flagpitch=0x8001 fmt=56 | dst: 0x10160d000
+[GDBG-i2b] vkfmt=97 ext=512x512 dstw=512 pitch=4096 lsize=2097152 | src: base=0x101a11000 pitch=4096 size=0x01000200 info=0x00501362 tm=3 ubwc=1 flag=0x101a0f000 flagpitch=0x8001 fmt=56 | dst: 0x10160d000
+[GDBG-i2b] vkfmt=109 ext=512x512 dstw=512 pitch=8192 lsize=4194304 | src: base=0x102415000 pitch=8192 size=0x01000200 info=0x00500082 tm=0 ubwc=0 flag=0x102415000 flagpitch=0x0 fmt=24 | dst: 0x10180d000
+[GDBG-i2b] vkfmt=109 ext=512x512 dstw=512 pitch=8192 lsize=4194304 | src: base=0x101c11000 pitch=8192 size=0x01000200 info=0x00501382 tm=3 ubwc=1 flag=0x101c0d000 flagpitch=0x10002 fmt=24 | dst: 0x10180d000
+[GDBG-i2b] vkfmt=109 ext=512x512 dstw=512 pitch=8192 lsize=4194304 | src: base=0x102015000 pitch=8192 size=0x01000200 info=0x00501382 tm=3 ubwc=1 flag=0x102011000 flagpitch=0x10002 fmt=24 | dst: 0x10180d000
+[GDBG-i2b] vkfmt=44 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10180f000 pitch=2048 size=0x01000200 info=0x00500430 tm=0 ubwc=0 flag=0x10180f000 flagpitch=0x0 fmt=105 | dst: 0x10150d000
+words EXACT
+U[CTRL_R32G32_UINT] linear dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R32G32_UINT_linear.bin
+U[CTRL_R32G32_UINT] nonmut roundtrip: 0/524288 words EXACT
+U[CTRL_R32G32_UINT] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R32G32_UINT_nonmut.bin
+U[CTRL_R32G32_UINT] list roundtrip: 0/524288 words EXACT
+U[CTRL_R32G32_UINT] list dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R32G32_UINT_list.bin
+U[CTRL_R32G32_SFLOAT] n=1 8B/texel  memreq: lin=0x200000 nonmut=0x202000 list=0x202000  -> format itself UBWC=yes, list kept=yes
+U[CTRL_R32G32_SFLOAT] linear roundtrip: 0/524288 words EXACT
+U[CTRL_R32G32_SFLOAT] linear dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R32G32_SFLOAT_linear.bin
+U[CTRL_R32G32_SFLOAT] nonmut roundtrip: 0/524288 words EXACT
+U[CTRL_R32G32_SFLOAT] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R32G32_SFLOAT_nonmut.bin
+U[CTRL_R32G32_SFLOAT] list roundtrip: 0/524288 words EXACT
+U[CTRL_R32G32_SFLOAT] list dump: /tmp/opencode/dumps/geomdbg_U_U_CTRL_R32G32_SFLOAT_list.bin
+U[R32_TYPELESS] n=3 4B/texel  memreq: lin=0x100000 nonmut=0x102000 list=0x102000  -> format itself UBWC=yes, list kept=yes
+U[R32_TYPELESS] linear roundtrip: 0/262144 words EXACT
+U[R32_TYPELESS] linear dump: /tmp/opencode/dumps/geomdbg_U_U_R32_TYPELESS_linear.bin
+U[R32_TYPELESS] nonmut roundtrip: 0/262144 words EXACT
+U[R32_TYPELESS] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_R32_TYPELESS_nonmut.bin
+U[R32_TYPELESS] list roundtrip: 0/262144 words EXACT
+U[R32_TYPELESS] list dump: /tmp/opencode/dumps/geomdbg_U_U_R32_TYPELESS_list.bin
+U[R16G16_TYPELESS] n=5 4B/texel  memreq: lin=0x100000 nonmut=0x102000 list=0x102000  -> format itself UBWC=yes, list kept=yes
+U[R16G16_TYPELESS] linear roundtrip: 0/262144 words EXACT
+U[R16G16_TYPELESS] linear dump: /tmp/opencode/dumps/geomdbg_U_U_R16G16_TYPELESS_linear.bin
+U[R16G16_TYPELESS] nonmut roundtrip: 0/262144 words EXACT
+U[R16G16_TYPELESS] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_R16G16_TYPELESS_nonmut.bin
+U[R16G16_TYPELESS] list roundtrip: 0/262144 words EXACT
+U[R16G16_TYPELESS] list dump: /tmp/opencode/dumps/geomdbg_U_U_R16G16_TYPELESS_list.bin
+U[R32G32_TYPELESS] n=3 8B/texel  memreq: lin=0x200000 nonmut=0x202000 list=0x202000  -> format itself UBWC=yes, list kept=yes
+U[R32G32_TYPELESS] linear roundtrip: 0/524288 words EXACT
+U[R32G32_TYPELESS] linear dump: /tmp/opencode/dumps/geomdbg_U_U_R32G32_TYPELESS_linear.bin
+U[R32G32_TYPELESS] nonmut roundtrip: 0/524288 words EXACT
+U[R32G32_TYPELESS] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_R32G32_TYPELESS_nonmut.bin
+U[R32G32_TYPELESS] list roundtrip: 0/524288 words EXACT
+U[R32G32_TYPELESS] list dump: /tmp/opencode/dumps/geomdbg_U_U_R32G32_TYPELESS_list.bin
+U[R16G16B16A16_TYPELESS] n=5 8B/texel  memreq: lin=0x200000 nonmut=0x202000 list=0x202000  -> format itself UBWC=yes, list kept=yes
+U[R16G16B16A16_TYPELESS] linear roundtrip: 0/524288 words EXACT
+U[R16G16B16A16_TYPELESS] linear dump: /tmp/opencode/dumps/geomdbg_U_U_R16G16B16A16_TYPELESS_linear.bin
+U[R16G16B16A16_TYPELESS] nonmut roundtrip: 0/524288 words EXACT
+U[R16G16B16A16_TYPELESS] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_R16G16B16A16_TYPELESS_nonmut.bin
+U[R16G16B16A16_TYPELESS] list roundtrip: 0/524288 words EXACT
+U[R16G16B16A16_TYPELESS] list dump: /tmp/opencode/dumps/geomdbg_U_U_R16G16B16A16_TYPELESS_list.bin
+U[R32G32B32A32_TYPELESS] n=3 16B/texel  memreq: lin=0x400000 nonmut=0x404000 list=0x404000  -> format itself UBWC=yes, list kept=yes
+U[R32G32B32A32_TYPELESS] linear roundtrip: 0/1048576 words EXACT
+U[R32G32B32A32_TYPELESS] linear dump: /tmp/opencode/dumps/geomdbg_U_U_R32G32B32A32_TYPELESS_linear.bin
+U[R32G32B32A32_TYPELESS] nonmut roundtrip: 0/1048576 words EXACT
+U[R32G32B32A32_TYPELESS] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_R32G32B32A32_TYPELESS_nonmut.bin
+U[R32G32B32A32_TYPELESS] list roundtrip: 0/1048576 words EXACT
+U[R32G32B32A32_TYPELESS] list dump: /tmp/opencode/dumps/geomdbg_U_U_R32G32B32A32_TYPELESS_list.bin
+U[B8G8R8A8_UAVLIST] n=5 4B/texel  memreq: lin=0x100000 nonmut=0x102000 list=0x100000  -> format itself UBWC=yes, list kept=NO (removed)
+U[B8G8R8A8_UAVLIST] linear roun[GDBG-i2b] vkfmt=44 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10160f000 pitch=2048 size=0x01000200 info=0x00501330 tm=3 ubwc=1 flag=0x10160d000 flagpitch=0x8001 fmt=105 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=44 ext=512x512 dstw=512 pitch=2048 lsize=1048576 | src: base=0x10170f000 pitch=2048 size=0x01000200 info=0x00500330 tm=3 ubwc=0 flag=0x10170f000 flagpitch=0x0 fmt=105 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=9 ext=512x512 dstw=512 pitch=512 lsize=262144 | src: base=0x10150d000 pitch=512 size=0x01000200 info=0x00500003 tm=0 ubwc=0 flag=0x10150d000 flagpitch=0x0 fmt=81 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=9 ext=512x512 dstw=512 pitch=512 lsize=262144 | src: base=0x10148d000 pitch=512 size=0x01000200 info=0x00500303 tm=3 ubwc=0 flag=0x10148d000 flagpitch=0x0 fmt=81 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=9 ext=512x512 dstw=512 pitch=512 lsize=262144 | src: base=0x1014cd000 pitch=512 size=0x01000200 info=0x00500303 tm=3 ubwc=0 flag=0x1014cd000 flagpitch=0x0 fmt=81 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=13 ext=512x512 dstw=512 pitch=512 lsize=262144 | src: base=0x10150d000 pitch=512 size=0x01000200 info=0x00500005 tm=0 ubwc=0 flag=0x10150d000 flagpitch=0x0 fmt=73 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=13 ext=512x512 dstw=512 pitch=512 lsize=262144 | src: base=0x10148d000 pitch=512 size=0x01000200 info=0x00500305 tm=3 ubwc=0 flag=0x10148d000 flagpitch=0x0 fmt=73 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=13 ext=512x512 dstw=512 pitch=512 lsize=262144 | src: base=0x1014cd000 pitch=512 size=0x01000200 info=0x00500305 tm=3 ubwc=0 flag=0x1014cd000 flagpitch=0x0 fmt=73 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=9 ext=512x512 dstw=512 pitch=512 lsize=262144 | src: base=0x10150d000 pitch=512 size=0x01000200 info=0x00500003 tm=0 ubwc=0 flag=0x10150d000 flagpitch=0x0 fmt=81 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=9 ext=512x512 dstw=512 pitch=512 lsize=262144 | src: base=0x10148d000 pitch=512 size=0x01000200 info=0x00500303 tm=3 ubwc=0 flag=0x10148d000 flagpitch=0x0 fmt=81 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=9 ext=512x512 dstw=512 pitch=512 lsize=262144 | src: base=0x1014cd000 pitch=512 size=0x01000200 info=0x00500303 tm=3 ubwc=0 flag=0x1014cd000 flagpitch=0x0 fmt=81 | dst: 0x10144d000
+dtrip: 0/262144 words EXACT
+U[B8G8R8A8_UAVLIST] linear dump: /tmp/opencode/dumps/geomdbg_U_U_B8G8R8A8_UAVLIST_linear.bin
+U[B8G8R8A8_UAVLIST] nonmut roundtrip: 0/262144 words EXACT
+U[B8G8R8A8_UAVLIST] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_B8G8R8A8_UAVLIST_nonmut.bin
+U[B8G8R8A8_UAVLIST] list roundtrip: 0/262144 words EXACT
+U[B8G8R8A8_UAVLIST] list dump: /tmp/opencode/dumps/geomdbg_U_U_B8G8R8A8_UAVLIST_list.bin
+T[B8G8R8A8_UAVLIST/linear] dump: /tmp/opencode/dumps/geomdbg_U_B8G8R8A8_UAVLIST_linear.bin
+T[B8G8R8A8_UAVLIST/linear] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+T[B8G8R8A8_UAVLIST/nonmut] dump: /tmp/opencode/dumps/geomdbg_U_B8G8R8A8_UAVLIST_nonmut.bin
+T[B8G8R8A8_UAVLIST/nonmut] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+T[B8G8R8A8_UAVLIST/list] dump: /tmp/opencode/dumps/geomdbg_U_B8G8R8A8_UAVLIST_list.bin
+T[B8G8R8A8_UAVLIST/list] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+U[R8_TYPELESS] n=4 1B/texel  memreq: lin=0x40000 nonmut=0x40000 list=0x40000  -> format itself UBWC=no, list kept=n/a - format without UBWC
+U[R8_TYPELESS] linear roundtrip: 0/65536 words EXACT
+U[R8_TYPELESS] linear dump: /tmp/opencode/dumps/geomdbg_U_U_R8_TYPELESS_linear.bin
+U[R8_TYPELESS] nonmut roundtrip: 0/65536 words EXACT
+U[R8_TYPELESS] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_R8_TYPELESS_nonmut.bin
+U[R8_TYPELESS] list roundtrip: 0/65536 words EXACT
+U[R8_TYPELESS] list dump: /tmp/opencode/dumps/geomdbg_U_U_R8_TYPELESS_list.bin
+T[R8_TYPELESS/linear] dump: /tmp/opencode/dumps/geomdbg_U_R8_TYPELESS_linear.bin
+T[R8_TYPELESS/linear] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+T[R8_TYPELESS/nonmut] dump: /tmp/opencode/dumps/geomdbg_U_R8_TYPELESS_nonmut.bin
+T[R8_TYPELESS/nonmut] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+T[R8_TYPELESS/list] dump: /tmp/opencode/dumps/geomdbg_U_R8_TYPELESS_list.bin
+T[R8_TYPELESS/list] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+U[R8_UINT] n=4 1B/texel  memreq: lin=0x40000 nonmut=0x40000 list=0x40000  -> format itself UBWC=no, list kept=n/a - format without UBWC
+U[R8_UINT] linear roundtrip: 0/65536 words EXACT
+U[R8_UINT] linear dump: /tmp/opencode/dumps/geomdbg_U_U_R8_UINT_linear.bin
+U[R8_UINT] nonmut roundtrip: 0/65536 words EXACT
+U[R8_UINT] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_R8_UINT_nonmut.bin
+U[R8_UINT] list roundtrip: 0/65536 words EXACT
+U[R8_UINT] list dump: /tmp/opencode/dumps/geomdbg_U_U_R8_UINT_list.bin
+U[R8_UNORM] n=4 1B/texel  memreq: lin=0x40000 nonmut=0x40000 list=0x40000  -> format itself UBWC=no, list kept=n/a - format without UBWC
+U[R8_UNORM] linear roundtrip: 0/65536 words EXACT
+U[R8_UNORM] linear dump: /tmp/opencode/dumps/geomdbg_U_U_R8_UNORM_linear.bin
+U[R8_UNORM] nonmut roundtrip: 0/65536 words EXACT
+U[R8_UNORM] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_R8_UNORM_nonmut.bin
+U[R8_UNORM] list roundtrip: 0/65536 words EXACT
+U[R8_UNORM] list dump: /tmp/opencode/dumps/geomdbg_U_U_R8_UNORM_list.bin
+T[R8_UNORM/linear] dump: /tmp/opencode/dumps/geomdbg_U_R8_UNORM_linear.bin
+T[R8_UNORM/linear] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+T[R8_UNORM/nonmut] dump: /tmp/opencode/dumps/geomdbg_U_R8_UNORM_nonmut.bin
+T[R8_UNORM/nonmut] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> th[GDBG-i2b] vkfmt=133 ext=128x128 dstw=128 pitch=1024 lsize=131072 | src: base=0x101491000 pitch=1024 size=0x00400080 info=0x00500068 tm=0 ubwc=0 flag=0x101491000 flagpitch=0x0 fmt=14 | dst: 0x10142d000
+[GDBG-i2b] vkfmt=133 ext=128x128 dstw=128 pitch=1024 lsize=131072 | src: base=0x10144f000 pitch=1024 size=0x00400080 info=0x00501368 tm=3 ubwc=1 flag=0x10144d000 flagpitch=0x8001 fmt=14 | dst: 0x10142d000
+[GDBG-i2b] vkfmt=133 ext=128x128 dstw=128 pitch=1024 lsize=131072 | src: base=0x101471000 pitch=1024 size=0x00400080 info=0x00501368 tm=3 ubwc=1 flag=0x10146f000 flagpitch=0x8001 fmt=14 | dst: 0x10142d000
+[GDBG-i2b] vkfmt=137 ext=128x128 dstw=128 pitch=2048 lsize=262144 | src: base=0x101515000 pitch=2048 size=0x00400080 info=0x00500083 tm=0 ubwc=0 flag=0x101515000 flagpitch=0x0 fmt=16 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=137 ext=128x128 dstw=128 pitch=2048 lsize=262144 | src: base=0x101491000 pitch=2048 size=0x00400080 info=0x00501383 tm=3 ubwc=1 flag=0x10148d000 flagpitch=0x10002 fmt=16 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=137 ext=128x128 dstw=128 pitch=2048 lsize=262144 | src: base=0x1014d5000 pitch=2048 size=0x00400080 info=0x00501383 tm=3 ubwc=1 flag=0x1014d1000 flagpitch=0x10002 fmt=16 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=145 ext=128x128 dstw=128 pitch=2048 lsize=262144 | src: base=0x101515000 pitch=2048 size=0x00400080 info=0x00500083 tm=0 ubwc=0 flag=0x101515000 flagpitch=0x0 fmt=16 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=145 ext=128x128 dstw=128 pitch=2048 lsize=262144 | src: base=0x101491000 pitch=2048 size=0x00400080 info=0x00501383 tm=3 ubwc=1 flag=0x10148d000 flagpitch=0x10002 fmt=16 | dst: 0x10144d000
+e data is in the image (the TP path reads it)
+T[R8_UNORM/list] dump: /tmp/opencode/dumps/geomdbg_U_R8_UNORM_list.bin
+T[R8_UNORM/list] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+U[BC1_UNORM] n=2 1B/texel  memreq: lin=0x20000 nonmut=0x22000 list=0x22000  -> format itself UBWC=yes, list kept=yes
+U[BC1_UNORM] linear roundtrip: 32768/32768 words MISMATCH  bad[0]=0(r0,c0) bad[N]=32767(r63,c511) zeros=32768 untouched(0xCD)=0  pat=0x5a5a0000 got=0x00000000
+U[BC1_UNORM] linear dump: /tmp/opencode/dumps/geomdbg_U_U_BC1_UNORM_linear.bin
+U[BC1_UNORM] nonmut roundtrip: 32768/32768 words MISMATCH  bad[0]=0(r0,c0) bad[N]=32767(r63,c511) zeros=32768 untouched(0xCD)=0  pat=0x5a5a0000 got=0x00000000
+U[BC1_UNORM] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_BC1_UNORM_nonmut.bin
+U[BC1_UNORM] list roundtrip: 32768/32768 words MISMATCH  bad[0]=0(r0,c0) bad[N]=32767(r63,c511) zeros=32768 untouched(0xCD)=0  pat=0x5a5a0000 got=0x00000000
+U[BC1_UNORM] list dump: /tmp/opencode/dumps/geomdbg_U_U_BC1_UNORM_list.bin
+T[BC1_UNORM/linear] dump: /tmp/opencode/dumps/geomdbg_U_BC1_UNORM_linear.bin
+T[BC1_UNORM/linear] TP-readback: nz=227173/262144 (86%) first=(y0,x0) last=(y511,x511)  TL128=14163 row0[0:128]=111 row16[0:128]=109  -> scattered zeros: fill is partially broken
+T[BC1_UNORM/nonmut] dump: /tmp/opencode/dumps/geomdbg_U_BC1_UNORM_nonmut.bin
+T[BC1_UNORM/nonmut] TP-readback: nz=227173/262144 (86%) first=(y0,x0) last=(y511,x511)  TL128=14163 row0[0:128]=111 row16[0:128]=109  -> scattered zeros: fill is partially broken
+T[BC1_UNORM/list] dump: /tmp/opencode/dumps/geomdbg_U_BC1_UNORM_list.bin
+T[BC1_UNORM/list] TP-readback: nz=227173/262144 (86%) first=(y0,x0) last=(y511,x511)  TL128=14163 row0[0:128]=111 row16[0:128]=109  -> scattered zeros: fill is partially broken
+U[BC3_UNORM] n=2 1B/texel  memreq: lin=0x40000 nonmut=0x44000 list=0x44000  -> format itself UBWC=yes, list kept=yes
+U[BC3_UNORM] linear roundtrip: 15680/65536 words MISMATCH  bad[0]=128(r0,c128) bad[N]=65407(r127,c383) zeros=15680 untouched(0xCD)=0  pat=0x41e6d880 got=0x00000000
+U[BC3_UNORM] linear dump: /tmp/opencode/dumps/geomdbg_U_U_BC3_UNORM_linear.bin
+U[BC3_UNORM] nonmut roundtrip: 15872/65536 words MISMATCH  bad[0]=128(r0,c128) bad[N]=65407(r127,c383) zeros=15872 untouched(0xCD)=0  pat=0x41e6d880 got=0x00000000
+U[BC3_UNORM] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_BC3_UNORM_nonmut.bin
+U[BC3_UNORM] list roundtrip: 15552/65536 words MISMATCH  bad[0]=128(r0,c128) bad[N]=65407(r127,c383) zeros=15552 untouched(0xCD)=0  pat=0x41e6d880 got=0x00000000
+U[BC3_UNORM] list dump: /tmp/opencode/dumps/geomdbg_U_U_BC3_UNORM_list.bin
+T[BC3_UNORM/linear] dump: /tmp/opencode/dumps/geomdbg_U_BC3_UNORM_linear.bin
+T[BC3_UNORM/linear] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+T[BC3_UNORM/nonmut] dump: /tmp/opencode/dumps/geomdbg_U_BC3_UNORM_nonmut.bin
+T[BC3_UNORM/nonmut] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+T[BC3_UNORM/list] dump: /tmp/opencode/dumps/geomdbg_U_BC3_UNORM_list.bin
+T[BC3_UNORM/list] TP-readback: nz=262144/262144 (100%) first=(y0,x0) last=(y511,x511)  TL128=16384 row0[0:128]=128 row16[0:128]=128  -> the data is in the image (the TP path reads it)
+U[BC7_UNORM] n=2 1B/texel  memreq: lin=0x40000 nonmut=0x44000 list=0x44000  -> format itself UBWC=yes, list kept=yes
+U[BC7_UNORM] linear roundtrip: 15008/65536 words MISMATCH  bad[0]=128(r0,c128) bad[N]=65407(r127,c383) zeros=15008 untouched(0xCD)=0  pat=0x41e6d880 got=0x00000000
+U[BC7_UNORM] linear dump: /tmp/opencode/dumps/geomdbg_U_U_BC7_UNORM_linear.bin
+U[BC7_UNORM] nonmut roundtrip: 16000/65536 words MISMATCH  bad[0]=128(r0,c128) bad[N]=65407(r127,c383) zeros=16000 untouched(0xCD)=0  pat=0x41e6d880 got=0x00000000
+U[BC7_UNORM] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_BC7_[GDBG-i2b] vkfmt=145 ext=128x128 dstw=128 pitch=2048 lsize=262144 | src: base=0x1014d5000 pitch=2048 size=0x00400080 info=0x00501383 tm=3 ubwc=1 flag=0x1014d1000 flagpitch=0x10002 fmt=16 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=109 ext=128x128 dstw=128 pitch=2048 lsize=262144 | src: base=0x10150f000 pitch=2048 size=0x00400080 info=0x00500082 tm=0 ubwc=0 flag=0x10150f000 flagpitch=0x0 fmt=24 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=109 ext=128x128 dstw=128 pitch=2048 lsize=262144 | src: base=0x10148e000 pitch=2048 size=0x00400080 info=0x00501382 tm=3 ubwc=1 flag=0x10148d000 flagpitch=0x4001 fmt=24 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=109 ext=128x128 dstw=128 pitch=2048 lsize=262144 | src: base=0x1014cf000 pitch=2048 size=0x00400080 info=0x00501382 tm=3 ubwc=1 flag=0x1014ce000 flagpitch=0x4001 fmt=24 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=109 ext=256x256 dstw=256 pitch=4096 lsize=1048576 | src: base=0x10180f000 pitch=4096 size=0x00800100 info=0x00500082 tm=0 ubwc=0 flag=0x10180f000 flagpitch=0x0 fmt=24 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=109 ext=256x256 dstw=256 pitch=4096 lsize=1048576 | src: base=0x10160e000 pitch=4096 size=0x00800100 info=0x00501382 tm=3 ubwc=1 flag=0x10160d000 flagpitch=0x4001 fmt=24 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=109 ext=256x256 dstw=256 pitch=4096 lsize=1048576 | src: base=0x10170f000 pitch=4096 size=0x00800100 info=0x00501382 tm=3 ubwc=1 flag=0x10170e000 flagpitch=0x4001 fmt=24 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=137 ext=32x32 dstw=32 pitch=512 lsize=16384 | src: base=0x10141f000 pitch=1024 size=0x00100020 info=0x00500083 tm=0 ubwc=0 flag=0x10141f000 flagpitch=0x0 fmt=16 | dst: 0x10055c000
+[GDBG-i2b] vkfmt=137 ext=32x32 dstw=32 pitch=512 lsize=16384 | src: base=0x10140e000 pitch=1024 size=0x00100020 info=0x00501383 tm=3 ubwc=1 flag=0x10140d000 flagpitch=0x4001 fmt=16 | dst: 0x10055c000
+[GDBG-i2b] vkfmt=137 ext=32x32 dstw=32 pitch=512 lsize=16384 | src: base=0x101417000 pitch=1024 size=0x00100020 info=0x00501383 tm=3 ubwc=1 flag=0x101416000 flagpitch=0x4001 fmt=16 | dst: 0x10055c000
+[GDBG-i2b] vkfmt=137 ext=256x256 dstw=256 pitch=4096 lsize=1048576 | src: base=0x10182d000 pitch=4096 size=0x00800100 info=0x00500083 tm=0 ubwc=0 flag=0x10182d000 flagpitch=0x0 fmt=16 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=137 ext=256x256 dstw=256 pitch=4096 lsize=1048576 | src: base=0x10161d000 pitch=4096 size=0x00800100 info=0x00501383 tm=3 ubwc=1 flag=0x10160d000 flagpitch=0x40004 fmt=16 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=137 ext=256x256 dstw=256 pitch=4096 lsize=1048576 | src: base=0x10172d000 pitch=4096 size=0x00800100 info=0x00501383 tm=3 ubwc=1 flag=0x10171d000 flagpitch=0x40004 fmt=16 | dst: 0x10150d000
+[GDBG-i2b] vkfmt=109 ext=256x128 dstw=256 pitch=4096 lsize=524288 | src: base=0x10160f000 pitch=4096 size=0x00400100 info=0x00500082 tm=0 ubwc=0 flag=0x10160f000 flagpitch=0x0 fmt=24 | dst: 0x10148d000
+UNORM_nonmut.bin
+U[BC7_UNORM] list roundtrip: 15616/65536 words MISMATCH  bad[0]=128(r0,c128) bad[N]=65407(r127,c383) zeros=15616 untouched(0xCD)=0  pat=0x41e6d880 got=0x00000000
+U[BC7_UNORM] list dump: /tmp/opencode/dumps/geomdbg_U_U_BC7_UNORM_list.bin
+T[BC7_UNORM/linear] dump: /tmp/opencode/dumps/geomdbg_U_BC7_UNORM_linear.bin
+T[BC7_UNORM/linear] TP-readback: nz=258048/262144 (98%) first=(y0,x4) last=(y511,x511)  TL128=15872 row0[0:128]=124 row16[0:128]=124  -> the data is in the image (the TP path reads it)
+T[BC7_UNORM/nonmut] dump: /tmp/opencode/dumps/geomdbg_U_BC7_UNORM_nonmut.bin
+T[BC7_UNORM/nonmut] TP-readback: nz=258048/262144 (98%) first=(y0,x4) last=(y511,x511)  TL128=15872 row0[0:128]=124 row16[0:128]=124  -> the data is in the image (the TP path reads it)
+T[BC7_UNORM/list] dump: /tmp/opencode/dumps/geomdbg_U_BC7_UNORM_list.bin
+T[BC7_UNORM/list] TP-readback: nz=258048/262144 (98%) first=(y0,x4) last=(y511,x511)  TL128=15872 row0[0:128]=124 row16[0:128]=124  -> the data is in the image (the TP path reads it)
+
+=== GEOM. readback geometry (A2D SRC 2D) ===
+U[GEOM_RGBA32_128] n=3 16B/texel  memreq: lin=0x40000 nonmut=0x41000 list=0x41000  -> format itself UBWC=yes, list kept=yes
+U[GEOM_RGBA32_128] linear roundtrip: 14112/65536 words MISMATCH  bad[0]=128(r1,c0) bad[N]=65407(r510,c127) zeros=14112 untouched(0xCD)=0  pat=0x41e6d880 got=0x00000000
+U[GEOM_RGBA32_128] linear dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_128_linear.bin
+U[GEOM_RGBA32_128] nonmut roundtrip: 16256/65536 words MISMATCH  bad[0]=128(r1,c0) bad[N]=65407(r510,c127) zeros=16256 untouched(0xCD)=0  pat=0x41e6d880 got=0x00000000
+U[GEOM_RGBA32_128] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_128_nonmut.bin
+U[GEOM_RGBA32_128] list roundtrip: 16000/65536 words MISMATCH  bad[0]=128(r1,c0) bad[N]=65407(r510,c127) zeros=16000 untouched(0xCD)=0  pat=0x41e6d880 got=0x00000000
+U[GEOM_RGBA32_128] list dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_128_list.bin
+U[GEOM_RGBA32_256] n=3 16B/texel  memreq: lin=0x100000 nonmut=0x101000 list=0x101000  -> format itself UBWC=yes, list kept=yes
+U[GEOM_RGBA32_256] linear roundtrip: 0/262144 words EXACT
+U[GEOM_RGBA32_256] linear dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_256_linear.bin
+U[GEOM_RGBA32_256] nonmut roundtrip: 0/262144 words EXACT
+U[GEOM_RGBA32_256] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_256_nonmut.bin
+U[GEOM_RGBA32_256] list roundtrip: 0/262144 words EXACT
+U[GEOM_RGBA32_256] list dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_256_list.bin
+U[GEOM_BC3_128] n=2 1B/texel  memreq: lin=0x8000 nonmut=0x9000 list=0x9000  -> format itself UBWC=yes, list kept=yes
+U[GEOM_BC3_128] linear roundtrip: 4096/4096 words MISMATCH  bad[0]=0(r0,c0) bad[N]=4095(r31,c127) zeros=4096 untouched(0xCD)=0  pat=0x5a5a0000 got=0x00000000
+U[GEOM_BC3_128] linear dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_BC3_128_linear.bin
+U[GEOM_BC3_128] nonmut roundtrip: 4096/4096 words MISMATCH  bad[0]=0(r0,c0) bad[N]=4095(r31,c127) zeros=4096 untouched(0xCD)=0  pat=0x5a5a0000 got=0x00000000
+U[GEOM_BC3_128] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_BC3_128_nonmut.bin
+U[GEOM_BC3_128] list roundtrip: 4096/4096 words MISMATCH  bad[0]=0(r0,c0) bad[N]=4095(r31,c127) zeros=4096 untouched(0xCD)=0  pat=0x5a5a0000 got=0x00000000
+U[GEOM_BC3_128] list dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_BC3_128_list.bin
+U[GEOM_BC3_1024] n=2 1B/texel  memreq: lin=0x100000 nonmut=0x110000 list=0x110000  -> format itself UBWC=yes, list kept=yes
+U[GEOM_BC3_1024] linear roundtrip: 0/262144 words EXACT
+U[GEOM_BC3_1024] linear dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_BC3_1024_linear.bin
+U[GEOM_BC3_1024] nonmut roundtrip: 0/262144 words EXACT
+U[GEOM_BC3_1024] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_BC3_1024_nonmut.bin
+U[GEOM_BC3_1024] list roundtrip: 0/262144 words EXACT
+U[GEOM_BC3_1024] list dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_BC3_1024_list.bin
+U[GEOM_RGBA32_256x128] n=3 16B/texel  memreq: lin=0x80000 nonmut=0x81000 list=0x81000  -> format itself UBWC=yes, list kept=yes
+U[GEOM_RGBA32_256x128] linear roundtri[GDBG-i2b] vkfmt=109 ext=256x128 dstw=256 pitch=4096 lsize=524288 | src: base=0x10150e000 pitch=4096 size=0x00400100 info=0x00501382 tm=3 ubwc=1 flag=0x10150d000 flagpitch=0x4001 fmt=24 | dst: 0x10148d000
+[GDBG-i2b] vkfmt=109 ext=256x128 dstw=256 pitch=4096 lsize=524288 | src: base=0x10158f000 pitch=4096 size=0x00400100 info=0x00501382 tm=3 ubwc=1 flag=0x10158e000 flagpitch=0x4001 fmt=24 | dst: 0x10148d000
+[GDBG-i2b] vkfmt=109 ext=128x256 dstw=128 pitch=2048 lsize=524288 | src: base=0x10160f000 pitch=2048 size=0x00800080 info=0x00500082 tm=0 ubwc=0 flag=0x10160f000 flagpitch=0x0 fmt=24 | dst: 0x10148d000
+[GDBG-i2b] vkfmt=109 ext=128x256 dstw=128 pitch=2048 lsize=524288 | src: base=0x10150e000 pitch=2048 size=0x00800080 info=0x00501382 tm=3 ubwc=1 flag=0x10150d000 flagpitch=0x4001 fmt=24 | dst: 0x10148d000
+[GDBG-i2b] vkfmt=109 ext=128x256 dstw=128 pitch=2048 lsize=524288 | src: base=0x10158f000 pitch=2048 size=0x00800080 info=0x00501382 tm=3 ubwc=1 flag=0x10158e000 flagpitch=0x4001 fmt=24 | dst: 0x10148d000
+[GDBG-i2b] vkfmt=109 ext=512x64 dstw=512 pitch=8192 lsize=524288 | src: base=0x10160f000 pitch=8192 size=0x00200200 info=0x00500082 tm=0 ubwc=0 flag=0x10160f000 flagpitch=0x0 fmt=24 | dst: 0x10148d000
+[GDBG-i2b] vkfmt=109 ext=512x64 dstw=512 pitch=8192 lsize=524288 | src: base=0x10150e000 pitch=8192 size=0x00200200 info=0x00501382 tm=3 ubwc=1 flag=0x10150d000 flagpitch=0x4002 fmt=24 | dst: 0x10148d000
+[GDBG-i2b] vkfmt=109 ext=512x64 dstw=512 pitch=8192 lsize=524288 | src: base=0x10158f000 pitch=8192 size=0x00200200 info=0x00501382 tm=3 ubwc=1 flag=0x10158e000 flagpitch=0x4002 fmt=24 | dst: 0x10148d000
+[GDBG-i2b] vkfmt=109 ext=64x512 dstw=64 pitch=1024 lsize=524288 | src: base=0x101611000 pitch=1024 size=0x01000040 info=0x00500082 tm=0 ubwc=0 flag=0x101611000 flagpitch=0x0 fmt=24 | dst: 0x10148d000
+[GDBG-i2b] vkfmt=109 ext=64x512 dstw=64 pitch=1024 lsize=524288 | src: base=0x10150f000 pitch=1024 size=0x01000040 info=0x00501382 tm=3 ubwc=1 flag=0x10150d000 flagpitch=0x8001 fmt=24 | dst: 0x10148d000
+[GDBG-i2b] vkfmt=109 ext=64x512 dstw=64 pitch=1024 lsize=524288 | src: base=0x101591000 pitch=1024 size=0x01000040 info=0x00501382 tm=3 ubwc=1 flag=0x10158f000 flagpitch=0x8001 fmt=24 | dst: 0x10148d000
+[GDBG-i2b] vkfmt=109 ext=256x64 dstw=256 pitch=4096 lsize=262144 | src: base=0x10150f000 pitch=4096 size=0x00200100 info=0x00500082 tm=0 ubwc=0 flag=0x10150f000 flagpitch=0x0 fmt=24 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=109 ext=256x64 dstw=256 pitch=4096 lsize=262144 | src: base=0x10148e000 pitch=4096 size=0x00200100 info=0x00501382 tm=3 ubwc=1 flag=0x10148d000 flagpitch=0x4001 fmt=24 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=109 ext=256x64 dstw=256 pitch=4096 lsize=262144 | src: base=0x1014cf000 pitch=4096 size=0x00200100 info=0x00501382 tm=3 ubwc=1 flag=0x1014ce000 flagpitch=0x4001 fmt=24 | dst: 0x10144d000
+[GDBG-i2b] vkfmt=109 ext=32x256 dstw=32 pitch=512 lsize=131072 | src: base=0x1014cf000 pitch=1024 size=0x00800020 info=0x00500082 tm=0 ubwc=0 flag=0x1014cf000 flagpitch=0x0 fmt=24 | dst: 0x10142d000
+[GDBG-i2b] vkfmt=109 ext=32x256 dstw=32 pitch=512 lsize=131072 | src: base=0x10144e000 pitch=1024 size=0x00800020 info=0x00501382 tm=3 ubwc=1 flag=0x10144d000 flagpitch=0x4001 fmt=24 | dst: 0x10142d000
+[GDBG-i2b] vkfmt=109 ext=32x256 dstw=32 pitch=512 lsize=131072 | src: base=0x10148f000 pitch=1024 size=0x00800020 info=0x00501382 tm=3 ubwc=1 flag=0x10148e000 flagpitch=0x4001 fmt=24 | dst: 0x10142d000
+p: 0/131072 words EXACT
+U[GEOM_RGBA32_256x128] linear dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_256x128_linear.bin
+U[GEOM_RGBA32_256x128] nonmut roundtrip: 0/131072 words EXACT
+U[GEOM_RGBA32_256x128] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_256x128_nonmut.bin
+U[GEOM_RGBA32_256x128] list roundtrip: 0/131072 words EXACT
+U[GEOM_RGBA32_256x128] list dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_256x128_list.bin
+U[GEOM_RGBA32_128x256] n=3 16B/texel  memreq: lin=0x80000 nonmut=0x81000 list=0x81000  -> format itself UBWC=yes, list kept=yes
+U[GEOM_RGBA32_128x256] linear roundtrip: 0/131072 words EXACT
+U[GEOM_RGBA32_128x256] linear dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_128x256_linear.bin
+U[GEOM_RGBA32_128x256] nonmut roundtrip: 0/131072 words EXACT
+U[GEOM_RGBA32_128x256] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_128x256_nonmut.bin
+U[GEOM_RGBA32_128x256] list roundtrip: 0/131072 words EXACT
+U[GEOM_RGBA32_128x256] list dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_128x256_list.bin
+U[GEOM_RGBA32_512x64] n=3 16B/texel  memreq: lin=0x80000 nonmut=0x81000 list=0x81000  -> format itself UBWC=yes, list kept=yes
+U[GEOM_RGBA32_512x64] linear roundtrip: 0/131072 words EXACT
+U[GEOM_RGBA32_512x64] linear dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_512x64_linear.bin
+U[GEOM_RGBA32_512x64] nonmut roundtrip: 0/131072 words EXACT
+U[GEOM_RGBA32_512x64] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_512x64_nonmut.bin
+U[GEOM_RGBA32_512x64] list roundtrip: 0/131072 words EXACT
+U[GEOM_RGBA32_512x64] list dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_512x64_list.bin
+U[GEOM_RGBA32_64x512] n=3 16B/texel  memreq: lin=0x80000 nonmut=0x82000 list=0x82000  -> format itself UBWC=yes, list kept=yes
+U[GEOM_RGBA32_64x512] linear roundtrip: 0/131072 words EXACT
+U[GEOM_RGBA32_64x512] linear dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_64x512_linear.bin
+U[GEOM_RGBA32_64x512] nonmut roundtrip: 0/131072 words EXACT
+U[GEOM_RGBA32_64x512] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_64x512_nonmut.bin
+U[GEOM_RGBA32_64x512] list roundtrip: 0/131072 words EXACT
+U[GEOM_RGBA32_64x512] list dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_64x512_list.bin
+U[GEOM_RGBA32_256x64] n=3 16B/texel  memreq: lin=0x40000 nonmut=0x41000 list=0x41000  -> format itself UBWC=yes, list kept=yes
+U[GEOM_RGBA32_256x64] linear roundtrip: 12464/65536 words MISMATCH  bad[0]=0(r0,c0) bad[N]=53183(r207,c191) zeros=12464 untouched(0xCD)=0  pat=0x5a5a0000 got=0x00000000
+U[GEOM_RGBA32_256x64] linear dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_256x64_linear.bin
+U[GEOM_RGBA32_256x64] nonmut roundtrip: 0/65536 words EXACT
+U[GEOM_RGBA32_256x64] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_256x64_nonmut.bin
+U[GEOM_RGBA32_256x64] list roundtrip: 0/65536 words EXACT
+U[GEOM_RGBA32_256x64] list dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_256x64_list.bin
+U[GEOM_RGBA32_32x256] n=3 16B/texel  memreq: lin=0x40000 nonmut=0x41000 list=0x41000  -> format itself UBWC=yes, list kept=yes
+U[GEOM_RGBA32_32x256] linear roundtrip: 18016/32768 words MISMATCH  bad[0]=512(r16,c0) bad[N]=31743(r991,c31) zeros=18016 untouched(0xCD)=0  pat=0x34a96200 got=0x00000000
+U[GEOM_RGBA32_32x256] linear dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_32x256_linear.bin
+U[GEOM_RGBA32_32x256] nonmut roundtrip: 30848/32768 words MISMATCH  bad[0]=0(r0,c0) bad[N]=32767(r1023,c31) zeros=30848 untouched(0xCD)=0  pat=0x5a5a0000 got=0x00000000
+U[GEOM_RGBA32_32x256] nonmut dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_32x256_nonmut.bin
+U[GEOM_RGBA32_32x256] list roundtrip: 30656/32768 words MISMATCH  bad[0]=16(r0,c16) bad[N]=32767(r1023,c31) zeros=30656 untouched(0xCD)=0  pat=0xb92d9b10 got=0x00000000
+U[GEOM_RGBA32_32x256] list dump: /tmp/opencode/dumps/geomdbg_U_U_GEOM_RGBA32_32x256_list.bin
+
+=== CPU-FILL. fill side check (raw image memory, no r2d readback) ===
+CP[CPUFILL_128] 128x128 linear mem-type-0: B=16384 A=0 zero=0 other=0 (100% B) firstA=18446744073709551615 first0=18446744073709551615 firstOther=18446744073709551615 -> FILL BYTE-CLEAN: the memory is all B, the corruption is in the r2d readback
+CP[CPUFILL_256] 256x256 linear mem-type-0: B=65536 A=0 zero=0 other=0 (100% B) firstA=18446744073709551615 first0=18446744073709551615 firstOther=18446744073709551615 -> FILL BYTE-CLEAN: the memory is all B, the corruption is in the r2d readback
+
+=== CEIL. UBWC ceiling: gate or format ===
+CEIL[R16_TYPELESS          ] n=4  2B/texel  lin=0x00080000 nonmut=0x00082000 list=0x00082000  -> gate is not in the way
+CEIL[R16_UINT              ] n=3  2B/texel  lin=0x00080000 nonmut=0x00082000 list=0x00082000  -> gate is not in the way
+CEIL[CTRL_R16G16           ] n=1  4B/texel  lin=0x00100000 nonmut=0x00102000 list=0x00102000  -> gate is not in the way
+CEIL[R8_TYPELESS           ] n=4  1B/texel  lin=0x00040000 nonmut=0x00040000 list=0x00040000  -> no ceiling (ubwc_possible)
+CEIL[R8_UINT               ] n=3  1B/texel  lin=0x00040000 nonmut=0x00040000 list=0x00040000  -> no ceiling (ubwc_possible)
+CEIL[R32G32B32_TYPELESS    ] n=3 12B/texel  lin=0x00300000 nonmut=0x00300000 list=0x00300000  -> no ceiling (ubwc_possible)
+CEIL[R32G32B32_UINT        ] n=2 12B/texel  lin=0x00300000 nonmut=0x00300000 list=0x00300000  -> no ceiling (ubwc_possible)
+CEIL[CTRL_R32G32B32A32     ] n=1 16B/texel  lin=0x00400000 nonmut=0x00404000 list=0x00404000  -> gate is not in the way
+CEIL[R10G10B10A2_TYPELESS  ] n=2  4B/texel  lin=0x00100000 nonmut=0x00102000 list=0x00102000  -> gate is not in the way
+CEIL[B8G8R8A8_UNORM        ] n=2  4B/texel  lin=0x00100000 nonmut=0x00102000 list=0x00102000  -> gate is not in the way
+CEIL[BC1_UNORM             ] n=2  1B/texel  lin=0x00020000 nonmut=0x00022000 list=0x00022000  -> gate is not in the way
+CEIL[BC3_UNORM             ] n=2  2B/texel  lin=0x00040000 nonmut=0x00044000 list=0x00044000  -> gate is not in the way
+CEIL[BC7_UNORM             ] n=2  2B/texel  lin=0x00040000 nonmut=0x00044000 list=0x00044000  -> gate is not in the way
+
+V[BGR+R32] 512x512 bpt=4  memreq: linear=0x100000 optimal=0x100000 (with a 64x64 tile 512x512 divides exactly, size does NOT distinguish)
+V[BGR+R32] size-detector  500x500: linear=0xfa000 (500*500*4=0xf4240) optimal=0x100000 => OPTIMAL TILING (padded up to 512x512)
+V[BGR+R32] sparse-detector  same list + SPARSE_RESIDENCY -> SUCCESS  => tiling allowed
+V[BGR+R32] linear (control)     R32 view: as written=262144  bytes swapped=0  other=0
+V[BGR+R32] optimal (decision)   R32 view: as written=1024  bytes swapped=0  other=261120
+V[BGR+R32] texels: (0,0) written 11223344 | linear 11223344  optimal 11443322
+V[BGR+R32]         (y=256,x=256) written 11243444 | linear 11243444  optimal 11443424
+V[BGR+R32] VERDICT: R32 view DIVERGED in 261120/262144 words (first (y=0 x=0), last (y=511 x=511)) -> visibility through the second view CHANGED
+DONE
