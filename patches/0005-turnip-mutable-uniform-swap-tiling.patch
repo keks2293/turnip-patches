@@ -90,7 +90,7 @@ index c0c9480dbe2..e10960b7be5 100644
 +          !tu6_format_list_swaps_are_uniform(fmt_list);
  }
  
- static bool
+ bool
 diff --git a/src/freedreno/vulkan/tu_formats.h b/src/freedreno/vulkan/tu_formats.h
 index c6d086f4007..6f3cb3c9a86 100644
 --- a/src/freedreno/vulkan/tu_formats.h

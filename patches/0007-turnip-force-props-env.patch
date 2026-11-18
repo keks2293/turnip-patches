@@ -5,7 +5,7 @@ Relations: none - touches only diagnostics, does not affect format
 lists.
 
 diff --git a/src/freedreno/vulkan/tu_device.cc b/src/freedreno/vulkan/tu_device.cc
-index 3c904bf3d70..07f36d2c44d 100644
+index 0d3e63e..2f02208 100644
 --- a/src/freedreno/vulkan/tu_device.cc
 +++ b/src/freedreno/vulkan/tu_device.cc
 @@ -15,6 +15,8 @@
@@ -17,7 +17,7 @@ index 3c904bf3d70..07f36d2c44d 100644
  #include "util/cache_ops.h"
  #include "util/disk_cache.h"
  #include "util/driconf.h"
-@@ -1679,6 +1681,103 @@ static const VkQueueFamilyProperties tu_sparse_queue_family_properties = {
+@@ -1704,6 +1706,112 @@ static const VkQueueFamilyProperties tu_sparse_queue_family_properties = {
     .minImageTransferGranularity = { 1, 1, 1 },
  };
  
@@ -72,11 +72,8 @@ index 3c904bf3d70..07f36d2c44d 100644
 +      { "has_persistent_counter", &info->props.has_persistent_counter },
 +      { "has_abs_bin_mask", &info->props.has_abs_bin_mask },
 +      { "ubwc_coherency_quirk", &info->props.ubwc_coherency_quirk },
-+      { "cs_lock_unlock_quirk", &info->props.cs_lock_unlock_quirk },
 +      { "enable_tp_ubwc_flag_hint",
 +        &info->props.enable_tp_ubwc_flag_hint },
-+      { "r8g8_faulty_fast_clear_quirk",
-+        &info->props.r8g8_faulty_fast_clear_quirk },
 +   };
 +
 +   char *buf = strdup(force);
@@ -86,29 +83,41 @@ index 3c904bf3d70..07f36d2c44d 100644
 +   for (char *item = strtok(buf, ","); item; item = strtok(NULL, ",")) {
 +      bool found = false;
 +
-+      for (unsigned i = 0; i < ARRAY_SIZE(flags); i++) {
-+         if (strcmp(item, flags[i].name))
-+            continue;
-+
-+         *flags[i].val = true;
-+
-+         /* VPC in GMEM without buffer sizes is useless: the cache is not
-+          * allocated, while accesses go by a zero size. We substitute the
-+          * a750 (a7xx_gen3) values if not set explicitly, and say so.
-+          */
-+         if (!strcmp(item, "has_gmem_vpc_attr_buf")) {
-+            if (!info->props.sysmem_vpc_attr_buf_size)
-+               info->props.sysmem_vpc_attr_buf_size = 0x20000;
-+            if (!info->props.gmem_vpc_attr_buf_size)
-+               info->props.gmem_vpc_attr_buf_size = 0xc000;
-+            mesa_logi("TU_FORCE_PROPS: vpc_attr_buf_size sysmem=0x%x gmem=0x%x",
-+                      info->props.sysmem_vpc_attr_buf_size,
-+                      info->props.gmem_vpc_attr_buf_size);
-+         }
-+
-+         mesa_logi("TU_FORCE_PROPS: %s", flags[i].name);
++      /* Quirks are bitfields in info->quirks, their address cannot be
++       * taken, so they live outside the props table. In Mesa 26 the same
++       * flags lived in props: cs_lock_unlock_quirk and
++       * r8g8_faulty_fast_clear_quirk; in Mesa 27 these are QCTDD quirks. */
++      if (!strcmp(item, "QCTDD08407086_cs_lock_unlock")) {
++         info->quirks.QCTDD08407086_cs_lock_unlock = true;
 +         found = true;
-+         break;
++      } else if (!strcmp(item, "QCTDD12766770_r8g8_fc_alignment")) {
++         info->quirks.QCTDD12766770_r8g8_fc_alignment = true;
++         found = true;
++      } else {
++         for (unsigned i = 0; i < ARRAY_SIZE(flags); i++) {
++            if (strcmp(item, flags[i].name))
++               continue;
++
++            *flags[i].val = true;
++
++            /* VPC in GMEM without buffer sizes is useless: the cache is not
++             * allocated, while accesses go by a zero size. We substitute the
++             * a750 (a7xx_gen3) values if not set explicitly, and say so.
++             */
++            if (!strcmp(item, "has_gmem_vpc_attr_buf")) {
++               if (!info->props.sysmem_vpc_attr_buf_size)
++                  info->props.sysmem_vpc_attr_buf_size = 0x20000;
++               if (!info->props.gmem_vpc_attr_buf_size)
++                  info->props.gmem_vpc_attr_buf_size = 0xc000;
++               mesa_logi("TU_FORCE_PROPS: vpc_attr_buf_size sysmem=0x%x gmem=0x%x",
++                         info->props.sysmem_vpc_attr_buf_size,
++                         info->props.gmem_vpc_attr_buf_size);
++            }
++
++            mesa_logi("TU_FORCE_PROPS: %s", flags[i].name);
++            found = true;
++            break;
++         }
 +      }
 +
 +      if (!found)
@@ -121,7 +130,7 @@ index 3c904bf3d70..07f36d2c44d 100644
  VkResult
  tu_physical_device_init(struct tu_physical_device *device,
                          struct tu_instance *instance)
-@@ -1693,9 +1792,11 @@ tu_physical_device_init(struct tu_physical_device *device,
+@@ -1718,9 +1826,11 @@ tu_physical_device_init(struct tu_physical_device *device,
                                 device->dev_id.chip_id, device->dev_id.gpu_id);
     }
  
