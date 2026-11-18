@@ -1,0 +1,66 @@
+diff --git a/src/freedreno/perfcntrs/fdperf.c b/src/freedreno/perfcntrs/fdperf.c
+index 751c7dc..bcb7ff8 100644
+--- a/src/freedreno/perfcntrs/fdperf.c
++++ b/src/freedreno/perfcntrs/fdperf.c
+@@ -95,6 +95,7 @@ static struct {
+    int num_configured_counters;
+ 
+    uint32_t seqno;
++   uint32_t samples_read;
+    bool discontinuity;
+ } dev = {
+    .perfcntr_config = {
+@@ -492,6 +493,8 @@ resample_perfcntr_stream(void)
+          group->sample_time_delta[ctr] = delta(previous_sample_time, ts);
+       }
+    }
++
++   dev.samples_read++;
+ }
+ 
+ /* sample all the counters: */
+@@ -946,9 +949,41 @@ out:
+ static void
+ dump_counters(void)
+ {
+-   resample();
+-   sleep_us(options.refresh_ms * 1000);
+-   resample();
++   /* legacy path (no kernel stream support): keep the old behavior */
++   if (dev.io) {
++      resample();
++      sleep_us(options.refresh_ms * 1000);
++      resample();
++   } else {
++      /* The kernel emits its first sample one period after the
++       * PERFCNTR_CONFIG ioctl, and the sample kthread adds a few more
++       * ms, so a single resample after a fixed sleep races it (prints
++       * zeros).  Worse, the first sample read degenerates to "counter
++       * minus zero": cumulative since the last counter reset, not a
++       * windowed value, and sample_time_delta is the absolute CP
++       * timestamp, so the printed % is garbage.
++       *
++       * Poll until at least two samples have been read; then the
++       * printed values are the delta between the two last kernel
++       * samples — a true one-window value — and sample_time_delta is
++       * the real CP timestamp delta, so the % is meaningful too.
++       */
++      uint64_t start_time = gettime_us();
++      uint64_t timeout_us = (uint64_t)(options.refresh_ms * 5 + 5000) * 1000;
++
++      while (dev.samples_read < 2) {
++         resample_perfcntr_stream();
++         if (dev.samples_read >= 2)
++            break;
++         usleep(10000);
++         if (dev.samples_read == 0 &&
++             gettime_us() - start_time > timeout_us) {
++            fprintf(stderr, "fdperf: no kernel samples after %u s\n",
++                    (unsigned)((gettime_us() - start_time) / 1000000));
++            break;
++         }
++      }
++   }
+ 
+    for (unsigned i = 0; i < dev.ngroups; i++) {
+       const struct counter_group *group = &dev.groups[i];

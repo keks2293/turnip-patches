@@ -1,0 +1,203 @@
+// fdperf.cfg-vertex - a vertex-oriented counter set for RE4 on Adreno 740
+// (a7xx).
+//
+// Why: an exact per-client DRAM split and the full budget of the vertex
+// blocks.
+//   * UCHE 12/12 per-client: VBIF_READ_BEATS_{VFD,TP,SP,PC} +
+//     READ_REQUESTS_{VFD,TP,SP,PC} + BUSY/STALL_ARB/VBIF-LAT*2 - the vertex
+//     share of DRAM reads directly (the per-client lines did not fit the hw
+//     budget in the main cfg and were silently not measured).
+//   * VFD 8/8: BUSY, STALL_UCHE, STALL_VPC_ALLOC, STARVE_UCHE, RBUFFER_FULL,
+//     DECODED_ATTRIBUTE_BYTES, TOTAL_VERTICES, NUM_ATTRIBUTES.
+//   * PC 8/8: BUSY, STALL_VFD/VPC/UCHE, STARVE_INDEX, VS_INVOCATIONS,
+//     IA_VERTICES, 3D_DRAWCALLS (these did not fit the budget in the main
+//     cfg - the draw rate was not measured in the 17.11 run).
+//   * CCU 5/5, LRZ 4/4, CMP 4/4, RBBM 4/4 - all within the hw budgets.
+//
+// HW BUDGETS (a7xx, a7xx_perfcntrs.json.h).  fdperf reads only
+// counter0..num_counters-1 from the cfg, where num_counters is the size of
+// the group hw table; extra lines are SILENTLY IGNORED (no error, no
+// "reducing" in the output):
+//   UCHE=12, CP=13, PC=8, VFD=8, VPC=6, TSE=4, RAS=4, HLSQ=6, TP=12,
+//   SP=24, RB=8, CCU=5, LRZ=4, UFC=4, CMP=4, RBBM=4, VSC=2.
+// Details: docs/fdperf-a7xx.md, section "hw budgets and silent-ignore".
+//
+// What is NOT here (the budget is exhausted, another cfg/run is needed):
+//   * UCHE_EVICTS, UCHE_UBWC_READ/WRITE_BEATS,
+//     UCHE_READ_REQUESTS_TP_UBWC/NONUBWC - UBWC is still unverified;
+//   * UCHE_VBIF_READ/WRITE_BEATS_CH0/CH1 (total DRAM) - sum the per-client
+//     beats ~ DRAM (check against 942 Mbeats/s from the 17.11 run);
+//   * per-client beats/req for HLSQ and LRZ (negligible clients).
+//
+// The selectors are the registration numbers of the countable from
+// a7xx_perfcntrs.json.h (NOT alphabetical indices).  CP counter0 is reserved
+// by fdperf for the GPU frequency (ALWAYS_COUNT), as in the main cfg.
+//
+// Run:
+//   scripts/fdperf-sample.sh <sec> <window-ms> <file> tools/fdperf/fdperf.cfg-vertex
+
+FD740 = {
+  CP = {
+    counter0  = 0;    // reserved (ALWAYS_COUNT, frequency)
+    counter1  = 2;    // PERF_CP_BUSY_CYCLES
+    counter2  = 15;   // PERF_CP_SQE_IDLE
+    counter3  = 29;   // PERF_CP_SQE_DRAW_EXEC
+    counter4  = 11;   // PERF_CP_CONTEXT_DONE
+    counter5  = 9;    // PERF_CP_MODE_SWITCH
+    counter6  = 12;   // PERF_CP_CACHE_FLUSH
+    counter7  = 47;   // PERF_CP_VBIF_READ_BEATS
+    counter8  = 48;   // PERF_CP_VBIF_WRITE_BEATS
+    counter9  = 32;   // PERF_CP_MEMORY_POOL_EMPTY
+    counter10 = 34;   // PERF_CP_MEMORY_POOL_ABOVE_THRESH
+    counter11 = 3;    // PERF_CP_NUM_PREEMPTIONS
+  }
+
+  RBBM = {
+    counter0 = 1;    // PERF_RBBM_ALWAYS_ON (divisor for the duty cycle)
+    counter1 = 9;    // PERF_RBBM_VBIF_BUSY
+    counter2 = 12;   // PERF_RBBM_UCHE_BUSY
+    counter3 = 13;   // PERF_RBBM_HLSQ_BUSY
+  }
+
+  PC = {
+    counter0 = 0;    // PERF_PC_BUSY_CYCLES
+    counter1 = 2;    // PERF_PC_STALL_CYCLES_VFD
+    counter2 = 4;    // PERF_PC_STALL_CYCLES_VPC
+    counter3 = 5;    // PERF_PC_STALL_CYCLES_UCHE
+    counter4 = 10;   // PERF_PC_STARVE_CYCLES_FOR_INDEX
+    counter5 = 25;   // PERF_PC_VS_INVOCATIONS
+    counter6 = 20;   // PERF_PC_IA_VERTICES
+    counter7 = 28;   // PERF_PC_3D_DRAWCALLS
+  }
+
+  VFD = {
+    counter0 = 0;    // PERF_VFD_BUSY_CYCLES
+    counter1 = 1;    // PERF_VFD_STALL_CYCLES_UCHE
+    counter2 = 2;    // PERF_VFD_STALL_CYCLES_VPC_ALLOC
+    counter3 = 5;    // PERF_VFD_STARVE_CYCLES_UCHE
+    counter4 = 6;    // PERF_VFD_RBUFFER_FULL
+    counter5 = 8;    // PERF_VFD_DECODED_ATTRIBUTE_BYTES
+    counter6 = 17;   // PERF_VFD_TOTAL_VERTICES
+    counter7 = 9;    // PERF_VFD_NUM_ATTRIBUTES
+  }
+
+  HLSQ = {
+    counter0 = 0;    // PERF_HLSQ_BUSY_CYCLES
+    counter1 = 1;    // PERF_HLSQ_STALL_CYCLES_UCHE
+    counter2 = 3;    // PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE
+    counter3 = 4;    // PERF_HLSQ_UCHE_LATENCY_CYCLES
+    counter4 = 5;    // PERF_HLSQ_UCHE_LATENCY_COUNT
+    counter5 = 22;   // PERF_HLSQ_FS_STALL_CYCLES
+  }
+
+  VPC = {
+    counter0 = 0;    // PERF_VPC_BUSY_CYCLES
+    counter1 = 1;    // PERF_VPC_WORKING_CYCLES
+    counter2 = 2;    // PERF_VPC_STALL_CYCLES_UCHE
+    counter3 = 16;   // PERF_VPC_VS_BUSY_CYCLES
+    counter4 = 18;   // PERF_VPC_VS_WORKING_CYCLES
+    counter5 = 27;   // PERF_VPC_NUM_ATTR_REQ_LM
+  }
+
+  TSE = {
+    counter0 = 0;    // PERF_TSE_BUSY_CYCLES
+    counter1 = 1;    // PERF_TSE_CLIPPING_CYCLES
+    counter2 = 5;    // PERF_TSE_STARVE_CYCLES_PC
+    counter3 = 6;    // PERF_TSE_INPUT_PRIM
+  }
+
+  RAS = {
+    counter0 = 0;    // PERF_RAS_BUSY_CYCLES
+    counter1 = 2;    // PERF_RAS_STALL_CYCLES_LRZ
+    counter2 = 3;    // PERF_RAS_STARVE_CYCLES_TSE
+    counter3 = 11;   // PERF_RAS_LRZ_INTF_WORKING_CYCLES
+  }
+
+  UCHE = {
+    counter0  = 0;   // PERF_UCHE_BUSY_CYCLES
+    counter1  = 1;   // PERF_UCHE_STALL_CYCLES_ARBITER
+    counter2  = 2;   // PERF_UCHE_VBIF_LATENCY_CYCLES
+    counter3  = 3;   // PERF_UCHE_VBIF_LATENCY_SAMPLES
+    counter4  = 5;   // PERF_UCHE_VBIF_READ_BEATS_VFD
+    counter5  = 4;   // PERF_UCHE_VBIF_READ_BEATS_TP
+    counter6  = 8;   // PERF_UCHE_VBIF_READ_BEATS_SP
+    counter7  = 36;  // PERF_UCHE_VBIF_READ_BEATS_PC
+    counter8  = 10;  // PERF_UCHE_READ_REQUESTS_VFD
+    counter9  = 9;   // PERF_UCHE_READ_REQUESTS_TP
+    counter10 = 13;  // PERF_UCHE_READ_REQUESTS_SP
+    counter11 = 37;  // PERF_UCHE_READ_REQUESTS_PC
+  }
+
+  TP = {
+    counter0 = 0;    // PERF_TP_BUSY_CYCLES
+    counter1 = 1;    // PERF_TP_STALL_CYCLES_UCHE
+    counter2 = 2;    // PERF_TP_LATENCY_CYCLES
+    counter3 = 3;    // PERF_TP_LATENCY_TRANS
+    counter4 = 55;   // PERF_TP_STARVE_CYCLES_UCHE
+    counter5 = 10;   // PERF_TP_OUTPUT_PIXELS
+    counter6 = 6;    // PERF_TP_L1_CACHELINE_REQUESTS
+    counter7 = 7;    // PERF_TP_L1_CACHELINE_MISSES
+  }
+
+  SP = {
+    counter0  = 0;   // PERF_SP_BUSY_CYCLES
+    counter1  = 1;   // PERF_SP_ALU_WORKING_CYCLES
+    counter2  = 2;   // PERF_SP_EFU_WORKING_CYCLES
+    counter3  = 4;   // PERF_SP_STALL_CYCLES_TP
+    counter4  = 5;   // PERF_SP_STALL_CYCLES_UCHE
+    counter5  = 6;   // PERF_SP_STALL_CYCLES_RB
+    counter6  = 7;   // PERF_SP_NON_EXECUTION_CYCLES
+    counter7  = 101; // PERF_SP_PIXELS
+    counter8  = 44;  // PERF_SP_FS_INSTRUCTIONS
+    counter9  = 83;  // PERF_SP_GM_LOAD_LATENCY_CYCLES
+    counter10 = 84;  // PERF_SP_GM_LOAD_LATENCY_SAMPLES
+    counter11 = 119; // PERF_SP_TEXTURE_FETCH_LATENCY_CYCLES
+    counter12 = 120; // PERF_SP_TEXTURE_FETCH_LATENCY_SAMPLES
+    counter13 = 68;  // PERF_SP_LOW_EFFICIENCY_STARVED_BY_TP
+  }
+
+  RB = {
+    counter0 = 0;    // PERF_RB_BUSY_CYCLES
+    counter1 = 5;    // PERF_RB_STARVE_CYCLES_SP
+    counter2 = 7;    // PERF_RB_STARVE_CYCLES_CCU
+    counter3 = 12;   // PERF_RB_Z_READ
+    counter4 = 13;   // PERF_RB_Z_WRITE
+    counter5 = 14;   // PERF_RB_C_READ
+    counter6 = 15;   // PERF_RB_C_WRITE
+    counter7 = 44;   // PERF_RB_STALL_CYCLES_CCU
+  }
+
+  VSC = {
+    counter0 = 0;    // PERF_VSC_BUSY_CYCLES
+    counter1 = 2;    // PERF_VSC_STALL_CYCLES_UCHE
+  }
+
+  CCU = {
+    counter0 = 0;    // PERF_CCU_BUSY_CYCLES
+    counter1 = 1;    // PERF_CCU_STALL_CYCLES_RB_DEPTH_RETURN
+    counter2 = 2;    // PERF_CCU_STALL_CYCLES_RB_COLOR_RETURN
+    counter3 = 8;    // PERF_CCU_GMEM_READ
+    counter4 = 9;    // PERF_CCU_GMEM_WRITE
+  }
+
+  LRZ = {
+    counter0 = 0;    // PERF_LRZ_BUSY_CYCLES
+    counter1 = 6;    // PERF_LRZ_STALL_CYCLES_UCHE
+    counter2 = 7;    // PERF_LRZ_LRZ_READ
+    counter3 = 17;   // PERF_LRZ_TOTAL_PIXEL
+  }
+
+  CMP = {
+    counter0 = 0;    // PERF_CMPDECMP_STALL_CYCLES_ARB
+    counter1 = 1;    // PERF_CMPDECMP_VBIF_LATENCY_CYCLES
+    counter2 = 2;    // PERF_CMPDECMP_VBIF_LATENCY_SAMPLES
+    counter3 = 3;    // PERF_CMPDECMP_VBIF_READ_DATA_CCU
+  }
+
+  UFC = {
+    counter0 = 0;    // PERF_UFC_BUSY_CYCLES
+    counter1 = 43;   // PERF_UFC_MISS_LATENCY_CYCLES
+    counter2 = 44;   // PERF_UFC_MISS_LATENCY_SAMPLES
+    counter3 = 40;   // PERF_UFC_PREFETCH_STALLED_CYCLES
+  }
+}
