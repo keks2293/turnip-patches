@@ -26,8 +26,9 @@ as zeros.
 | | |
 |---|---|
 | `docs/analysis.md` | the analysis: symptom, cause, measurements, applicability boundaries, reproduction; `docs/rp6-vkd3d-analysis.md` - the original short analysis (21.09.2026) it grew out of |
+| `docs/mesa-27-plan.md` | the move to Mesa 27.0-devel: the rebase matrix of 0001-0012, what changed upstream, the build rules with the cache in `/tmp` |
 | `patches/` | 0001-0012 - the Mesa patches that ship; `PATCHES.md` - the origin of 0001-0003 |
-| `experiments/` | `exp-1`-`exp-11` - **not** for commit: reproducible checks of the analysis' conclusions |
+| `experiments/` | `exp-1`-`exp-12` - **not** for commit: reproducible checks of the analysis' conclusions |
 | `tests/` | `rp6-vkd3d-sparse-test.c` + shaders; every result was obtained with it |
 | `scripts/` | build and runs, including the experiment script and game launch |
 | `container/` | toolchain Containerfile (there is no compiler on the device) |
@@ -157,7 +158,8 @@ application does a fast-clear through a view with float interpretation.
 No probe closes this; the risk is recorded in the patch header.
 
 Patches **0007** (`TU_FORCE_PROPS`, diagnostics only) and **0008**
-(`gen2`: `has_generic_clear` + `r8g8_faulty_fast_clear_quirk`) live in
+(`gen2`: `has_generic_clear` + `r8g8_faulty_fast_clear_quirk`, renamed
+in Mesa 27 to the quirk `QCTDD12766770_r8g8_fc_alignment`) live in
 `patches/` but are not in the README table - by definition 0007 must
 not work without environment variables, 0008 is switched by the device
 table.
@@ -234,6 +236,7 @@ never go to mesa themselves - only their results do, as `patches/000N`.
 | `exp-9-single-channel-swap-vacuous` | exactly 2 of 72 classes get tiling (§21.3) | `0010` | not moved yet |
 | `exp-10-is-mutable-without-ubwc` | is_mutable alone does not break anything (§21.4) | — | — |
 | `exp-11-ubwc-compat-r16-and-10bit` | 8 of 72 classes with UBWC, the gate is what lifts it (§21.6) | `0011` | not moved yet |
+| `exp-12-ubwc-bc-stageA-format-gate` + `exp-12-ubwc-bc-stageB-compat-mode` | the HW A740 does BC+UBWC: CEIL nonmut > lin (BC1 `0x20000` → `0x22000`, BC3/7 `0x40000` → `0x44000`), the list path keeps UBWC after stage B; the BC-copy roundtrip is broken on the base, independent of UBWC | — (the BC-copy breakage is a separate thread) | — |
 
 ## What was verified by measurement
 
@@ -265,6 +268,7 @@ A short list; the podman invocations and the step order are in the
 
 ```sh
 scripts/build-turnip.sh            # Mesa + patches, turnip only, KMD=msm
+scripts/build-turnip-mesa27.sh     # Mesa 27.0-devel: build dir and ccache in /tmp (the rules below)
 scripts/rebuild-turnip-msm.sh      # incremental, if only flags changed
 scripts/build-test.sh              # build the test (in the container)
 scripts/run-test.sh ""                       results/test-stock.log
@@ -272,6 +276,9 @@ scripts/run-test.sh out/freedreno_icd.json    results/test-patched.log
 scripts/run-experiment-mutableen.sh          # re-check the MUTABLEEN conclusion
 scripts/run-game.sh stock 300                # the game (RE4, DX12) on the packaged driver
 scripts/run-game.sh patched 120              # the game on the patched one (VK_DRIVER_FILES)
+scripts/fdperf-sample.sh 140 1000 out [cfg]  # per-block GPU counters (root; docs/fdperf-a7xx.md; cfg: fdperf.cfg / fdperf.cfg-vertex)
+scripts/fdperf-analyze.py <file> [tsv]       # turn fdperf samples into per-block load (busy%)
+scripts/fdperf-align.py <tsv> <freq> <csv> <epoch>  # overlay the windows on the MangoHud CSV + cur_freq
 ```
 
 Launching the game requires `CWD` = the game folder: otherwise RE4
@@ -294,6 +301,31 @@ the two Containerfiles in `container/`). `-Dplatforms=` in
 `scripts/build-turnip.sh` affects more than the test: without the WSI
 extensions the driver fails `vkCreateInstance` under proton, see
 section 9 of the analysis.
+
+## Build rules (cache in `/tmp`)
+
+`/var` is the SD card (`mmcblk0p3`); every Mesa rebuild writes hundreds
+of megabytes of objects and cache and wears it out. Therefore:
+
+1. **The cache and the build directory live in `/tmp`** (tmpfs, nothing
+   reaches the card): `CCACHE_DIR=/tmp/opencode/ccache`,
+   `CCACHE_MAXSIZE=1G`, `BUILD=/tmp/opencode/mesa27-build`. On the SD
+   card - only the sources (once, ~0.5 GB) and reads.
+2. **`-j2`**, not `-j$(nproc)`: the 7.3 GiB of RAM are shared with the
+   GPU.
+3. **Do not build while the game is running** (the script checks for
+   `re4.exe`/`wine`).
+4. **Never use `git checkout` in the patched tree** - only `git apply -R`.
+5. **Clean up after yourself**: `rm -rf $BUILD`, `ccache -C` when the
+   tmpfs is full.
+6. **The container storage in `/tmp` too**, if the image is missing:
+   `podman --root /tmp/opencode/containers/storage --runroot
+   /tmp/opencode/containers/run`.
+7. **No reboot is needed**: the driver is handed over through
+   `VK_DRIVER_FILES`.
+
+The full breakdown (the rebase matrix on 27.0-devel, the space budget,
+the commands) - [`docs/mesa-27-plan.md`](docs/mesa-27-plan.md).
 
 ## Build and tests
 
