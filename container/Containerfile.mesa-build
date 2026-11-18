@@ -8,25 +8,30 @@ RUN dnf -y install \
         xcb-util-keysyms-devel \
         wayland-devel wayland-protocols-devel \
         byacc bison flex \
+        libconfig-devel ncurses-devel \
     && dnf clean all
 
-# The WSI package block is needed for -Dplatforms=x11,wayland. Without it meson
-# configures the build, but the finished driver will have neither
+# The WSI package block is needed for -Dplatforms=x11,wayland.  Without it
+# meson still configures the build, but the resulting driver has neither
 # VK_KHR_xcb_surface nor VK_KHR_wayland_surface, and any DX12 application
-# under proton crashes on instance creation (see scripts/build-turnip.sh).
+# under proton dies on instance creation (see scripts/build-turnip.sh).
 # libxcb-devel in Fedora also covers xcb-randr/dri3/present/shm/xfixes,
 # libX11-devel — x11-xcb, libXrandr-devel — xrandr (xlib-lease, meson.build:2375).
-# Package names are written with exact case: in Fedora it is libXrandr-devel,
-# not libxrandr-devel, and dnf metadata is case-insensitive, so a typo
-# gives "No match for argument" instead of an understandable error.
+# Package names are case-sensitive: in Fedora it is libXrandr-devel, not
+# libxrandr-devel, and dnf metadata is case-insensitive, so a typo gives
+# "No match for argument" instead of a clear error.
 #
-# byacc/bison/flex are mandatory: without them `meson setup` aborts at
-# meson.build:2216 (parser generation), and it never gets to WSI.
-# ccache is useless without them, so they are installed together with the toolchain.
+# byacc/bison/flex are mandatory: without them `meson setup` stops at
+# meson.build:2216 (parser generation) and never reaches WSI.
+# ccache is useless without them, so they go in with the toolchain.
 
 # ccache speeds up the "patch -> rebuild" loop (scripts/rebuild-turnip-msm.sh),
-# which otherwise compiles Mesa from scratch every time. The cache is shared and
-# survives container recreation if ~/.cache/ccache is mounted.
+# which otherwise recompiles Mesa from scratch every time.  The cache is shared
+# and survives container recreation if ~/.cache/ccache is mounted.
+#
+# libconfig-devel + ncurses-devel are only for fdperf (per-block GPU counters,
+# docs/mesa-27-plan.md): without them meson silently skips fdperf
+# (build_by_default stays false) and the build does not fail.
 ENV CCACHE_DIR=/ccache
 ENV CC="ccache gcc"
 ENV CXX="ccache g++"
