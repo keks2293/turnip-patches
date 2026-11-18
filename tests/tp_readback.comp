@@ -1,0 +1,23 @@
+/* TP-readback: texelFetch 512x512 through the texture path (not r2d).
+ * A discriminator of the direction of the broken r2d copies (BC,
+ * R8-UBWC):
+ *   - the whole image is non-zero -> the r2d fill is fine, what breaks
+ *     is the r2d-readback;
+ *   - non-zero only in a prefix -> the r2d fill writes a partial
+ *     result.
+ * A zero BC block decodes to (0,0,0,0), the pattern bytes are
+ * non-zero.
+ * Built into tp_readback_spv.h: scripts/gen-tp-readback-spv.sh
+ */
+#version 450
+layout(local_size_x = 32, local_size_y = 32) in;
+layout(set = 0, binding = 0) uniform texture2D tex;
+layout(set = 0, binding = 1) uniform sampler smp;
+layout(set = 0, binding = 2) buffer Out { uint data[]; };
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    vec4 c = texelFetch(sampler2D(tex, smp), p, 0);
+    uvec4 q = uvec4(clamp(c, 0.0, 1.0) * 255.0 + 0.5);
+    data[p.y * 512 + p.x] = q.x | (q.y << 8) | (q.z << 16) | (q.w << 24);
+}

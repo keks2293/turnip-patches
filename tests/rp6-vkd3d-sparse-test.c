@@ -164,6 +164,7 @@
  * all compatibility lists that vkd3d is able to build (those with
  * formats >= 2 - that is the only case where it sets MUTABLE_FORMAT_BIT). */
 #include "vkd3d-fmt-classes.h"
+#include "tp_readback_spv.h"
 
 static const uint32_t cast_rgba_spv[] = {
     0x07230203, 0x00010000, 0x000d000b, 0x00000044, 0x00000000, 0x00020011, 0x00000001, 0x0006000b,
@@ -1204,22 +1205,240 @@ done:
         if (v[t].img != VK_NULL_HANDLE) vkDestroyImage(dev, v[t].img, NULL);
 }
 
+/* TP readback: read the image through the texture path (texelFetch in a
+ * compute shader) instead of through r2d - a discriminator for the
+ * direction of the broken r2d copy:
+ *   - nz > 90% -> fill (r2d buffer->image) wrote real data, the broken
+ *     one is r2d-readback (image->buffer);
+ *   - nz small (a prefix) -> fill wrote a partial result;
+ *   - nz == 0 -> fill wrote zeros (or the image is empty).
+ * The image must be in TRANSFER_SRC_OPTIMAL (that is how it stays after
+ * the roundtrip cycle).  A zero BC block decodes to (0,0,0,0), the pattern
+ * bytes are non-zero, so nz counts the "real" texels honestly. */
+static void tp_readback_probe(VkDevice dev, VkQueue q, VkCommandPool pool, const char *tag,
+                              const char *which, VkImage img, VkFormat fmt)
+{
+    VkImageView v = VK_NULL_HANDLE;
+    VkSampler sam = VK_NULL_HANDLE;
+    VkDescriptorSetLayout dsl = VK_NULL_HANDLE;
+    VkPipelineLayout pl = VK_NULL_HANDLE;
+    VkPipeline pipe = VK_NULL_HANDLE;
+    VkDescriptorPool dp = VK_NULL_HANDLE;
+    VkDescriptorSet ds = VK_NULL_HANDLE;
+    VkBuffer rb = VK_NULL_HANDLE;
+    VkDeviceMemory rbm = VK_NULL_HANDLE;
+
+    VkImageViewCreateInfo ivci = { .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                                   .image = img,
+                                   .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                                   .format = fmt,
+                                   .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+    if (vkCreateImageView(dev, &ivci, NULL, &v) != VK_SUCCESS) {
+        printf("T[%s/%s] create image view failed\n", tag, which);
+        return;
+    }
+    VkSamplerCreateInfo sci = { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+                                .magFilter = VK_FILTER_NEAREST,
+                                .minFilter = VK_FILTER_NEAREST,
+                                .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+                                .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                                .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                                .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                                .anisotropyEnable = VK_FALSE,
+                                .compareEnable = VK_FALSE,
+                                .unnormalizedCoordinates = VK_FALSE };
+    if (vkCreateSampler(dev, &sci, NULL, &sam) != VK_SUCCESS)
+        goto fail;
+
+    VkDescriptorSetLayoutBinding dsb[3] = {
+        { 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
+        { 1, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
+        { 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
+    };
+    VkDescriptorSetLayoutCreateInfo dslci = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+                                              NULL, 0, 3, dsb };
+    if (vkCreateDescriptorSetLayout(dev, &dslci, NULL, &dsl) != VK_SUCCESS)
+        goto fail;
+    VkPipelineLayoutCreateInfo plci = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, NULL, 0, 1,
+                                        &dsl, 0, NULL };
+    if (vkCreatePipelineLayout(dev, &plci, NULL, &pl) != VK_SUCCESS)
+        goto fail;
+    pipe = make_compute_pipe(dev, pl, tp_readback_spv, (uint32_t)sizeof(tp_readback_spv));
+    if (pipe == VK_NULL_HANDLE)
+        goto fail;
+
+    VkBufferCreateInfo rbci = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                                .size = (VkDeviceSize)W * H * 4,
+                                .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                .sharingMode = VK_SHARING_MODE_EXCLUSIVE };
+    if (vkCreateBuffer(dev, &rbci, NULL, &rb) != VK_SUCCESS)
+        goto fail;
+    VkMemoryRequirements rbr;
+    vkGetBufferMemoryRequirements(dev, rb, &rbr);
+    if (alloc_mem(dev, rbr.size, 0, &rbm) != VK_SUCCESS)
+        goto fail;
+    if (vkBindBufferMemory(dev, rb, rbm, 0) != VK_SUCCESS)
+        goto fail;
+    /* 0xCD pre-fill: "the shader did not touch it" is distinguished from
+     * "the shader wrote 0" */
+    {
+        unsigned char *p;
+        if (vkMapMemory(dev, rbm, 0, rbr.size, 0, (void **)&p) != VK_SUCCESS)
+            goto fail;
+        memset(p, 0xCD, (size_t)W * H * 4);
+        vkUnmapMemory(dev, rbm);
+    }
+
+    VkDescriptorPoolSize dpsz[3] = { { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1 },
+                                     { VK_DESCRIPTOR_TYPE_SAMPLER, 1 },
+                                     { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 } };
+    VkDescriptorPoolCreateInfo dpci = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, NULL, 0, 1,
+                                        3, dpsz };
+    if (vkCreateDescriptorPool(dev, &dpci, NULL, &dp) != VK_SUCCESS)
+        goto fail;
+    VkDescriptorSetAllocateInfo dai = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, NULL, dp, 1,
+                                        &dsl };
+    if (vkAllocateDescriptorSets(dev, &dai, &ds) != VK_SUCCESS)
+        goto fail;
+    VkDescriptorImageInfo dii = { sam, v, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+    VkDescriptorBufferInfo bfi = { rb, 0, (VkDeviceSize)W * H * 4 };
+    VkWriteDescriptorSet wd[3] = {
+        { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = ds, .dstBinding = 0,
+          .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+          .pImageInfo = &dii },
+        { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = ds, .dstBinding = 1,
+          .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER, .pImageInfo = &dii },
+        { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = ds, .dstBinding = 2,
+          .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+          .pBufferInfo = &bfi },
+    };
+    vkUpdateDescriptorSets(dev, 3, wd, 0, NULL);
+
+    VkCommandBuffer cb;
+    VkCommandBufferAllocateInfo cai = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                                        .commandPool = pool,
+                                        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                        .commandBufferCount = 1 };
+    if (vkAllocateCommandBuffers(dev, &cai, &cb) != VK_SUCCESS)
+        goto fail;
+    VkCommandBufferBeginInfo bbi = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                                     .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
+    vkBeginCommandBuffer(cb, &bbi);
+    VkImageSubresourceRange full = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+    VkImageMemoryBarrier imb = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                                 .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+                                 .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+                                 .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                 .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                 .image = img,
+                                 .subresourceRange = full };
+    vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &imb);
+    vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, pipe);
+    vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_COMPUTE, pl, 0, 1, &ds, 0, NULL);
+    vkCmdDispatch(cb, W / 32, H / 32, 1);
+    if (vkEndCommandBuffer(cb) != VK_SUCCESS)
+        goto fail;
+    VkSubmitInfo si = { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .commandBufferCount = 1,
+                        .pCommandBuffers = &cb };
+    vkQueueSubmit(q, 1, &si, NULL);
+    vkQueueWaitIdle(q);
+    vkFreeCommandBuffers(dev, pool, 1, &cb);
+
+    {
+        unsigned char *got;
+        if (vkMapMemory(dev, rbm, 0, rbr.size, 0, (void **)&got) != VK_SUCCESS)
+            goto fail;
+        uint32_t *gotw = (uint32_t *)got;
+        size_t total = (size_t)W * H;
+        size_t nz = 0, first = (size_t)-1, last = 0, tl128 = 0, row0_128 = 0, row16_128 = 0;
+        for (size_t y = 0; y < H; y++)
+            for (size_t x = 0; x < W; x++) {
+                size_t i = y * W + x;
+                if (gotw[i] != 0) {
+                    if (first == (size_t)-1)
+                        first = i;
+                    last = i;
+                    nz++;
+                    if (x < 128 && y < 128)
+                        tl128++;
+                    if (y == 0 && x < 128)
+                        row0_128++;
+                    if (y == 16 && x < 128)
+                        row16_128++;
+                }
+            }
+        /* T_DUMP=<prefix>: dump the raw words of the readback buffer to a
+         * file - for a byte-by-byte comparison with the CPU decode of the
+         * pattern (BC1). */
+        const char *tdump = getenv("T_DUMP");
+        if (tdump) {
+            char fn[512];
+            snprintf(fn, sizeof(fn), "%s_%s_%s.bin", tdump, tag, which);
+            FILE *f = fopen(fn, "wb");
+            if (f) {
+                fwrite(got, 1, (size_t)W * H * 4, f);
+                fclose(f);
+                printf("T[%s/%s] dump: %s\n", tag, which, fn);
+            }
+        }
+        const char *verdict = nz == 0 ? "all zeros: fill wrote zeros"
+                          : nz * 10 > total * 9
+                              ? (last > total * 9 / 10
+                                     ? "the data is in the image (the TP path reads it)"
+                                     : "prefix: fill does not fill the whole image")
+                              : (last > total * 9 / 10
+                                     ? "scattered zeros: fill is partially broken"
+                                     : "prefix: fill does not fill the whole image");
+        printf("T[%s/%s] TP-readback: nz=%zu/%zu (%zu%%) first=(y%zu,x%zu) last=(y%zu,x%zu)"
+               "  TL128=%zu row0[0:128]=%zu row16[0:128]=%zu  -> %s\n",
+               tag, which, nz, total, nz * 100 / total, first == (size_t)-1 ? 0 : first / W,
+               first == (size_t)-1 ? 0 : first % W, last / W, last % W, tl128, row0_128,
+               row16_128, verdict);
+        vkUnmapMemory(dev, rbm);
+    }
+    vkDestroyBuffer(dev, rb, NULL);
+    vkFreeMemory(dev, rbm, NULL);
+    vkFreeDescriptorSets(dev, dp, 1, &ds);
+    vkDestroyDescriptorPool(dev, dp, NULL);
+    vkDestroyPipeline(dev, pipe, NULL);
+    vkDestroyPipelineLayout(dev, pl, NULL);
+    vkDestroyDescriptorSetLayout(dev, dsl, NULL);
+    vkDestroySampler(dev, sam, NULL);
+    vkDestroyImageView(dev, v, NULL);
+    return;
+fail:
+    printf("T[%s/%s] pipeline/buffer setup failed\n", tag, which);
+    if (ds) vkFreeDescriptorSets(dev, dp, 1, &ds);
+    if (dp) vkDestroyDescriptorPool(dev, dp, NULL);
+    if (rb) vkDestroyBuffer(dev, rb, NULL);
+    if (rbm) vkFreeMemory(dev, rbm, NULL);
+    if (pipe) vkDestroyPipeline(dev, pipe, NULL);
+    if (pl) vkDestroyPipelineLayout(dev, pl, NULL);
+    if (dsl) vkDestroyDescriptorSetLayout(dev, dsl, NULL);
+    if (sam) vkDestroySampler(dev, sam, NULL);
+    vkDestroyImageView(dev, v, NULL);
+}
+
 static void probe_ubwc_class(VkDevice dev, VkQueue q, VkCommandPool pool, const char *tag,
                              VkFormat base, const VkFormat *list, unsigned n, unsigned bpt,
-                             VkDeviceSize bytes0)
+                             VkDeviceSize bytes0, unsigned w, unsigned h)
 {
     /* bytes0 is the exact size of the raw image data; it is needed for
      * sub-byte formats that do not fit into an integer bpt (BC1 = 0.5
-     * B/texel).  0 => W*H*bpt.  For every other format W*H*bpt ==
-     * lin-memreq (checked against the CEIL logs). */
-    VkDeviceSize bytes = bytes0 ? bytes0 : (VkDeviceSize)W * H * bpt;
+     * B/texel).  0 => w*h*bpt.  For every other format w*h*bpt ==
+     * lin-memreq (checked against the CEIL logs).  w/h are parameters (not
+     * the global W/H) for the GEOM sweep: a 128x128 image with 16 B/texel
+     * is a byte-for-byte repeat of the 512x512 BC3 layout (128x128
+     * blocks). */
+    VkDeviceSize bytes = bytes0 ? bytes0 : (VkDeviceSize)w * h * bpt;
 
     /* designated initializers: vulkan-headers 1.4.341 added VkImageType to
      * VkImageCreateInfo, and a positional list would silently shift */
     VkImageCreateInfo ici = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
                               .imageType = VK_IMAGE_TYPE_2D,
                               .format = base,
-                              .extent = { W, H, 1 },
+                              .extent = { w, h, 1 },
                               .mipLevels = 1,
                               .arrayLayers = 1,
                               .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -1317,9 +1536,9 @@ static void probe_ubwc_class(VkDevice dev, VkQueue q, VkCommandPool pool, const 
     chk(vkBindImageMemory(dev, img, list_mem, 0), "U: bind list mem");
     chk(vkBindImageMemory(dev, img_lin, lin_mem, 0), "U: bind lin mem");
 
-    VkBufferImageCopy bic = { .bufferOffset = 0, .bufferRowLength = W, .bufferImageHeight = 0,
+    VkBufferImageCopy bic = { .bufferOffset = 0, .bufferRowLength = w, .bufferImageHeight = 0,
                               .imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
-                              .imageOffset = { 0, 0, 0 }, .imageExtent = { W, H, 1 } };
+                              .imageOffset = { 0, 0, 0 }, .imageExtent = { w, h, 1 } };
 
     const char *which[3] = { "linear", "nonmut", "list" };
     VkImage target[3] = { img_lin, img_plain, img };
@@ -1406,14 +1625,53 @@ static void probe_ubwc_class(VkDevice dev, VkQueue q, VkCommandPool pool, const 
         printf("U[%s] %s roundtrip: %zu/%zu words %s", tag, which[t], bad, total,
                bad ? "MISMATCH" : "EXACT");
         if (first != (size_t)-1) {
-            size_t row0 = first / W, col0 = first % W;
-            size_t rowN = last / W, colN = last % W;
+            size_t row0 = first / w, col0 = first % w;
+            size_t rowN = last / w, colN = last % w;
             printf("  bad[0]=%zu(r%zu,c%zu) bad[N]=%zu(r%zu,c%zu) zeros=%zu untouched(0xCD)=%zu",
                    first, row0, col0, last, rowN, colN, zeros, untouched);
             printf("  pat=0x%08x got=0x%08x", patw[first], gotw[first]);
         }
         printf("\n");
+        /* T_DUMP=<prefix>: dump the raw U-roundtrip readback buffer - the
+         * structure of the zero words (tiles/lines/periodicity) for
+         * dissecting the mechanism of the r2d-readback BC breakage. */
+        {
+            const char *udump = getenv("T_DUMP");
+            if (udump) {
+                char fn[512];
+                snprintf(fn, sizeof(fn), "%s_U_%s_%s.bin", udump, tag, which[t]);
+                FILE *f = fopen(fn, "wb");
+                if (f) {
+                    fwrite(got, 1, (size_t)bytes, f);
+                    fclose(f);
+                    printf("U[%s] %s dump: %s\n", tag, which[t], fn);
+                }
+            }
+        }
         vkUnmapMemory(dev, rbm);
+    }
+
+    /* TP-readback (discriminator of the r2d direction): only the formats
+     * for which texelFetch returns a real vec4 (TYPELESS/integer are
+     * excluded - the vec4 mismatch with the shader).  The images are in
+     * TRANSFER_SRC_OPTIMAL after the roundtrip cycle and live until the end
+     * of the function; the probe of ALL 3 variants (linear/nonmut/list) is
+     * the fill-vs-readback discriminator on each storage.  T dump:
+     * <T_DUMP>_<tag>_<which>.bin (the raw readback buffer, word =
+     * r|g<<8|b<<16|a<<24). */
+    {
+        static const VkFormat tpr_fmts[] = { VK_FORMAT_R8_UNORM, VK_FORMAT_R16_UNORM,
+                                             VK_FORMAT_B8G8R8A8_UNORM,
+                                             VK_FORMAT_BC1_RGBA_UNORM_BLOCK,
+                                             VK_FORMAT_BC3_UNORM_BLOCK,
+                                             VK_FORMAT_BC7_UNORM_BLOCK };
+        for (unsigned i = 0; i < ARRAY_SIZE(tpr_fmts); i++) {
+            if (base == tpr_fmts[i] && w == W && h == H) {
+                for (int t = 0; t < 3; t++)
+                    tp_readback_probe(dev, q, pool, tag, which[t], target[t], base);
+                break;
+            }
+        }
     }
 
     vkFreeMemory(dev, plain_mem, NULL);
@@ -3553,7 +3811,36 @@ skip_b:
             };
             for (unsigned i = 0; i < ARRAY_SIZE(u); i++)
                 probe_ubwc_class(dev, q, pool, u[i].tag, u[i].base, u[i].f, u[i].n, u[i].bpt,
-                                 u[i].bytes0);
+                                 u[i].bytes0, W, H);
+
+            /* GEOM. The discriminator "BC vs geometry".  The readback goes
+             * through TPL1 A2D SRC in 2D mode (fill - through IMG_BUFFER),
+             * and for BC3 the holes are [512,768)+[1280,1536) of each
+             * 2048B row.  A 128x128 image with 16 B/texel is the same
+             * layout byte for byte (2048B x 128 rows) as the 512x512 BC3
+             * (128x128 blocks of 16B), but without BC.  If the holes are the
+             * same, the bug is not in BC but in the A2D SRC geometry.
+             * BC3@128/1024 - the scaling of the holes with the size (an
+             * address pattern or the geometry). */
+            printf("\n=== GEOM. readback geometry (A2D SRC 2D) ===\n");
+            probe_ubwc_class(dev, q, pool, "GEOM_RGBA32_128", VK_FORMAT_R32G32B32A32_SFLOAT,
+                             f_r32g32b32a32, ARRAY_SIZE(f_r32g32b32a32), 16, 0, 128, 128);
+            probe_ubwc_class(dev, q, pool, "GEOM_RGBA32_256", VK_FORMAT_R32G32B32A32_SFLOAT,
+                             f_r32g32b32a32, ARRAY_SIZE(f_r32g32b32a32), 16, 0, 256, 256);
+            probe_ubwc_class(dev, q, pool, "GEOM_BC3_128", VK_FORMAT_BC3_UNORM_BLOCK,
+                             f_bc3, ARRAY_SIZE(f_bc3), 1, 0, 128, 128);
+            probe_ubwc_class(dev, q, pool, "GEOM_BC3_1024", VK_FORMAT_BC3_UNORM_BLOCK,
+                             f_bc3, ARRAY_SIZE(f_bc3), 1, 0, 1024, 1024);
+            /* Non-square: separates width / height / pitch / the total
+             * size.  The square pairs correlate all four at once. */
+            probe_ubwc_class(dev, q, pool, "GEOM_RGBA32_256x128", VK_FORMAT_R32G32B32A32_SFLOAT,
+                             f_r32g32b32a32, ARRAY_SIZE(f_r32g32b32a32), 16, 0, 256, 128);
+            probe_ubwc_class(dev, q, pool, "GEOM_RGBA32_128x256", VK_FORMAT_R32G32B32A32_SFLOAT,
+                             f_r32g32b32a32, ARRAY_SIZE(f_r32g32b32a32), 16, 0, 128, 256);
+            probe_ubwc_class(dev, q, pool, "GEOM_RGBA32_512x64", VK_FORMAT_R32G32B32A32_SFLOAT,
+                             f_r32g32b32a32, ARRAY_SIZE(f_r32g32b32a32), 16, 0, 512, 64);
+            probe_ubwc_class(dev, q, pool, "GEOM_RGBA32_64x512", VK_FORMAT_R32G32B32A32_SFLOAT,
+                             f_r32g32b32a32, ARRAY_SIZE(f_r32g32b32a32), 16, 0, 64, 512);
 
             /* CEIL. The UBWC ceiling per format on its own.  This separates
              * two things the gate model mixes: "the format cannot do
@@ -3612,6 +3899,10 @@ skip_b:
                       ARRAY_SIZE(c_r32g32b32), 12 },
                     { "R32G32B32_UINT",     VK_FORMAT_R32G32B32_UINT,  c_r32g32b32u,
                       ARRAY_SIZE(c_r32g32b32u), 12 },
+                    /* control for the 96-bit R32G32B32 (cpp=12, not a power of
+                     * two): the 128-bit one (cpp=16, a power of two) must have
+                     * UBWC, i.e. nonmut > lin (+0x2000 of metadata). */
+                    { "CTRL_R32G32B32A32", VK_FORMAT_R32G32B32A32_SFLOAT, NULL, 0, 16 },
                     /* blocker: packed 10 bit */
                     { "R10G10B10A2_TYPELESS", VK_FORMAT_A2B10G10R10_UNORM_PACK32, c_r10g10b10a2,
                       ARRAY_SIZE(c_r10g10b10a2), 4 },
