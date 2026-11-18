@@ -28,7 +28,7 @@ as zeros.
 | `docs/analysis.md` | the analysis: symptom, cause, measurements, applicability boundaries, reproduction; `docs/rp6-vkd3d-analysis.md` - the original short analysis (21.09.2026) it grew out of |
 | `docs/mesa-27-plan.md` | the move to Mesa 27.0-devel: the rebase matrix of 0001-0012, what changed upstream, the build rules with the cache in `/tmp` |
 | `patches/` | 0001-0012 - the Mesa patches that ship; `PATCHES.md` - the origin of 0001-0003 |
-| `experiments/` | `exp-1`-`exp-11` - **not** for commit: reproducible checks of the analysis' conclusions (exp-12 was retired 18.11, the verdict is in `analysis.md` §21.9) |
+| `experiments/` | `exp-1`-`exp-13` - **not** for commit: reproducible checks of the analysis' conclusions (exp-12 was retired 18.11, the verdict is in `analysis.md` §21.9) |
 | `tests/` | `rp6-vkd3d-sparse-test.c` + shaders; every result was obtained with it |
 | `scripts/` | build and runs, including the experiment script and game launch |
 | `container/` | toolchain Containerfile (there is no compiler on the device) |
@@ -237,6 +237,7 @@ never go to mesa themselves - only their results do, as `patches/000N`.
 | `exp-10-is-mutable-without-ubwc` | is_mutable alone does not break anything (§21.4) | — | — |
 | `exp-11-ubwc-compat-r16-and-10bit` | 8 of 72 classes with UBWC, the gate is what lifts it (§21.6) | `0011` | not moved yet |
 | `exp-12-ubwc-bc-stageA/stageB` (retired 18.11, files removed) | the HW A740 does BC+UBWC: CEIL nonmut > lin (BC1 `0x20000` → `0x22000`, BC3/7 `0x40000` → `0x44000`), the list path keeps UBWC after stage B. Not shipped: not a perf lever (RE4 BC textures are sparse, UBWC is forbidden for them regardless - §21.9), and stacking lossless compression on BC is a deliberate industry norm (AMD DCC and Intel CCS exclude block formats too); the files are restorable from history `39e103d`. Its verification thread found a real defect instead - the r2d readback zero-windows (bugs-found Bug 2, §21.8) | — | — |
+| `exp-13-i2b-ccu-clean-env-bundle` + `exp-13b-b2i-ccu-clean-candidate` | the r2d readback defect is root-caused: A7XX CP_BLIT writes sit in the CCU, the public copy commands emit no clean and an outside-renderpass barrier emits nothing mid-submit, so the next reader in the same submit sees pre-copy memory. One `FD_CCU_CLEAN_COLOR`+WFI = 91/91 EXACT (§21.10); mesa main has the same gap | not into the RE4 stack - games submit between copy and use, this is an upstream/CTS finding | — |
 
 ## What was verified by measurement
 

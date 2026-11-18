@@ -1,0 +1,114 @@
+Experiment 13 (env-knob bundle) - NOT FOR COMMIT. The A/B rig that root-caused the
+r2d readback zero-windows (docs/bugs-found.md final section, analysis.md 21.10):
+TU_I2B_R3D=1 force all image->buffer readbacks over the 3D engine; TU_I2B_ROWS=1
+force the per-row (unaligned) blit loop; TU_B2I_WFI=1 WFI after the fill (refuted);
+TU_B2I_CLEAN=1 producer-side FD_CCU_CLEAN_COLOR+WFI after the fill (91/91 EXACT);
+TU_I2B_SYNC=1/2/3/4 consumer-side before the readback: clean+invalidate+WFI /
+invalidate only / clean only / clean without WFI (1 and 3 pass, 2 and 4 fail - the
+clean and the WFI are each necessary). Plus the GDBG-i2b src-register dump. Verdict:
+A7XX CP_BLIT writes land in the CCU, the public copy commands emit no cache
+operations and an outside-renderpass barrier emits nothing mid-submit. Rollback:
+git checkout HEAD -- src/freedreno/vulkan/tu_clear_blit.cc
+
+diff --git a/src/freedreno/vulkan/tu_clear_blit.cc b/src/freedreno/vulkan/tu_clear_blit.cc
+index 959c0d6..f51792f 100644
+--- a/src/freedreno/vulkan/tu_clear_blit.cc
++++ b/src/freedreno/vulkan/tu_clear_blit.cc
+@@ -3058,6 +3058,21 @@ tu_copy_buffer_to_image(struct tu_cmd_buffer *cmd,
+       }
+    }
+ 
++   /* EXPERIMENT B2I_WFI - NOT FOR COMMIT: WFI after the fill blit. Both r2d
++    * and r3d readbacks drop the same zero-windows (geomr3d A/B), the barrier
++    * between the two transfers in the test is legal - so the suspect is the
++    * in-submit visibility of the fill's writes when the readback starts.
++    * TU_B2I_WFI=1: WFI only (refuted, same failures). TU_B2I_CLEAN=1: the
++    * producer-side fix - FD_CCU_CLEAN_COLOR+WFI after the fill, so every
++    * consumer of the image in the submit sees it, not just i2b. Rollback:
++    * git checkout HEAD -- this file. */
++   if (getenv("TU_B2I_WFI"))
++      tu_cs_emit_wfi(cs);
++   if (getenv("TU_B2I_CLEAN")) {
++      tu_emit_event_write<CHIP>(cmd, cs, FD_CCU_CLEAN_COLOR);
++      tu_cs_emit_wfi(cs);
++   }
++
+    ops->teardown(cmd, cs);
+ }
+ 
+@@ -3202,6 +3217,16 @@ tu_copy_image_to_buffer(struct tu_cmd_buffer *cmd,
+       blit_param = R3D_COPY;
+    }
+ 
++   /* EXPERIMENT GEOMR3D - NOT FOR COMMIT: force the 3D engine for every
++    * image->buffer readback (A/B for the CP_BLIT geometry defect, GEOMDBG
++    * showed the programmed registers identical for failing/passing
++    * geometries). Enable with TU_I2B_R3D=1. Rollback: git checkout HEAD --
++    * src/freedreno/vulkan/tu_clear_blit.cc */
++   if (getenv("TU_I2B_R3D")) {
++      ops = &r3d_ops<CHIP>;
++      blit_param = R3D_COPY;
++   }
++
+    VkOffset3D offset = info->imageOffset;
+    VkExtent3D extent = info->imageExtent;
+    uint32_t dst_width = info->bufferRowLength ?: extent.width;
+@@ -3235,11 +3260,57 @@ tu_copy_image_to_buffer(struct tu_cmd_buffer *cmd,
+    tu_image_view_copy<CHIP>(&src, src_image, src_format,
+                             &info->imageSubresource, offset.z);
+ 
++   /* EXPERIMENT GEOMDBG - NOT FOR COMMIT. Dump the registers programmed for
++    * the image->buffer readback src: the failing geometries (128x128, 32x256,
++    * 256x64-linear) against the passing ones (256x128, 512x64, 256x256).
++    * Rollback: git checkout HEAD -- src/freedreno/vulkan/tu_clear_blit.cc */
++   {
++      const uint32_t tm =
++         (src.TPL1_A2D_SRC_TEXTURE_INFO & A6XX_TPL1_A2D_SRC_TEXTURE_INFO_TILE_MODE__MASK) >>
++         A6XX_TPL1_A2D_SRC_TEXTURE_INFO_TILE_MODE__SHIFT;
++      fprintf(stderr,
++              "[GDBG-i2b] vkfmt=%d ext=%ux%u dstw=%u pitch=%u lsize=%u | src: base=0x%llx "
++              "pitch=%u size=0x%08x info=0x%08x tm=%u ubwc=%d flag=0x%llx flagpitch=0x%x fmt=%d "
++              "| dst: 0x%llx\n",
++              (int)src_image->vk.format, extent.width, extent.height, dst_width, pitch,
++              layer_size, (unsigned long long)src.base_addr, src.pitch,
++              src.TPL1_A2D_SRC_TEXTURE_SIZE, src.TPL1_A2D_SRC_TEXTURE_INFO, tm,
++              (int)src.ubwc_enabled, (unsigned long long)src.ubwc_addr, src.FLAG_BUFFER_PITCH,
++              (int)src.format,
++              (unsigned long long)vk_buffer_address(&dst_buffer->vk, info->bufferOffset));
++   }
++
++   /* EXPERIMENT I2B_SYNC - NOT FOR COMMIT: the a7xx coherence model says
++    * CP_BLIT writes land in the CCU and image reads go through UCHE, so a
++    * b2i fill followed by an i2b readback inside one submit needs explicit
++    * CCU-clean + UCHE-invalidate in between (tu_copy_image_to_image's staging
++    * path does exactly this, :3645; a TRANSFER->TRANSFER barrier outside a
++    * renderpass emits nothing mid-submit). Reproduce the missing sync:
++    * TU_I2B_SYNC=1 clean+invalidate+WFI, =2 invalidate only, =3 clean only,
++    * =4 clean only without WFI.
++    * Rollback: git checkout HEAD -- src/freedreno/vulkan/tu_clear_blit.cc */
++   {
++      const char *sync = getenv("TU_I2B_SYNC");
++      if (sync && *sync && sync[0] != '4') {
++         if (sync[0] != '2')
++            tu_emit_event_write<CHIP>(cmd, cs, FD_CCU_CLEAN_COLOR);
++         if (sync[0] != '3')
++            tu_emit_event_write<CHIP>(cmd, cs, FD_CACHE_INVALIDATE);
++         tu_cs_emit_wfi(cs);
++      } else if (sync && sync[0] == '4') {
++         tu_emit_event_write<CHIP>(cmd, cs, FD_CCU_CLEAN_COLOR);
++      }
++   }
++
+    for (uint32_t i = 0; i < layers; i++) {
+       ops->src(cmd, cs, &src, i, VK_FILTER_NEAREST, dst_format);
+ 
+       uint64_t dst_va = vk_buffer_address(&dst_buffer->vk, info->bufferOffset) + layer_size * i;
+-      if ((dst_va & 63) || (pitch & 63)) {
++      /* EXPERIMENT I2B_ROWS - NOT FOR COMMIT: force the per-row blit loop
++       * (the a6xx-style unaligned path) even for aligned buffers - "build the
++       * copy like on 6xx". Enable with TU_I2B_ROWS=1. Rollback: git checkout
++       * HEAD -- src/freedreno/vulkan/tu_clear_blit.cc */
++      if (getenv("TU_I2B_ROWS") || (dst_va & 63) || (pitch & 63)) {
+          for (uint32_t y = 0; y < extent.height; y++) {
+             uint32_t x = (dst_va & 63) / block_size;
+             uint32_t excess_width = 0;

@@ -36,6 +36,11 @@ TYPE=IMG_BUFFER hypothesis was **not tested** (reclassified as "untested").
 
 ## Bug 2. (suspected root cause, upstream) the PITCH units on the A2D readback image-src path
 
+**REFUTED 18.11** (0013-F executed: PITCH = block row changed nothing; the same
+defect reproduces with plain RGBA32, where both pitch conventions coincide, and
+on the r3d engine). The real root cause is in the final section below. Kept as
+the evidence trail.
+
 **Symptom**: the readback of a 512x512 BC image (image->buffer, r2d) is broken in
 all 3 layout variants:
 - BC3: 3612/16384 zero blocks, the block columns are =32..47 (mod 48) =
@@ -119,4 +124,74 @@ is in the addressing, not in the codec.
 | C | re-emit the output registers | rejected |
 | D | src COLOR_FORMAT surrogate + SIZE/4 | rejected (COLOR_FORMAT was already the surrogate - see the Correction; only SIZE/4 was effective) |
 | E | `BLT_CNTL.type=IMG_BUFFER` | **was not tested (dead code, Bug 1)** -> E2 |
-| F | src PITCH = block row (2048/1024) | to execute (priority, Bug 2) |
+| F | src PITCH = block row (2048/1024) | executed, rejected (byte-identical failures) |
+| G | the register space at large | closed: GEOMDBG shows the programmed src registers structurally identical on failing and passing geometries; `TU_I2B_R3D=1` moves some cases and breaks others, the core fails on both engines |
+| H | **CCU coherence, not addressing** | **CONFIRMED - see the final section**; the whole 0013 numbering is retired, the fix is candidate `exp-13b` |
+
+## Final (18.11): root cause - no CCU clean between buffer->image and the next reader in the same submit (A7XX)
+
+**Root cause**. On A7XX the CP_BLIT (r2d) writes of `CmdCopyBufferToImage` land in
+the CCU and are not guaranteed visible to readers until an explicit CCU clean;
+`tu_copy_buffer_to_image`/`tu_copy_image_to_buffer` emit no cache operations at all
+(`r2d_teardown` is "nothing to do here"), and a pipeline barrier outside a
+renderpass inserts nothing into the CS (the flush bits of `cmd->state.cache`
+collapse onto the batch/submit). So a `CopyImageToBuffer` (or any UCHE read) later
+in the same submit reads pre-copy memory. Turnip knows the rule - "On A7XX, blit
+cache flushes are required to ensure blit writes are visible via UCHE. This isn't
+necessary on A6XX, all writes should be visible implicitly"
+(`tu_cmd_buffer.cc:421`), "CP_BLIT writes to the CCU ... we need to flush manually
+here" (`tu_clear_blit.cc:6101`, `store_3d_blit`), the staging copy path flushes
+precisely this way (`:3645`) - only the public copy commands skip it. This is also
+the a6xx/a7xx asymmetry: the same r2d code works on 6xx by the implicit-visibility
+rule, 7xx requires the clean.
+
+**Experiment chain** (all logs `results/test-BCcopy-*`, one variable per run):
+
+| Step | Result |
+|---|---|
+| GEOMDBG src-register dump, failing vs passing geometries | structurally identical registers, only sizes differ -> register-value hypotheses closed |
+| `TU_I2B_R3D=1` (all readbacks over the 3D engine) | the core failures persist (128x128, BC@512, 32x256); 256x64-linear is fixed, 256x256-linear breaks -> not engine-specific |
+| `TU_B2I_WFI=1` (WFI after the fill) | no change -> not a pipeline-drain issue |
+| `TU_I2B_ROWS=1` (per-row blits, the "6xx way") | the same column windows `[128,192)+[320,384)` survive in the first ~15 rows only -> timing at traversal start, not addressing |
+| CPU-FILL probe | image memory 100% byte-clean via CPU while the readback still fails -> GPU-side visibility, not storage |
+| `TU_I2B_SYNC=1` (CLEAN_COLOR + CACHE_INVALIDATE + WFI before the readback) | **91/91 EXACT, 0 MISMATCH** |
+| `TU_I2B_SYNC=3` (CLEAN_COLOR + WFI only) | 0 MISMATCH - the UCHE invalidate is not needed |
+| `TU_I2B_SYNC=2` (CACHE_INVALIDATE + WFI only) | 19 MISMATCH, old signature - invalidating reads alone does not help |
+| `TU_I2B_SYNC=4` (CLEAN_COLOR without WFI) | 19 MISMATCH - the event write is async, the WFI is required |
+| `TU_B2I_CLEAN=1` (producer side: CLEAN_COLOR + WFI at the end of b2i) | 0 MISMATCH |
+| no-env control on the same binary | 19 MISMATCH - the env gating is real |
+
+**Why it looked like geometry/BC/state magic**: which dirty lines a reader still
+misses depends on CCU capacity, tiling and the command-buffer history (the test
+reuses VA ranges across cases) - hence the run-to-run zero-count drift (15488..16032)
+and the format-agnostic, "geometry-dependent" signatures. BC@512/BC1@100%-zeros and
+plain RGBA32 128x128 are one and the same defect.
+
+**Upstream**: mesa main still has no cache operation in either copy function
+(verified 18.11 against gitlab `main`, `tu_clear_blit.cc`) - this is not our lag.
+The closed blob reads the same geometries correctly, so the HW only needs the
+event write that turnip omits.
+
+**Fix**: `experiments/exp-13b-b2i-ccu-clean-candidate.patch` - at the end of
+`tu_copy_buffer_to_image` (CHIP >= A7XX), in the native flush-tracking idiom:
+`cmd->state.cache.flush_bits |= TU_CMD_FLAG_CCU_CLEAN_COLOR |
+TU_CMD_FLAG_WAIT_FOR_IDLE; tu_emit_cache_flush<CHIP>(cmd)` (tu6_emit_flushes
+orders the WFI after the clean - both are required). Validated 91/91 EXACT with
+no env: raw-event-write form `results/test-BCcopy-0013cand.log`, flush_bits form
+`results/test-BCcopy-0013candb.log`. Open before shipping as 0013: the RE4 cost
+of one clean+WFI per b2i (b2i is the texture-upload hot path). The zero-cost
+form, and what upstream would actually write: b2i only *marks* the bit and the
+outside-renderpass pipeline barrier executes the pending `cmd->state.cache`
+flushes on the spot (all app patterns that submit between copy and use stay
+flush-free, and b2i->shader-read in one submit gets fixed too). The env-knob
+bundle used for the A/B is `experiments/exp-13-i2b-ccu-clean-env-bundle.patch`.
+
+**Shipping decision (18.11): not a candidate for the RE4 stack, no game
+measurement.** Games/vkd3d-proton submit between the copy and its use (readbacks
+run as their own command list, uploads are submitted before use), so RE4 never
+executes the in-submit chain - that is exactly why the game always looked fine
+while the CTS-style probe failed 19/19. The producer-side clean would add a
+clean+WFI to every upload blit to fix a path the game does not walk: pure cost,
+zero benefit. The thread's output is a standalone upstream/CTS correctness
+finding (mesa main affected; blob unaffected), with both fix forms validated and
+the barrier form being the one worth posting upstream, with a CTS repro.

@@ -2774,4 +2774,42 @@ the patch: it surfaced a real defect - r2d readback (image->buffer) drops
 zero-windows, geometry- and state-dependent and **not BC-specific** (a plain
 RGBA32 128x128 fails with the same signature; the fill direction is byte-clean) -
 see Bug 2 and §21.8. That defect is tracked and fixed as a separate correctness
-line: vkd3d `CopyTextureRegion` texture->buffer goes through the same path.
+line: vkd3d `CopyTextureRegion` texture->buffer goes through the same path -
+though not as an in-submit chain: vkd3d submits between the copy and its use, so
+RE4 itself does not hit the defect (see §21.10, closed without game A/B).
+
+## 21.10. Root cause of the r2d readback zero-windows (18.11): missing CCU clean on A7XX
+
+Closed the same evening as 21.8/21.9. The bug is neither BC, nor addressing, nor
+engine-specific - it is **in-submit memory visibility**. On A7XX the CP_BLIT writes
+of `CmdCopyBufferToImage` land in the CCU; `tu_copy_buffer_to_image` and
+`tu_copy_image_to_buffer` emit no cache operations (empty `r2d_teardown`), and an
+outside-renderpass pipeline barrier inserts nothing into the CS (its flush bits
+collapse onto the batch). The next reader in the same submit - our readback, but
+in general any UCHE read - may see pre-copy memory. The decisive A/B (`TU_I2B_SYNC`,
+one line of `FD_CCU_CLEAN_COLOR` + WFI before the readback): 91/91 EXACT, every
+GEOM/BC failure in the matrix disappears; `=2` (invalidate only) and `=4` (clean
+without WFI) still fail; the no-env control still fails. Turnip already documents
+the rule it violates ("On A7XX, blit cache flushes are required to ensure blit
+writes are visible via UCHE. This isn't necessary on A6XX, all writes should be
+visible implicitly") - and applies it in `store_3d_blit` and in the
+`tu_copy_image_to_image` staging path, only the public copy commands skip it. This
+is exactly the "works on 6xx" asymmetry, and mesa main has the same gap (verified
+against gitlab main 18.11), so it is an upstream correctness find, not our lag:
+vkd3d `CopyTextureRegion` texture->buffer in one command list hits it, and the
+"first fill writes ~2% zeros" quirk is plausibly the same phenomenon. The earlier
+signals all re-read consistently: WFI after the fill does nothing (drain is not a
+CCU clean); r3d moves cases without fixing the class (same missing sync); the
+per-row path keeps the windows only in the first rows (traversal starts before the
+CCU has drained); CPU-FILL sees clean DRAM (the data does land - only the GPU read
+is too early). Fix candidate and the full evidence chain: `docs/bugs-found.md`
+final section, `experiments/exp-13b-b2i-ccu-clean-candidate.patch`, logs
+`results/test-BCcopy-i2b*.log` and `results/test-BCcopy-0013cand*.log` (both the
+raw event-write form and the idiomatic `flush_bits |= CCU_CLEAN_COLOR |
+WAIT_FOR_IDLE; tu_emit_cache_flush()` form give 91/91). Closed without a game
+A/B and **not shipped into the RE4 stack**: games/vkd3d-proton submit between
+the copy and its use, RE4 never executes the in-submit chain - which is why the
+game always looked fine. The finding is for upstream/CTS (mesa main affected,
+blob unaffected); the upstream-shaped patch is the zero-cost barrier form - b2i
+only marks the pending flush bit and the outside-renderpass pipeline barrier
+executes it, which also covers b2i -> shader reads in one submit.

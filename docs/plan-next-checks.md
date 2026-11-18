@@ -99,13 +99,24 @@ roundtrip BC1/BC3/BC7 EXACT on the base and on A+B.
   byte-clean on the failing geometry too (CP[] raw read of the image = 100%
   fill), `other=0` (only exact words or zeros), and the zero-windows are
   **geometry- and state-dependent, format-agnostic** - a plain RGBA32 128x128
-  fails with the old BC3-512 signature, 256x128/512x64/256x256 pass. So the
-  hypothesis space was never "BC units in A2D" - it is r2d readback addressing
-  on small/odd geometries.
-- Next: A/B of the programmed registers, failing vs passing geometries
-  (`[GDBG-i2b]` dump, `results/test-BCcopy-geomdbg.log`), then either a
-  register fix or the verdict "CP_BLIT HW behavior on A740" with BC copies
-  routed through r3d (the original fallback).
+  fails with the old BC3-512 signature, 256x128/512x64/256x256 pass. The wording
+  "readback addressing" held until the final verdict below - it is visibility,
+  not addressing.
+- **CLOSED the same evening (see `bugs-found.md` final section, `analysis.md`
+  §21.10): root cause = missing CCU clean on A7XX between b2i and the next
+  reader in one submit.** `TU_I2B_SYNC=1` (FD_CCU_CLEAN_COLOR + WFI before the
+  readback) and the producer-side variant both give 91/91 EXACT; invalidate-only
+  and clean-without-WFI still fail. Fix candidate:
+  `experiments/exp-13b-b2i-ccu-clean-candidate.patch` (validated as-is, no env:
+  `results/test-BCcopy-0013cand.log`). The old "route BC through r3d" fallback is
+  moot - the defect reproduces on r3d too and the fix is engine-agnostic.
+- Closed 18.11, no game measurement (decision): the block is **not a candidate
+  for the RE4 stack** - games/vkd3d-proton submit between the copy and its use,
+  RE4 never executes the in-submit chain, the producer-side clean would be pure
+  upload cost with zero benefit. What remains is optional and upstream-shaped:
+  the barrier-form patch + a CTS repro, posted by the user (we do not post to
+  mesa); `experiments/exp-13*` and the final section of `bugs-found.md` carry
+  everything needed for it. mesa27-src is back at HEAD.
 
 ---
 

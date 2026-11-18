@@ -1,0 +1,50 @@
+Candidate 0013 (validated 18.11, NOT committed yet): flush the CCU after buffer->image blits on A7XX,
+in the native turnip flush-tracking idiom (flush_bits + tu_emit_cache_flush),
+not a raw event write - the same shape upstream reviewers expect.
+
+The r2d readback zero-window defect (docs/bugs-found.md, analysis.md 21.8-21.10) is
+not BC-, not geometry-addressing- and not engine-specific: b2i (CP_BLIT/r2d) leaves
+its writes in the CCU, an outside-renderpass TRANSFER->TRANSFER barrier emits nothing
+mid-submit, and the next reader in the same submit sees pre-copy memory. Validated:
+full U-matrix 91/91 EXACT, no env - raw event-write form results/test-BCcopy-0013cand.log,
+flush_bits form results/test-BCcopy-0013candb.log; invalidate-only and clean-without-
+WFI still fail (results/test-BCcopy-i2bsync*.log). Producer-side covers every consumer
+(b2i->shader-read in one submit is equally broken today); tu6_emit_flushes orders the
+WFI after the clean, which is required (event write is async). Shipping decision
+18.11: NOT into the RE4 stack - games/vkd3d-proton submit between the copy and its
+use, RE4 never executes the in-submit chain (no game A/B, by decision), so this
+form would be pure upload cost with zero benefit. Kept as the validation vehicle
+and the core of the upstream patch; the upstream-shaped form additionally makes
+the outside-renderpass pipeline barrier execute pending cmd->state.cache flushes
+(zero cost for the game pattern, also fixes b2i -> shader reads in one submit).
+
+---
+diff --git a/src/freedreno/vulkan/tu_clear_blit.cc b/src/freedreno/vulkan/tu_clear_blit.cc
+index 959c0d6..4d2c9e3 100644
+--- a/src/freedreno/vulkan/tu_clear_blit.cc
++++ b/src/freedreno/vulkan/tu_clear_blit.cc
+@@ -3058,6 +3058,24 @@ tu_copy_buffer_to_image(struct tu_cmd_buffer *cmd,
+       }
+    }
+ 
++   /* A7XX: the blitter writes land in the CCU ("CP_BLIT writes to the CCU,
++    * unlike CP_EVENT_WRITE::BLIT which writes to sysmem" - store_3d_blit),
++    * and a pipeline barrier outside a renderpass emits no cache operations
++    * mid-submit.  Without this clean, an image->buffer readback (over r2d or
++    * r3d) or any other UCHE read later in the same submit can read the
++    * pre-copy memory: reproduced on A740 as zero windows whose placement
++    * depends on geometry and command history (turnip-patches repo,
++    * docs/bugs-found.md).  A6XX needs nothing: "all writes should be visible
++    * implicitly" (the TU_CMD_FLAG_BLIT_CACHE_CLEAN comment, tu_cmd_buffer.cc).
++    * tu6_emit_flushes orders the WFI after the clean, which is required (the
++    * event write is async).
++    */
++   if (CHIP >= A7XX) {
++      cmd->state.cache.flush_bits |=
++         TU_CMD_FLAG_CCU_CLEAN_COLOR | TU_CMD_FLAG_WAIT_FOR_IDLE;
++      tu_emit_cache_flush<CHIP>(cmd);
++   }
++
+    ops->teardown(cmd, cs);
+ }
+ 
