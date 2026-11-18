@@ -405,3 +405,7 @@ complete (logs `results/test-BCUBWC-stageA.log`,
   with the game closed.
 - **Expected gain +/-1 fps.** The move is justified only as a test of the
   hypothesis "27 changes something", not as a way to raise FPS.
+- Closed 18.11: BC+UBWC (exp-12 A+B) is retired as a lever and removed from the
+  repo (`analysis.md` §21.9) - RE4's BC textures are sparse, UBWC is forbidden
+  for them regardless. The A/B here stays on record as a control, not a lever;
+  the verification thread became the r2d-readback bug fix (bugs-found Bug 2).

@@ -2760,3 +2760,18 @@ The real UBWC levers of RE4 are not BC: the fast-clear R8G8 (block 1:
 `has_generic_clear` is -61..-65% of vkmark vertex/shading/texture, the cost
 of the quirk is ~0, the verdict - keep the blanket) and the 8bpp classes
 (§21.7 - there is corruption there, the lever is closed).
+
+**Final verdict (18.11): exp-12 (BC+UBWC) is retired, the files are removed from
+`experiments/` (restorable from history, `39e103d`).** Three independent reasons:
+(a) not a perf lever - vkd3d creates RE4's BC textures sparse, and `ubwc_possible()`
+forbids UBWC for sparse images regardless of any format gate; (b) stacking lossless
+memory compression over block-compressed formats is a deliberate industry norm, not
+a turnip gap - AMD's DCC and Intel's render compression (CCS) exclude BC formats the
+same way stock `ubwc_possible()` excludes all of `vk_format_is_compressed()`;
+(c) the remaining "blob compat" justification has no observable symptom to verify
+against, the blob is closed. What the thread produced instead is worth more than
+the patch: it surfaced a real defect - r2d readback (image->buffer) drops
+zero-windows, geometry- and state-dependent and **not BC-specific** (a plain
+RGBA32 128x128 fails with the same signature; the fill direction is byte-clean) -
+see Bug 2 and §21.8. That defect is tracked and fixed as a separate correctness
+line: vkd3d `CopyTextureRegion` texture->buffer goes through the same path.

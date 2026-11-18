@@ -90,6 +90,23 @@ roundtrip BC1/BC3/BC7 EXACT on the base and on A+B.
   original plan), or a dump of the readback buffer (T_DUMP in the U section
   of the test) for the structure of the zero words.
 
+### Status close (18.11): the 0013 series is closed, the defect outgrew it
+
+- 0013-C/D/E/F rejected as well (C: the surrogate color format in all output
+  registers - no change; E was dead code; PITCH/SIZE/surrogate hypotheses all
+  refuted - the defect is byte-identical on base/A+B/every 0013 variant).
+- The T_DUMP structure (GEOM sweep + CPU-FILL) redefines the bug: the fill is
+  byte-clean on the failing geometry too (CP[] raw read of the image = 100%
+  fill), `other=0` (only exact words or zeros), and the zero-windows are
+  **geometry- and state-dependent, format-agnostic** - a plain RGBA32 128x128
+  fails with the old BC3-512 signature, 256x128/512x64/256x256 pass. So the
+  hypothesis space was never "BC units in A2D" - it is r2d readback addressing
+  on small/odd geometries.
+- Next: A/B of the programmed registers, failing vs passing geometries
+  (`[GDBG-i2b]` dump, `results/test-BCcopy-geomdbg.log`), then either a
+  register fix or the verdict "CP_BLIT HW behavior on A740" with BC copies
+  routed through r3d (the original fallback).
+
 ---
 
 ## 1. Candidate B: the `QCTDD12766770` fast-clear quirk (patch 0008)
@@ -254,8 +271,11 @@ with R32G32B32A32.
 
 ## Priority and order
 
-1. **Block 0 (BC copy)** - the premise: without it, 0012 is not verified
-   with data, and the A/B is noisy. By itself it is a functional bug (candidate 0013).
+1. **Block 0 (BC copy)** - re-framed 18.11: the 0012 verification premise is
+   withdrawn (0012 retired, §21.9), but the block stayed alive as its own
+   correctness bug: the r2d readback zero-windows are geometry/state-dependent,
+   not BC- and not UBWC-dependent (a plain RGBA32 128x128 fails the same way).
+   The fix is a candidate on its own, 0012 no longer blocks anything.
 2. **Block 1 (fast-clear)** - a real performance lever (generic clear
    is already enabled, the only question is the R8G8 exception) + an improvement of the 0008 description.
 3. **Block 3 (R32G32B32)** - a quick re-check, most likely it will confirm the dead end

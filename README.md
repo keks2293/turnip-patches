@@ -28,7 +28,7 @@ as zeros.
 | `docs/analysis.md` | the analysis: symptom, cause, measurements, applicability boundaries, reproduction; `docs/rp6-vkd3d-analysis.md` - the original short analysis (21.09.2026) it grew out of |
 | `docs/mesa-27-plan.md` | the move to Mesa 27.0-devel: the rebase matrix of 0001-0012, what changed upstream, the build rules with the cache in `/tmp` |
 | `patches/` | 0001-0012 - the Mesa patches that ship; `PATCHES.md` - the origin of 0001-0003 |
-| `experiments/` | `exp-1`-`exp-12` - **not** for commit: reproducible checks of the analysis' conclusions |
+| `experiments/` | `exp-1`-`exp-11` - **not** for commit: reproducible checks of the analysis' conclusions (exp-12 was retired 18.11, the verdict is in `analysis.md` §21.9) |
 | `tests/` | `rp6-vkd3d-sparse-test.c` + shaders; every result was obtained with it |
 | `scripts/` | build and runs, including the experiment script and game launch |
 | `container/` | toolchain Containerfile (there is no compiler on the device) |
@@ -236,7 +236,7 @@ never go to mesa themselves - only their results do, as `patches/000N`.
 | `exp-9-single-channel-swap-vacuous` | exactly 2 of 72 classes get tiling (§21.3) | `0010` | not moved yet |
 | `exp-10-is-mutable-without-ubwc` | is_mutable alone does not break anything (§21.4) | — | — |
 | `exp-11-ubwc-compat-r16-and-10bit` | 8 of 72 classes with UBWC, the gate is what lifts it (§21.6) | `0011` | not moved yet |
-| `exp-12-ubwc-bc-stageA-format-gate` + `exp-12-ubwc-bc-stageB-compat-mode` | the HW A740 does BC+UBWC: CEIL nonmut > lin (BC1 `0x20000` → `0x22000`, BC3/7 `0x40000` → `0x44000`), the list path keeps UBWC after stage B; the BC-copy roundtrip is broken on the base, independent of UBWC | — (the BC-copy breakage is a separate thread) | — |
+| `exp-12-ubwc-bc-stageA/stageB` (retired 18.11, files removed) | the HW A740 does BC+UBWC: CEIL nonmut > lin (BC1 `0x20000` → `0x22000`, BC3/7 `0x40000` → `0x44000`), the list path keeps UBWC after stage B. Not shipped: not a perf lever (RE4 BC textures are sparse, UBWC is forbidden for them regardless - §21.9), and stacking lossless compression on BC is a deliberate industry norm (AMD DCC and Intel CCS exclude block formats too); the files are restorable from history `39e103d`. Its verification thread found a real defect instead - the r2d readback zero-windows (bugs-found Bug 2, §21.8) | — | — |
 
 ## What was verified by measurement
 
