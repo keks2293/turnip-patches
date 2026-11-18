@@ -1,0 +1,54 @@
+RE4 (Mesa 27, DX12), стационарный участок t_rel 37-106 c (~70 c), fps 13.7-15.7, GPU 680 МГц (ondemand)
+Окон: 33 (окно 1 с), mean по окнам. Выбраны: CP_ALWAYS_COUNT > 5e8 (≈680 МГц, насыщенное) и
+t_rel >= 35 c (окна загрузки/перехода исключены). Multi-instance делители: SP/TP ÷12 (usptp),
+UCHE ÷2, CCU ÷6 (num_ccu), RB ÷4 — см. docs/fdperf-a7xx.md.
+
+### Загрузка блоков (от core-частоты 680 МГц):
+  CP   (front)         99.9%   SQE_IDLE ~100% (см. домены)
+  PC   (VS disp)       92.1%   stall VPC 63%, stall VFD 11%
+  VFD  (v-fetch)     raw   4955 Мцикл/с   starve UCHE ~48-51% (raw ÷N, N>=8)
+  VPC  (VS)            91.1%   stall UCHE ~0% (чистое вычисление)
+  TSE  (topo)          79.6%   
+  RAS  (rast)          72.3%   
+  SP   (shader)        93.9%   stall TP 4.1%, stall UCHE 0.8%, RB 0.8%
+  TP   (tex pipe)      80.3%   starve UCHE ~48%, stall UCHE ~19%
+  RB                   82.5%   
+  CCU                  47.7%   stall depth-return 9.5%, color-return 5.2%
+  LRZ                  82.6%   
+  UFC  (tex cach)      26.7%   
+  UCHE (L2)            90.0%   stall arbiter 39% (!)
+  HLSQ (fabric)        99.0%   stall UCHE 0%
+
+### Задержки:
+  UCHE->VBIF (DRAM): 149 циклов/доступ = 219 нс (680 МГц)
+  UFC miss: 212 циклов/miss
+
+### Трафик (mean):
+  UCHE->DRAM read: 942 Mbeats/s (16 B/beat: 15.1 GB/s)
+  UCHE->DRAM write: 19 Mbeats/s (0.3 GB/s)
+  UCHE RAM-запросы: read 1266 M/s, write 1001 M/s
+  CCU->GMEM: read 291 M/s, write 79 M/s
+
+### События (mean/с):
+  draws: НЕ ИЗМЕРЕНО (CP_SQE_DRAW_EXEC ~0 k/s в стационаре — ненулевые
+  511/220 k/s только в окнах загрузки; PC_3D_DRAWCALLS не влезал в hw-бюджет
+  PC, см. docs/fdperf-a7xx.md; в cfg-vertex есть)
+  VS invocations: 255 M/s (~17.4 M/кадр)
+  вертексы (VFD_TOTAL): 255 M/s
+  примитивы (TSE): 247 M/s
+  пиксели (SP_PIXELS): 451 M/s (~30.7 M/кадр, 4Kx4MSAA = 33.2 M)
+  FS-инструкции: 7.4 G/s
+
+### Вывод: стена — путь памяти (L2/UCHE + DRAM-латентность), не текстуры-вычисления:
+  * UCHE (L2) 90% занят, 39% — stall на арбитрах: узкое место арбитрации L2;
+  * DRAM-полоса: ~15 GB/s read = ~30% от пика LPDDR5X (51 GB/s) — не уперлись в полосу;
+  * главная сторона спроса — вертексы: VFD starve на UCHE ~48-51%, VFD+PC+VPC 91-92%;
+  * текстуры: TP starve UCHE ~48% + stall 19%, но UFC (вычисления) всего 26%;
+  * вертексный fetch: 32.0 B/вершину = 5.09 attr x 6.3 B/attr, 8.17 GB/s к
+    L2 ~ 54% DRAM-read; fetch в размере точного формата (не 16B-линии),
+    без инстанс-усиления (VS_INV == VFD_TOTAL_VERTICES);
+  * счётчики UBWC (READ_REQUESTS_TP_UBWC/NONUBWC, UBWC_BEATS, EVICTS) в
+    основном cfg не влезали в hw-бюджет UCHE (12 из 19 строк) и молча не
+    измерялись (нет строк в дампе, а не «читают 0»); UCHE_GMEM_*_BEATS в
+    дампе, но читают 0. Состояние сжатия НЕ ВЕРИФИЦИРОВАНО — пер-клиентный
+    прогон: tools/fdperf/fdperf.cfg-vertex (см. docs/fdperf-a7xx.md).
