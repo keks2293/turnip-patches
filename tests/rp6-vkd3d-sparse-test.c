@@ -1205,9 +1205,14 @@ done:
 }
 
 static void probe_ubwc_class(VkDevice dev, VkQueue q, VkCommandPool pool, const char *tag,
-                             VkFormat base, const VkFormat *list, unsigned n, unsigned bpt)
+                             VkFormat base, const VkFormat *list, unsigned n, unsigned bpt,
+                             VkDeviceSize bytes0)
 {
-    VkDeviceSize bytes = (VkDeviceSize)W * H * bpt;
+    /* bytes0 is the exact size of the raw image data; it is needed for
+     * sub-byte formats that do not fit into an integer bpt (BC1 = 0.5
+     * B/texel).  0 => W*H*bpt.  For every other format W*H*bpt ==
+     * lin-memreq (checked against the CEIL logs). */
+    VkDeviceSize bytes = bytes0 ? bytes0 : (VkDeviceSize)W * H * bpt;
 
     /* designated initializers: vulkan-headers 1.4.341 added VkImageType to
      * VkImageCreateInfo, and a positional list would silently shift */
@@ -3499,36 +3504,56 @@ skip_b:
                                                     VK_FORMAT_R32_UINT,
                                                     VK_FORMAT_R32_SINT,
                                                     VK_FORMAT_R32_SFLOAT };
+            /* EXPERIMENT 0012 (BC+UBWC): lists as vkd3d builds them (a
+             * UNORM+SRGB pair; BC1 = BC1_RGBA, i.e. DXGI BC1).  bpt is only a
+             * label here: BC1 = 0.5 B/texel does not fit an integer bpt, the
+             * exact raw size is in bytes0.  On the base (tiled, no UBWC)
+             * EXACT is expected in all three columns; after stage A nonmut
+             * goes through UBWC - EXACT must survive, otherwise the UBWC+BC
+             * path is broken. */
+            static const VkFormat f_bc1[] = { VK_FORMAT_BC1_RGBA_UNORM_BLOCK,
+                                              VK_FORMAT_BC1_RGBA_SRGB_BLOCK };
+            static const VkFormat f_bc3[] = { VK_FORMAT_BC3_UNORM_BLOCK,
+                                              VK_FORMAT_BC3_SRGB_BLOCK };
+            static const VkFormat f_bc7[] = { VK_FORMAT_BC7_UNORM_BLOCK,
+                                              VK_FORMAT_BC7_SRGB_BLOCK };
             static const struct {
                 const char *tag;
                 VkFormat base;
                 const VkFormat *f;
                 unsigned n;
                 unsigned bpt;
+                VkDeviceSize bytes0;
             } u[] = {
-                { "CTRL_RGBA8", VK_FORMAT_R8G8B8A8_UNORM, f_c_rgba8, 1, 4 },
-                { "CTRL_BGRA8", VK_FORMAT_B8G8R8A8_UNORM, f_c_bgra8, 1, 4 },
-                { "CTRL_R32_UINT", VK_FORMAT_R32_UINT, f_c_r32u, 1, 4 },
-                { "CTRL_R32_SFLOAT", VK_FORMAT_R32_SFLOAT, f_c_r32f, 1, 4 },
-                { "CTRL_R16G16_UINT", VK_FORMAT_R16G16_UINT, f_c_r16g16u, 1, 4 },
-                { "CTRL_R16G16_SFLOAT", VK_FORMAT_R16G16_SFLOAT, f_c_r16g16f, 1, 4 },
-                { "CTRL_R32G32_UINT", VK_FORMAT_R32G32_UINT, f_c_r32g32u, 1, 8 },
-                { "CTRL_R32G32_SFLOAT", VK_FORMAT_R32G32_SFLOAT, f_c_r32g32f, 1, 8 },
-                { "R32_TYPELESS", VK_FORMAT_R32_SFLOAT, f_r32, ARRAY_SIZE(f_r32), 4 },
-                { "R16G16_TYPELESS", VK_FORMAT_R16G16_SFLOAT, f_r16g16, ARRAY_SIZE(f_r16g16), 4 },
-                { "R32G32_TYPELESS", VK_FORMAT_R32G32_SFLOAT, f_r32g32, ARRAY_SIZE(f_r32g32), 8 },
+                { "CTRL_RGBA8", VK_FORMAT_R8G8B8A8_UNORM, f_c_rgba8, 1, 4, 0 },
+                { "CTRL_BGRA8", VK_FORMAT_B8G8R8A8_UNORM, f_c_bgra8, 1, 4, 0 },
+                { "CTRL_R32_UINT", VK_FORMAT_R32_UINT, f_c_r32u, 1, 4, 0 },
+                { "CTRL_R32_SFLOAT", VK_FORMAT_R32_SFLOAT, f_c_r32f, 1, 4, 0 },
+                { "CTRL_R16G16_UINT", VK_FORMAT_R16G16_UINT, f_c_r16g16u, 1, 4, 0 },
+                { "CTRL_R16G16_SFLOAT", VK_FORMAT_R16G16_SFLOAT, f_c_r16g16f, 1, 4, 0 },
+                { "CTRL_R32G32_UINT", VK_FORMAT_R32G32_UINT, f_c_r32g32u, 1, 8, 0 },
+                { "CTRL_R32G32_SFLOAT", VK_FORMAT_R32G32_SFLOAT, f_c_r32g32f, 1, 8, 0 },
+                { "R32_TYPELESS", VK_FORMAT_R32_SFLOAT, f_r32, ARRAY_SIZE(f_r32), 4, 0 },
+                { "R16G16_TYPELESS", VK_FORMAT_R16G16_SFLOAT, f_r16g16, ARRAY_SIZE(f_r16g16), 4, 0 },
+                { "R32G32_TYPELESS", VK_FORMAT_R32G32_SFLOAT, f_r32g32, ARRAY_SIZE(f_r32g32), 8, 0 },
                 { "R16G16B16A16_TYPELESS", VK_FORMAT_R16G16B16A16_SFLOAT, f_r16g16b16a16,
-                  ARRAY_SIZE(f_r16g16b16a16), 8 },
+                  ARRAY_SIZE(f_r16g16b16a16), 8, 0 },
                 { "R32G32B32A32_TYPELESS", VK_FORMAT_R32G32B32A32_SFLOAT, f_r32g32b32a32,
-                  ARRAY_SIZE(f_r32g32b32a32), 16 },
+                  ARRAY_SIZE(f_r32g32b32a32), 16, 0 },
                 { "B8G8R8A8_UAVLIST", VK_FORMAT_B8G8R8A8_UNORM, f_bgra8_uav,
-                  ARRAY_SIZE(f_bgra8_uav), 4 },
-                { "R8_TYPELESS", VK_FORMAT_R8_UNORM, f_r8, ARRAY_SIZE(f_r8), 1 },
-                { "R8_UINT", VK_FORMAT_R8_UINT, f_r8u, ARRAY_SIZE(f_r8u), 1 },
-                { "R8_UNORM", VK_FORMAT_R8_UNORM, f_r8, ARRAY_SIZE(f_r8), 1 },
+                  ARRAY_SIZE(f_bgra8_uav), 4, 0 },
+                { "R8_TYPELESS", VK_FORMAT_R8_UNORM, f_r8, ARRAY_SIZE(f_r8), 1, 0 },
+                { "R8_UINT", VK_FORMAT_R8_UINT, f_r8u, ARRAY_SIZE(f_r8u), 1, 0 },
+                { "R8_UNORM", VK_FORMAT_R8_UNORM, f_r8, ARRAY_SIZE(f_r8), 1, 0 },
+                /* EXPERIMENT 0012 */
+                { "BC1_UNORM", VK_FORMAT_BC1_RGBA_UNORM_BLOCK, f_bc1, ARRAY_SIZE(f_bc1), 1,
+                  W * H / 2 },
+                { "BC3_UNORM", VK_FORMAT_BC3_UNORM_BLOCK, f_bc3, ARRAY_SIZE(f_bc3), 1, 0 },
+                { "BC7_UNORM", VK_FORMAT_BC7_UNORM_BLOCK, f_bc7, ARRAY_SIZE(f_bc7), 1, 0 },
             };
             for (unsigned i = 0; i < ARRAY_SIZE(u); i++)
-                probe_ubwc_class(dev, q, pool, u[i].tag, u[i].base, u[i].f, u[i].n, u[i].bpt);
+                probe_ubwc_class(dev, q, pool, u[i].tag, u[i].base, u[i].f, u[i].n, u[i].bpt,
+                                 u[i].bytes0);
 
             /* CEIL. The UBWC ceiling per format on its own.  This separates
              * two things the gate model mixes: "the format cannot do
@@ -3557,6 +3582,16 @@ skip_b:
                                                            VK_FORMAT_A2B10G10R10_UINT_PACK32 };
                 static const VkFormat c_bgra8[] = { VK_FORMAT_B8G8R8A8_UNORM,
                                                    VK_FORMAT_B8G8R8A8_SRGB };
+                /* EXPERIMENT 0012 (BC+UBWC): lists as vkd3d builds them
+                 * (a UNORM+SRGB pair).  bpt is only a label: BC1 0.5 B/texel,
+                 * BC3/BC7 1 B/texel; bpt is not used by the probe itself
+                 * (512x512, memreq). */
+                static const VkFormat c_bc1[] = { VK_FORMAT_BC1_RGBA_UNORM_BLOCK,
+                                                  VK_FORMAT_BC1_RGBA_SRGB_BLOCK };
+                static const VkFormat c_bc3[] = { VK_FORMAT_BC3_UNORM_BLOCK,
+                                                  VK_FORMAT_BC3_SRGB_BLOCK };
+                static const VkFormat c_bc7[] = { VK_FORMAT_BC7_UNORM_BLOCK,
+                                                  VK_FORMAT_BC7_SRGB_BLOCK };
                 static const struct {
                     const char *tag;
                     VkFormat base;
@@ -3582,6 +3617,13 @@ skip_b:
                       ARRAY_SIZE(c_r10g10b10a2), 4 },
                     /* blocker that 0006 closes: the B8G8R8A8 family outside UNORM */
                     { "B8G8R8A8_UNORM", VK_FORMAT_B8G8R8A8_UNORM, c_bgra8, ARRAY_SIZE(c_bgra8), 4 },
+                    /* EXPERIMENT 0012: BC.  nonmut (no list, the gate is not
+                     * involved) is a statement about the HW; list is about the
+                     * compat gate (the blob table).  On the base "no ceiling"
+                     * (ubwc_possible) is expected. */
+                    { "BC1_UNORM", VK_FORMAT_BC1_RGBA_UNORM_BLOCK, c_bc1, ARRAY_SIZE(c_bc1), 1 },
+                    { "BC3_UNORM", VK_FORMAT_BC3_UNORM_BLOCK, c_bc3, ARRAY_SIZE(c_bc3), 2 },
+                    { "BC7_UNORM", VK_FORMAT_BC7_UNORM_BLOCK, c_bc7, ARRAY_SIZE(c_bc7), 2 },
                 };
                 for (unsigned i = 0; i < ARRAY_SIZE(c); i++)
                     probe_ubwc_ceiling(dev, c[i].tag, c[i].base,
