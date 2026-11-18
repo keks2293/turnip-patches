@@ -2493,6 +2493,28 @@ that vkd3d itself puts two different classes into the list (`B8G8R8A8_UNORM`
 for typed reading and `R32_*` for typed UAV load) — this is not a defect of the
 rule but the structure of the list.
 
+Update (after 0012 A+B and the CEIL control, 18.11):
+
+* **The BC rows: the 15 BC classes of the vkd3d lists are closed** - 0012
+  stage A (the BC exclusion in `ubwc_possible()`) + stage B (the compat
+  rows). An attribution correction: in stock BC+UBWC is **not enabled** -
+  `ubwc_possible()` cuts `vk_format_is_compressed()` as a whole (verified
+  with `git show HEAD:src/freedreno/vulkan/tu_image.cc`, there is no BC
+  exclusion in stock); the BC+UBWC in the tree is our patch. On the A740:
+  all 15 classes `V[vkd3d] mut=SUCCESS`, the U probe `list = lin + 0x2000`
+  (`results/test-BCUBWC-stageAB.log`). NV12/P010/P016 (3) remain closed
+  (planar).
+* **R32G32B32: the "no ceiling" attribution is wrong.** The 128-bit control
+  `CTRL_R32G32B32A32` **gets** UBWC (`lin=0x400000 nonmut=0x404000`,
+  `results/test-BCcopy-base.log`) - the family has no ceiling; the 96-bit
+  formats (cpp=12) are cut by the layout gate
+  `!util_is_power_of_two_or_zero(cpp)` at `fd6_layout.c:127` (the comment
+  "R8G8B8 and other 3 component formats don't get UBWC"), not by
+  `ubwc_possible()`. A dead end confirmed, the priority is low.
+* The updated count: of the 36 - **15** are closed by 0012 A+B, **8** are
+  closed by 0011, **11** cannot be closed (NV12/P010/P016 + R8 +
+  R32G32B32), **2** run into the structure of the list.
+
 A caveat about method: the first version of this breakdown grouped by name
 prefix, and `G16_B16R16_2PLANE_420_UNORM` fell into the `R16_*` group and
 `G8_B8R8_2PLANE_420_UNORM` into `R8_*`, because `R16_` and `R8_` occur in them
@@ -2640,3 +2662,101 @@ Practical summary:
 Logs: `results/test-r8-has8bpp-on.log`, `results/test-r8-has8bpp-off.log`
 (full `rp6-vkd3d-sparse-test` run with the added R8 probes, baseline
 `drv-base.so`).
+
+### 21.8 BC copy (r2d): fill OK, readback broken; 0013v1 rejected, 0013-A - the dst-buffer surrogate format (18.11)
+
+Task: after 0012 A+B, check the byte roundtrip of BC through the copy
+pipeline. The T probe in `tests/rp6-vkd3d-sparse-test.c` (512x512, pattern;
+fill = `vkCmdCopyBufferToImage` x2, readback = `vkCmdCopyImageToBuffer`, both
+directions through r2d on a7xx; TP-readback `texelFetch` for the fill, the
+CPU comparison for the readback). The allowlist: the BGRA8/R8 controls +
+BC1/BC3/BC7.
+
+The measurement on base / A+B / 0013v1 - **the behavior is identical**, i.e.
+the defect predates 0012 and does not depend on UBWC. Logs:
+`results/test-BCcopy-base.log`, `results/test-BCcopy-0013.log`.
+
+* The controls (BGRA8/R8): fill 100% nz, roundtrip EXACT.
+* Fill BC3/7: 100%/98% nz - OK.
+* Fill BC1: 86-98% nz - the first-fill defect (§20): the CPU decode of the
+  pattern = 29594 zero texels, the hardware = 34971, an excess of ~2%; the
+  second BC1 fill does not fix it completely.
+* **The readback (image->buffer) is broken**: BC1 - all zeros; BC3/7 - the
+  first 512 B are exact (= the 32 4x4 blocks of the first row,
+  `bad[0]=128(r0,c128)`), further a mix of exact and zero words (the zero
+  words in the tail are 15184/15552/15872 between runs - uninitialized
+  memory), ~76% of the words match the expected pattern (part of the matches
+  is an artifact of the repeating pattern).
+
+The candidates and the results:
+
+* **0013v1**: `r2d_dst_buffer()` programmed `FMT6_NONE` for BC
+  (`blit_format_color()` -> `tu6_format_color`: the BC rows in
+  `fd6_format_table.c` are `_T_`, there is no color write). The patch: a
+  fallback to `fd6_texture_format()`. Built (out-0013, sha256 `8c73a859`),
+  run - **no change at all** -> rejected. The artifact:
+  `experiments/0013-experiment-r2d-dest-buffer-bc-format.patch`.
+* **0013-A (the current candidate)**: reinterpret the dst buffer as a
+  surrogate uncompressed format with the same number of bytes per 4x4 block:
+  one block = one "texel" of the surrogate (an 8B block -> `R32G32_UINT`, a
+  16B block -> `R32G32B32A32_UINT`). The geometry in
+  `tu_copy_image_to_buffer` is already in block units (`copy_compressed()`
+  divides the extent by 4), the pitch is already in bytes of a block row
+  (128 x 16B = 2048B for the 512x512 BC3) - the byte layout matches exactly.
+  The precedent for the same trick in the same file: `copy_buffer()`
+  (buffer->buffer) has long used R32G32B32A32_UINT / R32_UINT / R8_UNORM as
+  surrogates. **The image side stays BC**: the tiled layout of a BC image is
+  incompatible with the reinterpretation to a surrogate (a BC tile 32x32
+  texel = 8x8 blocks = 1KB, the surrogate tile 32x32 texel = 16KB - after the
+  first tile the engine would read someone else's bytes). The working fill
+  (buffer-src BC -> image-dst BC) is not touched.
+
+An auxiliary fact: the buffer-src in the fill is programmed in **block units**
+(`r2d_src_buffer_unaligned` receives the extent already /4) and it works -
+i.e. for BC the A2D engine counts coordinates/sizes in 4x4 blocks. For the
+image-src (`r2d_src`), `TPL1_A2D_SRC_TEXTURE_SIZE` is taken from `fdl6_view`
+in **texel units** (512x512 instead of 128x128) - if 0013-A does not close
+the readback, the next candidate (0013-B): divide SIZE by 4 for BC in
+`r2d_src`.
+
+The RE4 credit of the defect is ~0: the hot path of vkd3d is buffer->image
+(fill - works), image->buffer over BC is a rare staging/feedback, the RE4 BC
+textures are sparse -> UBWC is not allowed for them in the first place
+(§21.9). The experiment goes for the correctness of the driver (and for the
+sake of upstream), not for RE4.
+
+### 21.9 The economics of BC+UBWC: not an RE4-perf lever (18.11)
+
+The user's thesis (confirmed, fixed as the main conclusion): UBWC creates
+fixed overheads - the meta/flag plane (+1-3% of VRAM, the alignment of both
+planes), the flag read before every block, a possible decompress/resolve pass
+on the copy/reinterpretation. On BC1-BC7 the data is already of a fixed bit
+rate (indexed content, almost no compression) - there is no compression
+gain, only the overheads remain. **Conclusion: for BC, UBWC has no perf
+sense. "It seems this was in vain" - yes, for RE4.**
+
+The corrections to the details:
+
+* "The drivers deliberately disable UBWC for BC" - true for **stock turnip**:
+  `ubwc_possible()` cuts `vk_format_is_compressed()` as a whole (verified
+  with `git show HEAD:src/freedreno/vulkan/tu_image.cc` - there is no BC
+  exclusion in stock; the earlier mark "the BC list is stock" was a mistake).
+  The BC+UBWC in our tree is the patch 0012 stage A. The BC+UBWC rows are
+  present in the blob compat table, and the A740 TP reads BC+UBWC at 100%
+  (the T probe) - the hardware can, stock deliberately does not enable it.
+* **Sparse residency is excluded from UBWC** (the stock `ubwc_possible()`,
+  `tu_image.cc` ~:361: "UBWC isn't possible with sparse residency, because
+  unbound blocks may have leftover fast-clear data..."). The RE4 BC textures
+  are created by vkd3d as sparse -> **UBWC is not allowed for them at all**,
+  regardless of 0012 A+B.
+* Consequently **0012 A+B is not an RE4-perf lever**. The reclassification:
+  completeness/blob compatibility (the 15 BC classes of the vkd3d lists get
+  the UBWC semantics: fast-clear/flag, the memreq `+0x2000`), not a perf
+  claim. The RE4 A/B (base vs A+B) over BC is expected to be ~0; the
+  measurement is kept as a control, not as a lever.
+
+The real UBWC levers of RE4 are not BC: the fast-clear R8G8 (block 1:
+`QCTDD12766770`/`has_generic_clear`; 30.09: the gain from
+`has_generic_clear` is -61..-65% of vkmark vertex/shading/texture, the cost
+of the quirk is ~0, the verdict - keep the blanket) and the 8bpp classes
+(§21.7 - there is corruption there, the lever is closed).

@@ -54,6 +54,42 @@ roundtrip BC1/BC3/BC7 EXACT on the base and on A+B.
 
 **Artifact:** `results/test-BCcopy-<name>.log`, a section in `analysis.md`.
 
+### Status (18.11)
+
+- The direction is established: **fill OK (byte-exact), broken is the
+  r2d-readback (image->buffer)** - the TP-readback (texelFetch) is 100% nz
+  for BC3/7; the BC1 fill = the first-fill defect of section 20 (the second
+  fill does not fix it completely, 86% nz). The premise "the RE4 textures
+  are broken on the base" is **withdrawn**: the hot path of vkd3d
+  (buffer->image) works; the T suffix "broken r2d-readback" is a static
+  label of the test, not a measurement.
+- Candidates: **0013v1** (FMT6_NONE -> `fd6_texture_format` in
+  `r2d_dst_buffer`) - rejected (no change, `8c73a859`); **0013-A** (the
+  surrogate format of the dst buffer only: 8B -> R32G32_UINT, 16B ->
+  R32G32B32A32_UINT) - rejected (no change, `d73b0282`); **0013-B** (the
+  SIZE of the image-src /4 for BC in `r2d_src`) - rejected (no change,
+  `172344a7`) - i.e. the texel/block units of the SIZE are not the cause.
+  The defect is identical on base/A+B/0013v1/0013a/0013b: BC1 - all zeros;
+  BC3/7 - the first 512 B are exact, then ~76% of the words match, ~24% are
+  zeros (the zero count varies between the runs, 15008-16000 ->
+  uninitialized memory is read); the linear (no tiling/UBWC) and the UBWC
+  images break the same way; all the controls are EXACT.
+- **0013-C (in progress)**: for the BC-dst the setup programs `FMT6_NONE`
+  into `RB_A2D_BLT_CNTL`/`GRAS_A2D_BLT_CNTL`/`SP_A2D_OUTPUT_INFO` + the
+  `ifmt` from `format_to_ifmt(BC)` = **UNREACHABLE** (BC has one packed
+  channel, no component bits -> garbage in the register). 0013-C programs
+  the surrogate color format (one 4x4 block = one "texel" of the surrogate:
+  8B -> R32G32_UINT, 16B -> R32G32B32A32_UINT, the precedent is
+  `copy_buffer()`) into **all** the output registers + an honest `ifmt`,
+  only on the image->buffer path (the fill is not touched - it works with
+  FMT6_NONE).
+- The fallback candidate: the `COPY` bit (pos 30, A7XX) in
+  `RB_A2D_BLT_CNTL` - not programmed anywhere in the code, the meaning is
+  unknown (a possible "raw copy").
+- If 0013-C does not close it - next: routing the BC through r3d (from the
+  original plan), or a dump of the readback buffer (T_DUMP in the U section
+  of the test) for the structure of the zero words.
+
 ---
 
 ## 1. Candidate B: the `QCTDD12766770` fast-clear quirk (patch 0008)
@@ -113,6 +149,32 @@ the time of the patch it was applied to all R8G8 (blanket, possibly excessive - 
 
 **Artifact:** `results/test-fastclear-<name>.log` (vkmark), `dmesg` excerpts,
 a section in `analysis.md`; a header edit in `patches/0008-*.patch`.
+
+### Status (18.11): closed by analysis - keep the blanket
+
+- The quirk fires in exactly one of the six reads of
+  `has_generic_clear` - `use_generic_clear_for_image_clear`
+  (`tu_clear_blit.cc`): the blanket `!(QUIRK && image_is_r8g8)` -> every
+  R8G8 image-clear goes to the cp_blit; the other five places
+  (vkCmdClearAttachments, the subpass begin gmem/sysmem,
+  `tu7_emit_subpass_clear`, the renderpass config) already get the
+  generic-clear on the A740.
+- The cost of the blanket is measured (30.09, `results/vkmark-ab-r8g8.txt`,
+  a series of 8 runs, interleaved): gc_r8g8 is about gc within the noise -
+  vertex -62.1% vs -63.1%, shading -64.2% vs -61.1%, texture -64.5% vs
+  -64.5%, clear +1.8% vs +0.9%; RE4 0% (median 12.4, n=77, no frame
+  divergence). I.e. the blanket zeroes the gain only for the R8G8
+  image-clear - and "fast-clear value + 960x540 + GMEM" is exactly the
+  pattern on which the fault; the RE4 credit of returning the R8G8 to the
+  generic is about 0.
+- Nothing to narrow it with: the full set of the faulty sizes is unknown
+  (the comment in the code - "e.g. 960x540"), the fast-clear value is not
+  defined separately in the code (not found in tu_clear_blit/tu_lrz/fdl).
+  The build variant `QCTDD12766770=False` is not worth it: the fault risk in
+  RE4 with ~0 new information and ~0 gain (see the measurement above).
+- **Verdict: keep the blanket.** The win of `has_generic_clear`
+  (-61..-65% vkmark vertex/shading/texture) is already obtained and does
+  not depend on the quirk.
 
 ---
 
