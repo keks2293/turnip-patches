@@ -1,0 +1,18 @@
+Stock Mesa 27 (6dfa32a85f91) + one line: ubwc_all_formats_compatible for a7xx_gen2.
+No other patch in the tree - 0001..0014 are not applied. Generated with:
+  diff -u <(git show 6dfa32a:src/freedreno/common/freedreno_devices.py) src/freedreno/common/freedreno_devices.py
+--- a/src/freedreno/common/freedreno_devices.py
++++ b/src/freedreno/common/freedreno_devices.py
+@@ -829,6 +829,12 @@
+         has_implicit_fragface_fragcoord_ij_linear = True,
+         has_resbase = True,
+ 
++        # EXPERIMENT, one line, no other patch in the tree: upstream sets this
++        # for a7xx_gen3 only, and a7xx_gen1 inherits it through the gen2 table,
++        # so A740 (gen2) is the only a7xx family without it.  See
++        # docs/a7xx-gen-props.md row 23 and docs/findings-2026-11-19.md §7.9.
++        ubwc_all_formats_compatible = True,
++
+         QCTDD08049535 = True,
+         QCTDD08901551 = True,
+         QCTDD08517960 = True,
