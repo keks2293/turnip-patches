@@ -35,12 +35,15 @@ Run:
 
 import argparse
 import itertools
+import json
 import os
 import re
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_TABLE = "/var/home/armada/opencode/build/mesa-rp6/src/freedreno/fdl/fd6_format_table.c"
+# the same generated table checked into the tree we build from
+MESA_TABLE = "/var/home/armada/opencode/mesa27-src/src/freedreno/fdl/fd6_format_table.c"
 
 UNKNOWN = "UNKNOWN_COMPAT"
 NV12_VK = "G8_B8R8_2PLANE_420_UNORM"
@@ -534,6 +537,227 @@ def forces_linear(base, formats, swap, props, patch_0005=False, patch_0006=False
     return False, "no trigger"
 
 
+def load_swap_table_all(path):
+    """(pipe_format -> swap) over every macro of fd6_format_table.c.
+
+    `load_format_table()` above only catches the *TC( lines, which is enough for the
+    vkd3d lists (all of them are uncompressed) but misses `_T_(`/`VT_(`/`V__(`, i.e.
+    every block-compressed row.  The no-list report needs DXT/BC rows, so it uses this
+    one; the old loader is left alone because the §16 numbers were taken with it.
+    """
+    swap = {}
+    for line in open(path):
+        m = re.match(r"\s*(FMT|VTC|_TC|_T_|VT_|V__)\(([^)]*)\)", line)
+        if not m:
+            continue
+        args = [a.strip() for a in m.group(2).split(",") if a.strip()]
+        if len(args) not in (3, 5):
+            continue
+        fmt, sw = args[0], args[-1]
+        swap.setdefault(fmt, sw)
+    return swap
+
+
+def load_vk_classes(path):
+    """tests/vk-fmt-classes.json from scripts/gen-vk-fmt-classes.py."""
+    return json.load(open(path))
+
+
+def spec_class_of(data, vk):
+    """Members of the compatibility class of a VkFormat, per vk.xml `class`."""
+    cls = data["formats"][vk]["class"]
+    return [f for f in data["classes"][cls] if data["formats"][f]["kind"] != "multi-planar"]
+
+
+def blocksize_group_of(data, base_vk):
+    """Table-free superset of the class: every color format with the same block size.
+
+    The spec defines the class of uncompressed color formats as "occupies the same
+    number of bits per texel block", so this is the same rule except that it also
+    pulls in the 422/packed classes that share a block size and the formats of other
+    codecs with a coinciding block size.  A superset can only make the answer more
+    conservative, never less, which is what lets the driver skip a table.
+    """
+    info = data["formats"][base_vk]
+    out = []
+    for vk, i in data["formats"].items():
+        if i["kind"] in ("depth-stencil", "multi-planar") or i["pipe"] is None:
+            continue
+        if vk == base_vk or i["blockSize"] != info["blockSize"]:
+            continue
+        if bool(i["compressed"]) != bool(info["compressed"]):
+            continue
+        if i["compressed"] and i["blockExtent"] != info["blockExtent"]:
+            continue
+        out.append(vk)
+    return out
+
+
+def class_names(members, data, pipe=True):
+    """Names in the namespace the predicates use, PIPE_FORMAT_NONE dropped."""
+    out = []
+    for vk in members:
+        p = data["formats"][vk]["pipe"]
+        if p is None:
+            continue
+        out.append(p if pipe else vk)
+    return out
+
+
+def nl_ctx(data, swap, props):
+    """Lookup tables the no-list predicates need, straight from vk-fmt-classes.json."""
+    sizes, compressed = {}, set()
+    for info in data["formats"].values():
+        p = info["pipe"]
+        if p is None:
+            continue
+        sizes[p] = info["blockSize"]
+        if info["compressed"]:
+            compressed.add(p)
+    return {"swap": swap, "sizes": sizes, "compressed": compressed, "props": props}
+
+
+def nl_uniform(pipes, ctx, swap_is_identity_ok=False, exp_9=False, compressed_bail=True):
+    """tu6_format_list_swaps_are_uniform() over a synthesized list.
+
+    Stock bails out on compressed formats ("a description comparison cannot speak about
+    those layouts").  Within one codec class the members differ only in the numeric
+    format, which is decode, not storage, so a caller that knows this can pass the
+    compressed set as already handled.  exp_9 models the single-channel exemption of
+    exp-9.  swap_is_identity_ok is the stricter reading of the same argument: a swap that
+    permutes nothing cannot disagree with another swap that permutes nothing, whatever the
+    channel counts of the two formats are.
+    """
+    if len(pipes) < 2:
+        return False
+    if compressed_bail and any(p in ctx["compressed"] for p in pipes):
+        return False
+    if len({ctx["sizes"].get(p) for p in pipes}) != 1:
+        return False
+    swaps = {ctx["swap"].get(p, "WZYX") for p in pipes}
+    if len(swaps) != 1:
+        return False
+    if swap_is_identity_ok and swaps == {"WZYX"}:
+        return True
+    if exp_9:
+        multi = [p for p in pipes if len(channels(p)) > 1]
+        if not multi:
+            return True
+        return all(channels(p) == channels(multi[0]) for p in pipes
+                   if len(channels(p)) > 1)
+    return all(channels(p) == channels(pipes[0]) for p in pipes)
+
+
+def nl_layout(base_vk, members, data, ctx, patch_0006=True, patch_0010=True,
+              patch_0011=False, exp_9=False, swap_is_identity_ok=False,
+              r8g8_r16_ok=False, drop_compressed=False, compressed_bail=True):
+    """The decision for a MUTABLE image created WITHOUT a format list.
+
+    Stock never looks at the base format: has_swaps(NULL) is true, reinterprets_r8g8_r16()
+    with no list is true for every 2-byte format and swaps_are_uniform(NULL) is false, so
+    the image is deposed to linear by assumption alone.  The candidate bounds the set of
+    legal views by the compatibility class of the base (an image created without a list
+    may still be viewed as any size-compatible format) and runs that set through the same
+    predicates the list path uses.
+
+    drop_compressed — block-compressed members of a color class are not views the driver
+      can take (they need BLOCK_TEXEL_VIEW_COMPATIBLE, which requires a list), so a
+      compressed base has no class to fear beyond its own codec.
+    """
+    base = data["formats"][base_vk]["pipe"]
+    if base is None:
+        return "no pipe format", "turnip has no layout for the base at all"
+    members_p = class_names(members, data)
+    if drop_compressed:
+        members_p = [p for p in members_p if p not in ctx["compressed"]]
+    if base not in members_p:
+        members_p = [base] + members_p
+
+    if ubwc_compatible(members_p, ctx["props"], patch_0006, patch_0010, patch_0011):
+        # tu6_ubwc_possible() says no to compression for block-compressed formats no
+        # matter what the gate decided, so the early exit buys them the tiling only.
+        if base in ctx["compressed"]:
+            return "tiled", "UBWC is impossible for block compression, tiling stays"
+        return "tiled+UBWC", "the class is UBWC-compatible: early exit"
+
+    if not r8g8_r16_ok and reinterprets_r8g8_r16(base, members_p):
+        return "linear", "r8g8 <-> r16 inside the class"
+
+    if not has_swaps(members_p, ctx["swap"]):
+        # swap is the only thing besides the block size that decides where the bytes of a
+        # texel live, and the block size is the same for the whole class by definition
+        return "tiled", "no member of the class needs a channel swap"
+    if nl_uniform(members_p, ctx, swap_is_identity_ok, exp_9, compressed_bail):
+        return "tiled", "the whole class swaps the same way"
+
+    return "linear", "the class members disagree about the channel order"
+
+
+def load_inventory(path, data):
+    """{pipe_format: [count, bytes]} of the images a no-list MUTABLE creation put into
+    linear, from a TU_IMG_INV log.
+
+    Lines wine interleaved into mid-printf are dropped by the end-anchored pattern, the
+    same rule as in the earlier inventories.  `list=` is empty exactly when the app
+    passed no VkImageFormatListCreateInfo, which is the case under study.
+    """
+    line = re.compile(r"TU_IMG_INV fmt=\S+ vkfmt=PIPE_FORMAT_(\S+) \d+x\d+x\d+ "
+                      r"mip=\d+ arr=\d+ samples=\d+ usage=0x[0-9a-f]+ "
+                      r"flags=0x([0-9a-f]+) tile=(\S+) ubwc=\d mutable=\d size=(\d+) "
+                      r"app_tiling=(\d) tiling_possible=(\d) listn=(\d+) list=$")
+    out = {}
+    for raw in open(path, errors="replace"):
+        m = line.search(raw.rstrip())
+        if not m:
+            continue
+        pipe, flags, tile, size, apt, tp, listn = m.groups()
+        if tile != "linear" or apt != "0" or tp != "1":
+            continue
+        if int(listn) or not int(flags, 16) & 0x8:
+            continue
+        r = out.setdefault(pipe, [0, 0])
+        r[0] += 1
+        r[1] += int(size)
+    return out
+
+
+def report_no_list(data, ctx, inv, title, **kw):
+    """Per compatibility class: what stock does with no list vs what the class allows."""
+    rows = {}
+    total = sum(v[1] for v in inv.values())
+    for pipe, (n, size) in inv.items():
+        vks = [vk for vk, i in data["formats"].items() if i["pipe"] == pipe]
+        if not vks:
+            print(f"  ? {pipe}: no VkFormat maps to it")
+            continue
+        vk = vks[0]
+        if data["formats"][vk]["kind"] in ("depth-stencil", "multi-planar"):
+            continue
+        new, why = nl_layout(vk, spec_class_of(data, vk), data, ctx, **kw)
+        key = (data["formats"][vk]["class"], new, why)
+        r = rows.setdefault(key, [0, 0, set()])
+        r[0] += n
+        r[1] += size
+        r[2].add(pipe)
+
+    print(f"### {title}\n")
+    gained = 0
+    for (cls, new, why), (n, size, pipes) in sorted(rows.items(), key=lambda kv: -kv[1][1]):
+        if new == "linear":
+            mark = "   stays linear"
+        else:
+            mark = f"-> {new:<13}"
+            gained += size
+        print(f"{mark} {cls:<12} {n:>5} imgs {size / 2**20:>7.0f} MiB "
+              f"({100 * size / total:>4.1f}%)")
+        print(f"{'':>20}{'':<12} {', '.join(sorted(pipes))}")
+        print(f"{'':>20}{'':<12} {why}")
+    print(f"\n  back to tiled: {gained / 2**20:.0f} MiB of {total / 2**20:.0f} MiB "
+          f"({100 * gained / total:.1f}% of the deposed bytes)")
+    return gained
+
+
+
 def load_vkd3d_classes(path):
     src = open(path).read()
     out = []
@@ -716,11 +940,25 @@ def main():
     ap.add_argument("--exp-0011", action="store_true",
                     help="exp-11: rows for the single-channel 16-bit "
                          "and packed-10-bit in fd6_ubwc_compat_mode()")
+    ap.add_argument("--no-list", metavar="LOG", default=None,
+                    help="analysis of MUTABLE images created WITHOUT a format list, "
+                         "weighted by the images of a TU_IMG_INV log")
+    ap.add_argument("--vk-classes", default=os.path.join(REPO, "tests", "vk-fmt-classes.json"),
+                    help="tests/vk-fmt-classes.json from scripts/gen-vk-fmt-classes.py")
+    ap.add_argument("--nl-relaxed", action="store_true",
+                    help="no-list variants: a swap that permutes nothing, compressed "
+                         "classes by description, classes of one codec only")
+    ap.add_argument("--nl-exp9", action="store_true",
+                    help="no-list: exp-9, a single-channel member has no channel order")
+    ap.add_argument("--nl-r8g8", action="store_true",
+                    help="no-list: drop the r8g8 <-> r16 test (2x1 blocks are fd5 and older)")
     ap.add_argument("--stack", action="store_true",
                     help="layout of the working stack and analysis of the remaining "
                          "tiled, no-UBWC classes")
     args = ap.parse_args()
 
+    if not os.path.exists(args.table) and os.path.exists(MESA_TABLE):
+        args.table = MESA_TABLE
     if not os.path.exists(args.table):
         sys.exit(f"no format table: {args.table}\n"
                  f"pass --table PATH (in the Mesa tree: src/freedreno/fdl/fd6_format_table.c)")
@@ -746,6 +984,24 @@ def main():
                 print("\n" + "-" * 78 + "\nand with exp-11 (single-channel 16 bit "
                       "+ packed-10 bit):")
                 report_blockers(swap, classes, GEN2_PROPS, patch_0010=True, patch_0011=True)
+    if args.no_list:
+        if not os.path.exists(args.vk_classes):
+            sys.exit(f"no {args.vk_classes}: generate it with scripts/gen-vk-fmt-classes.py")
+        if not os.path.exists(args.no_list):
+            sys.exit(f"no log: {args.no_list}")
+        data = load_vk_classes(args.vk_classes)
+        # the *TC-only loader above misses every _T_( row, i.e. all of block compression
+        ctx = nl_ctx(data, load_swap_table_all(args.table), GEN2_PROPS)
+        inv = load_inventory(args.no_list, data)
+        report_no_list(data, ctx, inv, "no-list, the predicates as they are now")
+        if args.nl_relaxed or args.nl_exp9 or args.nl_r8g8:
+            print("\n" + "-" * 78)
+            report_no_list(data, ctx, inv,
+                           "no-list, with the selected relaxations",
+                           swap_is_identity_ok=args.nl_relaxed,
+                           compressed_bail=not args.nl_relaxed,
+                           drop_compressed=args.nl_relaxed,
+                           exp_9=args.nl_exp9, r8g8_r16_ok=args.nl_r8g8)
     if args.stack:
         report_stack(swap, classes, GEN2_PROPS, patch_0011=args.exp_0011)
     report_zink(swap, GEN2_PROPS)

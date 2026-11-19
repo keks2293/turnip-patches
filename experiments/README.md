@@ -16,6 +16,10 @@ conclusions in `docs/analysis.md` can be re-checked rather than taken on faith.
 | `exp-9-single-channel-swap-vacuous.patch` | a single-channel format (`R32_UINT` and the like) must not push the list into linear: it has no channel order | **yes, exactly 2 classes out of 72** get tiling (`B8G8R8A8/B8G8R8X8_TYPELESS+UAV`); the BGRA8 side is EXACT `0/262144`. What changes is visibility through the `R32_UINT` view: bytes 0 and 2 are swapped, `261120/262144` words disagree with linear. Cross-order and NV12 are unaffected. **Moved to `patches/0010-turnip-single-channel-swap-tiling.patch`**, the caveat about the `R32` view — in `README.md`. Analysis — `docs/analysis.md`, section 21.3 |
 | `exp-10-is-mutable-without-ubwc.patch` | isolation: does `is_mutable` (MUTABLEEN) break things by itself, without UBWC and without sparse — the combination from §14 had remained unmeasured | **no, the rejection is alarming**: the `R32_UINT` view did not change by a single byte, but the BGRA8 side broke — `261119/262144` MISMATCH. The breakage is swap's exchange applied once instead of twice (write through the layout with forced WZYX, read through the view with format WXYZ). The hole in the `is_mutable` measurements is closed. Analysis — `docs/analysis.md`, section 21.4 |
 | `exp-11-ubwc-compat-r16-and-10bit.patch` | rows for single-channel 16-bit and packed 10-bit in `fd6_ubwc_compat_mode()`: the stock table has no such formats, and any vkd3d list with `R16` or `R10G10B10A2` silently loses UBWC | **yes, by the gate, and this is not over-caution but a gap in the table**: the CEIL probe showed that a lone `R16_UNORM` and `R10G10B10A2_UNORM` hold up without a UBWC list (`0x82000`/`0x102000` vs the linear `0x80000`/`0x100000`), i.e. there is a ceiling and the gate is what lifts it. An isolated A/B (same stack, `git apply -R`) changes exactly 3 log lines: `R16_TYPELESS`, `R16_UINT`, `R10G10B10A2_TYPELESS` go from `GATE REMOVED` to `gate is not in the way`. The model counts 8 classes out of 72 (with 0012). `R8_*` and `R32G32B32_*` are unaffected — they have no ceiling at all. The contents under UBWC and fast-clear were not verified. **Moved to `patches/0011-turnip-ubwc-compat-r16-and-10bit.patch`** (the header no longer says NOT FOR COMMIT; the caveat about unverified content — in `README.md`). Analysis — `docs/analysis.md`, section 21.6 |
+| `exp-13-i2b-ccu-clean-env-bundle.patch` | one env knob per hypothesis around the r2d readback (`TU_I2B_R3D`, `TU_I2B_ROWS`, `TU_B2I_WFI/CLEAN`, `TU_I2B_SYNC=1..4`, the GDBG src dump) | the defect is producer-side: `b2i` leaves its writes in the CCU, the barrier emits nothing mid-submit, and the clean **and** the WFI are each necessary (`TU_B2I_CLEAN` 91/91 EXACT, invalidate-only and clean-without-WFI fail). Verdict → `patches/0013-turnip-b2i-ccu-clean.patch` |
+| `exp-13b-b2i-ccu-clean-candidate.patch` | the same fix in the native `flush_bits` + `tu_emit_cache_flush` idiom instead of a raw event write | 91/91 EXACT; it is the shape 0013 ships, kept only as the intermediate candidate |
+| `exp-14-image-inventory.patch` | byte budget per created image: `TU_IMG_INV=1` prints format/extent/flags/tile/UBWC/mutable/size/`listn`/list | **4062 MiB of 7977 MiB sampled (50.9%) are `MUT listn=0` in linear**, and that is the input to 0014. `scripts/fmt-list-gate-check.py --no-list <log>` turns the log into the per-class table |
+| `exp-15-b2i-sync-env-bundle.patch` | 16 forms of the post-`b2i` cache operation (`TU_B2I_SYNC=0..15`: per-copy vs deferred vs lazy bits, clean color vs blit cache, with/without invalidate and WFI), plus `TU_B2I_COUNT` | **mode 7 wins**: `flush_bits |= CCU_CLEAN_COLOR \| WAIT_FOR_IDLE` and nothing executed at the copy — 94/94 EXACT over 3 repeats and the cheapest (one clean+WFI per group, merging into `tu_EndCommandBuffer`). Modes 2/3/5/10/13 fail (blit cache is the wrong aperture for r2d), 4/6 pass but pay two events, 1 passes but pays a WFI per copy. → `patches/0013-turnip-b2i-ccu-clean.patch` |
 
 The experiment numbering is `exp-N`, the patch numbering is `000N` - the
 two cannot collide. Which experiment went into which patch and
@@ -24,13 +28,15 @@ in the main `README.md`. The identifiers for the
 gate model are by meaning: `--exp-9` and `--exp-10` in
 `scripts/fmt-list-gate-check.py` refer to this very directory.
 
-All of them apply on a tree with patches 0004–0006, each one individually, and
-are reverted with `git apply -R <patch>`. `git checkout` for reverting **is not
-usable**: uncommitted 0005/0006 sit in `tu_image.cc`, a checkout would destroy
-them. exp-2 and exp-5 are narrowed down to their own hunk, so apply/-R work on
-top of them. The second experiment exists because the first changed two
-variables at once (the MUTABLEEN bit and the list composition) and on its own
-gave no conclusion about the cause.
+exp-1 … exp-11 apply on a tree with patches 0004–0006, each one individually,
+and are reverted with `git apply -R <patch>`. exp-13/13b/15 are written against
+the stock `tu_clear_blit.cc` + `tu_cmd_buffer.h` (they predate 0013 and must not
+be applied on top of it), exp-14 against the current stack. `git checkout` for
+reverting **is not usable**: uncommitted 0005/0006 sit in `tu_image.cc`, a
+checkout would destroy them. exp-2 and exp-5 are narrowed down to their own
+hunk, so apply/-R work on top of them. The second experiment exists because the
+first changed two variables at once (the MUTABLEEN bit and the list
+composition) and on its own gave no conclusion about the cause.
 
 Run: `scripts/run-experiment-mutableen.sh` (the first one). For the rest:
 

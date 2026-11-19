@@ -1205,6 +1205,184 @@ done:
         if (v[t].img != VK_NULL_HANDLE) vkDestroyImage(dev, v[t].img, NULL);
 }
 
+/* NL: a MUTABLE image created WITHOUT a VkImageFormatListCreateInfo, i.e. the
+ * case that is 50.9% of the sampled texture bytes in RE4.  Stock reads the
+ * missing list as the worst case and demotes every such image to linear; the
+ * candidate bounds the question by the base format's compatibility class.
+ *
+ * Two things are measured, both per class:
+ *   - the layout, by memreq at a size which is not a multiple of the 64x64
+ *     tile: tiled pads to 512x512, linear only to 512 rows of `w` texels, so
+ *     tiled > linear.  `expect` is what the class model predicts.
+ *   - the content, by a fill + readback in whatever layout came out.  A tiled
+ *     layout which the r2d paths cannot address would show up here, and the
+ *     fill is a plain buffer->image copy (0013 covers its visibility).
+ */
+static void probe_no_list_mutable(VkDevice dev, VkQueue q, VkCommandPool pool,
+                                  const char *tag, VkFormat base, unsigned bpt,
+                                  unsigned w, unsigned h, const char *expect)
+{
+    const VkDeviceSize bytes = (VkDeviceSize)w * h * bpt;
+    VkImageCreateInfo ici = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                              .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+                              .imageType = VK_IMAGE_TYPE_2D,
+                              .format = base,
+                              .extent = { w, h, 1 },
+                              .mipLevels = 1,
+                              .arrayLayers = 1,
+                              .samples = VK_SAMPLE_COUNT_1_BIT,
+                              .tiling = VK_IMAGE_TILING_OPTIMAL,
+                              .usage = VK_IMAGE_USAGE_SAMPLED_BIT |
+                                       VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                                       VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                              .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                              .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED };
+    VkImageCreateInfo lci = ici;
+    lci.flags = 0;
+    lci.tiling = VK_IMAGE_TILING_LINEAR;
+
+    VkImage img = VK_NULL_HANDLE, lin = VK_NULL_HANDLE;
+    VkResult rm = vkCreateImage(dev, &ici, NULL, &img);
+    VkResult rl = vkCreateImage(dev, &lci, NULL, &lin);
+    if (rm != VK_SUCCESS || rl != VK_SUCCESS) {
+        printf("NL[%s] create: opt=%s lin=%s\n", tag, vkerr(rm), vkerr(rl));
+        if (img != VK_NULL_HANDLE) vkDestroyImage(dev, img, NULL);
+        if (lin != VK_NULL_HANDLE) vkDestroyImage(dev, lin, NULL);
+        return;
+    }
+
+    VkMemoryRequirements mr, lr;
+    vkGetImageMemoryRequirements(dev, img, &mr);
+    vkGetImageMemoryRequirements(dev, lin, &lr);
+    const int want_tiled = !strcmp(expect, "tiled");
+    printf("NL[%-20s] %ux%u %uB/texel  memreq: lin=0x%08llx opt=0x%08llx  -> %s\n",
+           tag, w, h, bpt,
+           (unsigned long long)lr.size, (unsigned long long)mr.size,
+           mr.size > lr.size ? "tiled" :
+           mr.size == lr.size ? "inconclusive" : "linear");
+
+    /* Second layout detector, independent of memreq: a sparse image cannot be
+     * linear (tu_image_init refuses that create), so SUCCESS means tiled.  It
+     * is the only detector that separates the two layouts for block-compressed
+     * formats, whose linear pitch and height are padded to the same total.
+     */
+    {
+        VkImageCreateInfo sci = ici;
+        sci.flags |= VK_IMAGE_CREATE_SPARSE_BINDING_BIT |
+                     VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
+        VkImage si = VK_NULL_HANDLE;
+        VkResult rs = vkCreateImage(dev, &sci, NULL, &si);
+        const int sparse_tiled = rs == VK_SUCCESS;
+        printf("NL[%-20s] sparse+mutable+no-list create: %s -> %s "
+               "(class model: %s) %s\n", tag, vkerr(rs),
+               sparse_tiled ? "tiled" : "linear", expect,
+               sparse_tiled == want_tiled ? "OK" : "UNEXPECTED");
+        if (si != VK_NULL_HANDLE)
+            vkDestroyImage(dev, si, NULL);
+    }
+
+    VkDeviceMemory mem = VK_NULL_HANDLE;
+    chk(alloc_mem(dev, mr.size, 0, &mem), "NL: alloc image");
+    chk(vkBindImageMemory(dev, img, mem, 0), "NL: bind image");
+
+    VkBufferCreateInfo bci = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                               .size = bytes,
+                               .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                                        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                               .sharingMode = VK_SHARING_MODE_EXCLUSIVE };
+    VkBuffer fb = VK_NULL_HANDLE, rb = VK_NULL_HANDLE;
+    VkMemoryRequirements fr, rr;
+    VkDeviceMemory fm = VK_NULL_HANDLE, rm2 = VK_NULL_HANDLE;
+    chk(vkCreateBuffer(dev, &bci, NULL, &fb), "NL: create fill buf");
+    chk(vkCreateBuffer(dev, &bci, NULL, &rb), "NL: create readback buf");
+    vkGetBufferMemoryRequirements(dev, fb, &fr);
+    vkGetBufferMemoryRequirements(dev, rb, &rr);
+    chk(alloc_mem(dev, fr.size, 0, &fm), "NL: alloc fill mem");
+    chk(alloc_mem(dev, rr.size, 0, &rm2), "NL: alloc readback mem");
+    chk(vkBindBufferMemory(dev, fb, fm, 0), "NL: bind fill mem");
+    chk(vkBindBufferMemory(dev, rb, rm2, 0), "NL: bind readback mem");
+
+    unsigned char *pat = malloc((size_t)bytes);
+    unsigned char *pre = NULL;
+    if (!pat) { printf("NL[%s] OOM\n", tag); goto out; }
+    for (VkDeviceSize i = 0; i < bytes; i++)
+        pat[i] = (unsigned char) (0x31 + (i * 37 + (i >> 9)) % 0xce);
+    {
+        unsigned char *fp;
+        chk(vkMapMemory(dev, fm, 0, fr.size, 0, (void **)&fp), "NL: map fill");
+        memcpy(fp, pat, (size_t)bytes);
+        vkUnmapMemory(dev, fm);
+        chk(vkMapMemory(dev, rm2, 0, rr.size, 0, (void **)&pre), "NL: map pre");
+        memset(pre, 0xCD, (size_t)rr.size);
+        vkUnmapMemory(dev, rm2);
+    }
+
+    VkCommandBuffer cb;
+    VkCommandBufferAllocateInfo cai = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                                        .commandPool = pool,
+                                        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                        .commandBufferCount = 1 };
+    chk(vkAllocateCommandBuffers(dev, &cai, &cb), "NL: alloc cb");
+    VkCommandBufferBeginInfo bbi = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                                     .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
+    chk(vkBeginCommandBuffer(cb, &bbi), "NL: begin cb");
+    VkImageSubresourceRange full = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+    VkImageMemoryBarrier b[2] = {
+        { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+          .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+          .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+          .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+          .image = img, .subresourceRange = full },
+        { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+          .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+          .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+          .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+          .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+          .image = img, .subresourceRange = full },
+    };
+    vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &b[0]);
+    VkBufferImageCopy bic = { .bufferOffset = 0, .bufferRowLength = w, .bufferImageHeight = 0,
+                              .imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
+                              .imageOffset = { 0, 0, 0 }, .imageExtent = { w, h, 1 } };
+    vkCmdCopyBufferToImage(cb, fb, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bic);
+    vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &b[1]);
+    vkCmdCopyImageToBuffer(cb, img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, rb, 1, &bic);
+    chk(vkEndCommandBuffer(cb), "NL: end cb");
+    VkSubmitInfo si = { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, NULL, 0, NULL, NULL, 1, &cb, 0, NULL };
+    chk(vkQueueSubmit(q, 1, &si, NULL), "NL: submit");
+    chk(vkQueueWaitIdle(q), "NL: wait");
+
+    {
+        unsigned char *rd;
+        chk(vkMapMemory(dev, rm2, 0, rr.size, 0, (void **)&rd), "NL: map readback");
+        unsigned long long bad = 0, first = ~0ull;
+        for (VkDeviceSize i = 0; i < bytes; i++)
+            if (rd[i] != pat[i]) {
+                if (!bad) first = (unsigned long long)i;
+                bad++;
+            }
+        printf("NL[%-20s] roundtrip: %llu/%llu bytes differ", tag, bad,
+               (unsigned long long)bytes);
+        if (bad)
+            printf("  first=%llu", first);
+        printf("\n");
+        vkUnmapMemory(dev, rm2);
+    }
+
+    vkFreeCommandBuffers(dev, pool, 1, &cb);
+out:
+    free(pat);
+    vkDestroyBuffer(dev, fb, NULL);
+    vkDestroyBuffer(dev, rb, NULL);
+    vkFreeMemory(dev, fm, NULL);
+    vkFreeMemory(dev, rm2, NULL);
+    vkDestroyImage(dev, img, NULL);
+    vkDestroyImage(dev, lin, NULL);
+    vkFreeMemory(dev, mem, NULL);
+}
+
 /* TP readback: read the image through the texture path (texelFetch in a
  * compute shader) instead of through r2d - a discriminator for the
  * direction of the broken r2d copy:
@@ -1722,6 +1900,38 @@ static void probe_ubwc_class(VkDevice dev, VkQueue q, VkCommandPool pool, const 
                                         .image = im, .subresourceRange = full };
         vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
                              0, 0, NULL, 0, NULL, 1, &to_src);
+
+        /* RK_SPLIT_SUBMITS=1: fill and readback in SEPARATE submits with a
+         * wait between them. The b2i->i2b in-submit visibility bug (analysis
+         * .md 21.10) made the 2026-10-02 R8 verdict unreliable: the readback
+         * saw the pre-fill image (fresh zeros), not the pattern. Games/vkd3d
+         * never execute the in-submit chain, so the split mode is the honest
+         * content test; the default path keeps the old behavior for the
+         * in-submit series. */
+        if (getenv("RK_SPLIT_SUBMITS")) {
+            chk(vkEndCommandBuffer(cb), "U: end fill cb");
+            VkSubmitInfo si1 = { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .commandBufferCount = 1,
+                                 .pCommandBuffers = &cb };
+            chk(vkQueueSubmit(q, 1, &si1, NULL), "U: submit fill");
+            vkQueueWaitIdle(q);
+
+            VkCommandBuffer cb2;
+            VkCommandBufferAllocateInfo cai2 = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                                                 .commandPool = pool,
+                                                 .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                 .commandBufferCount = 1 };
+            chk(vkAllocateCommandBuffers(dev, &cai2, &cb2), "U: alloc readback cb");
+            VkCommandBufferBeginInfo bbi2 = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                                              .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
+            chk(vkBeginCommandBuffer(cb2, &bbi2), "U: begin readback cb");
+            vkCmdCopyImageToBuffer(cb2, im, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, rb, 1, &bic);
+            chk(vkEndCommandBuffer(cb2), "U: end readback cb");
+            VkSubmitInfo si2 = { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .commandBufferCount = 1,
+                                 .pCommandBuffers = &cb2 };
+            chk(vkQueueSubmit(q, 1, &si2, NULL), "U: submit readback");
+            vkQueueWaitIdle(q);
+            vkFreeCommandBuffers(dev, pool, 1, &cb2);
+        } else {
         vkCmdCopyImageToBuffer(cb, im, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, rb, 1, &bic);
         chk(vkEndCommandBuffer(cb), "U: end cb");
         VkSubmitInfo si = { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .commandBufferCount = 1,
@@ -1729,6 +1939,7 @@ static void probe_ubwc_class(VkDevice dev, VkQueue q, VkCommandPool pool, const 
         chk(vkQueueSubmit(q, 1, &si, NULL), "U: submit");
         vkQueueWaitIdle(q);
         vkFreeCommandBuffers(dev, pool, 1, &cb);
+        }
 
         unsigned char *got;
         chk(vkMapMemory(dev, rbm, 0, rb_req.size, 0, (void **)&got), "U: map readback");
@@ -3941,6 +4152,32 @@ skip_b:
             for (unsigned i = 0; i < ARRAY_SIZE(u); i++)
                 probe_ubwc_class(dev, q, pool, u[i].tag, u[i].base, u[i].f, u[i].n, u[i].bpt,
                                  u[i].bytes0, W, H);
+
+            /* NL. MUTABLE images created with no format list at all - 50.9% of
+             * the sampled texture bytes in RE4.  The class model says: 8-bit
+             * and 8-byte classes keep the tiled layout, the 4-byte and 2-byte
+             * ones cannot (their class mixes channel orders / R8G8 with R16),
+             * block compression keeps it because no member needs a swap. */
+            printf("\n=== NL. MUTABLE without a format list ===\n");
+            probe_no_list_mutable(dev, q, pool, "R8_UNORM", VK_FORMAT_R8_UNORM, 1,
+                                  500, 500, "tiled");
+            probe_no_list_mutable(dev, q, pool, "R16G16B16A16_FLOAT",
+                                  VK_FORMAT_R16G16B16A16_SFLOAT, 8, 500, 500, "tiled");
+            probe_no_list_mutable(dev, q, pool, "R32G32_FLOAT", VK_FORMAT_R32G32_SFLOAT, 8,
+                                  500, 500, "tiled");
+            probe_no_list_mutable(dev, q, pool, "R8G8B8A8_UNORM", VK_FORMAT_R8G8B8A8_UNORM, 4,
+                                  500, 500, "linear");
+            probe_no_list_mutable(dev, q, pool, "R32_UINT", VK_FORMAT_R32_UINT, 4,
+                                  500, 500, "linear");
+            probe_no_list_mutable(dev, q, pool, "R8G8_UNORM", VK_FORMAT_R8G8_UNORM, 2,
+                                  500, 500, "linear");
+            probe_no_list_mutable(dev, q, pool, "R16_UNORM", VK_FORMAT_R16_UNORM, 2,
+                                  500, 500, "linear");
+            /* 500x500, not 512x512: at a multiple of the tile size the tiled
+             * and linear layouts have the same total size, so memreq cannot
+             * tell them apart. */
+            probe_no_list_mutable(dev, q, pool, "BC7_UNORM", VK_FORMAT_BC7_UNORM_BLOCK, 1,
+                                  500, 500, "tiled");
 
             /* GEOM. The discriminator "BC vs geometry".  The readback goes
              * through TPL1 A2D SRC in 2D mode (fill - through IMG_BUFFER),

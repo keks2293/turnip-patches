@@ -1,0 +1,206 @@
+Experiment 15 (env-knob bundle) - NOT FOR COMMIT. The A/B rig that found the cheapest
+form of the CP_BLIT (r2d) write-visibility fix on A7XX (docs/bugs-found.md Bug 1,
+analysis.md 21.10-21.11). TU_B2I_SYNC selects what the driver does after every
+vkCmdCopyBufferToImage; TU_B2I_COUNT counts copies and copies-per-command-buffer.
+
+  0  off: 19 MISMATCH - the b2i -> i2b chain in one submit reads pre-copy memory
+  1  FD_CCU_CLEAN_COLOR + WFI after every copy      (the validated reference, 94/94)
+  2  FD_CCU_CLEAN_BLIT_CACHE + WFI                  FAIL - the blit/resolve cache
+  3  FD_CCU_CLEAN_BLIT_CACHE alone                  FAIL   is not what r2d writes go through
+  4  CLEAN_COLOR + CACHE_INVALIDATE + WFI           PASS
+  5  BLIT_CACHE + CACHE_INVALIDATE + WFI            FAIL
+  6  CLEAN_COLOR + CACHE_INVALIDATE, no WFI         PASS
+  9/12/14 = 1/4/6 deferred (flush once per group of copies in the next blit setup): PASS
+  7  lazy bits: flush_bits |= CCU_CLEAN_COLOR|WAIT_FOR_IDLE, nothing executed here -
+     the next natural flush point pays: PASS 94/94, stable over repeats
+  15 the lazy bits without the WFI: PASS (kept only as a control, the WFI is proven
+     necessary in the per-copy form, see analysis.md 21.10)
+
+Verdict: mode 7 is the shipping form, see patches/0013-turnip-b2i-ccu-clean.patch.
+Rollback: git checkout -- src/freedreno/vulkan/tu_clear_blit.cc src/freedreno/vulkan/tu_cmd_buffer.h
+(the rig is the only change in those two files; git apply -R of this patch also works).
+diff --git a/src/freedreno/vulkan/tu_clear_blit.cc b/src/freedreno/vulkan/tu_clear_blit.cc
+index 959c0d6..bf2dd1a 100644
+--- a/src/freedreno/vulkan/tu_clear_blit.cc
++++ b/src/freedreno/vulkan/tu_clear_blit.cc
+@@ -27,6 +27,8 @@
+ #include "tu_scratch_ram.h"
+ #include "tu_tracepoints.h"
+ 
++#include <stdlib.h> /* EXPERIMENT 15 (NOT FOR COMMIT): getenv/strtoul */
++
+ static const VkOffset2D blt_no_coord = { ~0, ~0 };
+ 
+ /* The helpers below quantize floats to match shader export behavior and avoid
+@@ -764,6 +766,103 @@ r2d_setup_common(struct tu_cmd_buffer *cmd,
+          .mask = 0xf));
+ }
+ 
++/* EXPERIMENT 15 (NOT FOR COMMIT) - rig for the cheapest form of the CP_BLIT
++ * write-visibility fix on A7XX (docs/bugs-found.md Bug 1, analysis.md 21.10):
++ * r2d writes land in the CCU, the public copy commands emit no cache
++ * operation and a barrier outside a renderpass only sets pending bits, so a
++ * reader later in the same submit sees pre-copy memory.  The validated form
++ * is a CCU color clean + WFI after every buffer->image; TU_B2I_SYNC measures
++ * the cheaper ones, including the deferred form (mode | 8), which pays for a
++ * whole group of copies once, in the setup of the next blit of the same
++ * command buffer:
++ *   1  CCU_CLEAN_COLOR + WFI                (the validated reference)
++ *   2  CCU_CLEAN_BLIT_CACHE + WFI
++ *   3  CCU_CLEAN_BLIT_CACHE alone
++ *   4  CCU_CLEAN_COLOR + CACHE_INVALIDATE + WFI   (also for UCHE readers)
++ *   5  CCU_CLEAN_BLIT_CACHE + CACHE_INVALIDATE + WFI
++ *   6  CCU_CLEAN_COLOR + CACHE_INVALIDATE, no WFI (negative control)
++ *   7  lazy bits: flush_bits |= CCU_CLEAN_COLOR + WFI, nothing executed here -
++ *      the next natural flush point pays, so a group of copies costs one
++ *   15 the same lazy bits without the WFI (negative control)
++ *   +8 deferred
++ */
++static unsigned
++b2i_sync_mode(void)
++{
++   static int mode = -1;
++
++   if (mode < 0) {
++      const char *str = getenv("TU_B2I_SYNC");
++      mode = str ? (int) strtoul(str, NULL, 0) : 0;
++   }
++
++   return (unsigned) mode;
++}
++
++template <chip CHIP>
++static void
++b2i_sync_emit(struct tu_cmd_buffer *cmd, struct tu_cs *cs, unsigned mode)
++{
++   /* a6xx needs nothing here: tam writes are visible to the next reader
++    * without help (analysis.md 21.10).
++    */
++   if (CHIP < A7XX)
++      return;
++
++   const bool blit_cache = mode == 2 || mode == 3 || mode == 5;
++   const bool invalidate = mode == 4 || mode == 5;
++
++   tu_emit_event_write<CHIP>(cmd, cs,
++                             blit_cache ? FD_CCU_CLEAN_BLIT_CACHE
++                                        : FD_CCU_CLEAN_COLOR);
++   if (invalidate)
++      tu_emit_event_write<CHIP>(cmd, cs, FD_CACHE_INVALIDATE);
++
++   /* The event write is async, the reader must not start before it ends. */
++   if (mode != 6)
++      tu_cs_emit_wfi(cs);
++}
++
++/* The deferred form: the flush happens once per group of copies, right before
++ * the next operation that can read what they wrote.
++ */
++template <chip CHIP>
++static void
++b2i_sync_lazy_flush(struct tu_cmd_buffer *cmd, struct tu_cs *cs)
++{
++   if (!cmd->b2i_ccu_dirty)
++      return;
++
++   cmd->b2i_ccu_dirty = false;
++   b2i_sync_emit<CHIP>(cmd, cs, b2i_sync_mode() & 7);
++}
++
++/* How often does a real workload copy buffer->image, and how many copies per
++ * command buffer?  That is the whole cost question of per-copy vs deferred.
++ */
++static void
++b2i_count(struct tu_cmd_buffer *cmd)
++{
++   static unsigned long long total, cbs, max_per_cb;
++   static int enabled = -1;
++
++   if (enabled < 0)
++      enabled = !!getenv("TU_B2I_COUNT");
++   if (!enabled)
++      return;
++
++   total++;
++   if (++cmd->b2i_in_cb == 1)
++      cbs++;
++   if (cmd->b2i_in_cb > max_per_cb)
++      max_per_cb = cmd->b2i_in_cb;
++
++   if ((total & 8191) == 0) {
++      fprintf(stderr, "TU_B2I_COUNT b2i=%llu cbs=%llu max-per-cb=%llu avg=%.1f\n",
++              total, cbs, max_per_cb, (double) total / MAX2(cbs, 1ull));
++   }
++}
++
+ template <chip CHIP>
+ static void
+ r2d_setup(struct tu_cmd_buffer *cmd,
+@@ -780,6 +879,7 @@ r2d_setup(struct tu_cmd_buffer *cmd,
+    assert(dst_samples == VK_SAMPLE_COUNT_1_BIT);
+ 
+    if (!cmd->state.pass) {
++      b2i_sync_lazy_flush<CHIP>(cmd, cs);
+       tu_emit_cache_flush_ccu<CHIP>(cmd, cs, TU_CMD_CCU_SYSMEM);
+    }
+ 
+@@ -1932,6 +2032,7 @@ r3d_setup(struct tu_cmd_buffer *cmd,
+    fixup_dst_format(src_format, &dst_format, &fmt);
+ 
+    if (!cmd->state.pass || (blit_param & R3D_OUTSIDE_PASS)) {
++      b2i_sync_lazy_flush<CHIP>(cmd, cs);
+       tu_emit_cache_flush_ccu<CHIP>(cmd, cs, TU_CMD_CCU_SYSMEM);
+       tu6_emit_window_scissor<CHIP>(cs, 0, 0, 0x3fff, 0x3fff);
+       if (cmd->device->physical_device->info->props.has_hw_bin_scaling) {
+@@ -3059,6 +3160,31 @@ tu_copy_buffer_to_image(struct tu_cmd_buffer *cmd,
+    }
+ 
+    ops->teardown(cmd, cs);
++
++   /* EXPERIMENT 15 (NOT FOR COMMIT): the writes of this blit sit in the CCU
++    * and nothing drains them, so a reader later in the same submit sees the
++    * memory as it was before the copy.  See b2i_sync_mode() for the modes.
++    */
++   b2i_count(cmd);
++   if (const unsigned mode = b2i_sync_mode()) {
++      if (mode == 7) {
++         /* The lazy-bits form: do not execute anything here, leave the clean in
++          * flush_bits and let the next natural flush point pay for it (the
++          * setup of the next out-of-renderpass blit calls
++          * tu_emit_cache_flush() unconditionally, a dispatch and the start of a
++          * renderpass do the same).  Consecutive copies share one clean+WFI.
++          */
++         cmd->state.cache.flush_bits |=
++            TU_CMD_FLAG_CCU_CLEAN_COLOR | TU_CMD_FLAG_WAIT_FOR_IDLE;
++      } else if (mode == 15) {
++         /* negative control for 7: the clean without the WFI */
++         cmd->state.cache.flush_bits |= TU_CMD_FLAG_CCU_CLEAN_COLOR;
++      } else if (mode & 8) {
++         cmd->b2i_ccu_dirty = true;
++      } else {
++         b2i_sync_emit<CHIP>(cmd, cs, mode);
++      }
++   }
+ }
+ 
+ template <chip CHIP>
+diff --git a/src/freedreno/vulkan/tu_cmd_buffer.h b/src/freedreno/vulkan/tu_cmd_buffer.h
+index 75673e8..c95ae6f 100644
+--- a/src/freedreno/vulkan/tu_cmd_buffer.h
++++ b/src/freedreno/vulkan/tu_cmd_buffer.h
+@@ -730,6 +730,15 @@ struct tu_cmd_buffer
+    struct tu_cmd_state state;
+    uint32_t queue_family_index;
+ 
++   /* EXPERIMENT 15 (NOT FOR COMMIT): CP_BLIT (r2d) buffer->image writes
++    * land in the CCU and nothing drains them, see
++    * tu_copy_buffer_to_image().  b2i_ccu_dirty is the deferred form,
++    * b2i_sync the mode the command buffer was created with, b2i_in_cb only
++    * feeds the TU_B2I_COUNT statistics.
++    */
++   bool b2i_ccu_dirty;
++   unsigned b2i_in_cb;
++
+    /* For TU_DEBUG_START(CHECK_CMD_BUFFER_STATUS) functionality. */
+    struct tu_bo *status_bo;
+ 

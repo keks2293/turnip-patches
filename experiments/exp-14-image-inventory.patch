@@ -1,0 +1,83 @@
+Experiment 14 (image inventory) - NOT FOR COMMIT. One line per created image on
+stderr, enabled by TU_IMG_INV=1: format, extent, mips/layers/samples, usage and
+create flags, the layout the driver chose (tiled/linear), UBWC on/off, mutable,
+total_size, the app's tiling and tiling_possible(), the number of formats in the
+VkImageFormatListCreateInfo and the list itself (empty = no list).
+
+Purpose: replace "the driver demotes a lot" with a byte budget. The run that
+produced the numbers in 0014 (docs/analysis.md 21.12) is RE4, one window,
+results/raw/game-patched-imginv4.log: 7977 MiB sampled, 4062 MiB (50.9%) are
+MUTABLE images with listn=0 sitting in linear, broken down by base format with
+scripts/fmt-list-gate-check.py --no-list <log>. The same log feeds the
+"which explicit list loses what" table (the 72 vkd3d classes) in the report.
+
+Cost: one fprintf per vkCreateImage, only with the variable set; nothing is
+computed otherwise. The size is image->total_size, i.e. what the driver
+allocated, not what the app asked for.
+
+Rollback: git checkout HEAD -- src/freedreno/vulkan/tu_image.cc (the rig is the
+only change in that file; git apply -R of this patch also works). Note that
+this file also carries 0004/0005/0009/0014 in an uncommitted tree - use
+git apply -R, not git checkout, there.
+
+--- a/src/freedreno/vulkan/tu_image.cc
++++ b/src/freedreno/vulkan/tu_image.cc
+@@ -9,6 +9,9 @@
+ 
+ #include "tu_image.h"
+ 
++#include <stdio.h>
++#include <stdlib.h>
++
+ #include "drm-uapi/drm_fourcc.h"
+ 
+ #include "util/format/u_format.h"
+@@ -868,6 +871,48 @@
+          image->vk.array_layers * sizeof(struct tu_subsampled_metadata);
+    }
+ 
++   /* exp-14 (turnip-patches-en experiments): image inventory for the UBWC
++    * gate - NOT FOR SHIP, remove from the tree after the run. One line per
++    * created image so that a single 60-70 s game run shows which share of
++    * allocated bytes ends up ubwc / tiled / linear, and why (BC, sparse).
++    * Enabled by TU_IMG_INV=1 in the environment.
++    */
++   if (getenv("TU_IMG_INV")) {
++      const VkImageFormatListCreateInfo *fl =
++         vk_find_struct_const(pCreateInfo->pNext, IMAGE_FORMAT_LIST_CREATE_INFO);
++      char lbuf[200];
++      size_t off = 0;
++      lbuf[0] = '\0';
++      if (fl) {
++         for (uint32_t i = 0; i < fl->viewFormatCount && off < sizeof(lbuf) - 32; i++) {
++            VkFormat f = fl->pViewFormats[i];
++            if (f == VK_FORMAT_UNDEFINED)
++               continue;
++            int n = snprintf(lbuf + off, sizeof(lbuf) - off, "%s%s",
++                             off ? "," : "",
++                             util_format_name(vk_format_to_pipe_format(f)));
++            if (n > 0)
++               off += (size_t)n;
++         }
++      }
++      fprintf(stderr,
++              "TU_IMG_INV fmt=%s vkfmt=%s %ux%ux%u mip=%u arr=%u samples=%u "
++              "usage=0x%llx flags=0x%llx tile=%s ubwc=%d mutable=%d size=%llu "
++              "app_tiling=%d tiling_possible=%d listn=%u list=%s\n",
++              util_format_name(image->layout[0].format),
++              util_format_name(vk_format_to_pipe_format(pCreateInfo->format)),
++              image->vk.extent.width, image->vk.extent.height,
++              image->vk.extent.depth, image->vk.mip_levels,
++              image->vk.array_layers, image->vk.samples,
++              (unsigned long long)image->vk.usage,
++              (unsigned long long)image->vk.create_flags,
++              image->layout[0].tile_mode == TILE6_LINEAR ? "linear" : "tiled",
++              image->layout[0].ubwc, is_mutable,
++              (unsigned long long)image->total_size,
++              (int)pCreateInfo->tiling, (int)tiling_possible(image->vk.format),
++              fl ? fl->viewFormatCount : 0u, lbuf);
++   }
++
+    return VK_SUCCESS;
+ }
+ TU_GENX(tu_image_init);

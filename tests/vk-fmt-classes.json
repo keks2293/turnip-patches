@@ -1,0 +1,4357 @@
+{
+ "classes": {
+  "128-bit": [
+   "R32G32B32A32_SFLOAT",
+   "R32G32B32A32_SINT",
+   "R32G32B32A32_UINT",
+   "R64G64_SFLOAT",
+   "R64G64_SINT",
+   "R64G64_UINT"
+  ],
+  "16-bit": [
+   "A1B5G5R5_UNORM_PACK16",
+   "A1R5G5B5_UNORM_PACK16",
+   "A4B4G4R4_UNORM_PACK16",
+   "A4R4G4B4_UNORM_PACK16",
+   "B4G4R4A4_UNORM_PACK16",
+   "B5G5R5A1_UNORM_PACK16",
+   "B5G6R5_UNORM_PACK16",
+   "R10X6_UINT_PACK16_ARM",
+   "R10X6_UNORM_PACK16",
+   "R12X4_UINT_PACK16_ARM",
+   "R12X4_UNORM_PACK16",
+   "R14X2_UINT_PACK16_ARM",
+   "R14X2_UNORM_PACK16_ARM",
+   "R16_SFLOAT",
+   "R16_SFLOAT_FPENCODING_BFLOAT16_ARM",
+   "R16_SINT",
+   "R16_SNORM",
+   "R16_SSCALED",
+   "R16_UINT",
+   "R16_UNORM",
+   "R16_USCALED",
+   "R4G4B4A4_UNORM_PACK16",
+   "R5G5B5A1_UNORM_PACK16",
+   "R5G6B5_UNORM_PACK16",
+   "R8G8_SINT",
+   "R8G8_SNORM",
+   "R8G8_SRGB",
+   "R8G8_SSCALED",
+   "R8G8_UINT",
+   "R8G8_UNORM",
+   "R8G8_USCALED"
+  ],
+  "192-bit": [
+   "R64G64B64_SFLOAT",
+   "R64G64B64_SINT",
+   "R64G64B64_UINT"
+  ],
+  "24-bit": [
+   "B8G8R8_SINT",
+   "B8G8R8_SNORM",
+   "B8G8R8_SRGB",
+   "B8G8R8_SSCALED",
+   "B8G8R8_UINT",
+   "B8G8R8_UNORM",
+   "B8G8R8_USCALED",
+   "R8G8B8_SINT",
+   "R8G8B8_SNORM",
+   "R8G8B8_SRGB",
+   "R8G8B8_SSCALED",
+   "R8G8B8_UINT",
+   "R8G8B8_UNORM",
+   "R8G8B8_USCALED"
+  ],
+  "256-bit": [
+   "R64G64B64A64_SFLOAT",
+   "R64G64B64A64_SINT",
+   "R64G64B64A64_UINT"
+  ],
+  "32-bit": [
+   "A2B10G10R10_SINT_PACK32",
+   "A2B10G10R10_SNORM_PACK32",
+   "A2B10G10R10_SSCALED_PACK32",
+   "A2B10G10R10_UINT_PACK32",
+   "A2B10G10R10_UNORM_PACK32",
+   "A2B10G10R10_USCALED_PACK32",
+   "A2R10G10B10_SINT_PACK32",
+   "A2R10G10B10_SNORM_PACK32",
+   "A2R10G10B10_SSCALED_PACK32",
+   "A2R10G10B10_UINT_PACK32",
+   "A2R10G10B10_UNORM_PACK32",
+   "A2R10G10B10_USCALED_PACK32",
+   "A8B8G8R8_SINT_PACK32",
+   "A8B8G8R8_SNORM_PACK32",
+   "A8B8G8R8_SRGB_PACK32",
+   "A8B8G8R8_SSCALED_PACK32",
+   "A8B8G8R8_UINT_PACK32",
+   "A8B8G8R8_UNORM_PACK32",
+   "A8B8G8R8_USCALED_PACK32",
+   "B10G11R11_UFLOAT_PACK32",
+   "B8G8R8A8_SINT",
+   "B8G8R8A8_SNORM",
+   "B8G8R8A8_SRGB",
+   "B8G8R8A8_SSCALED",
+   "B8G8R8A8_UINT",
+   "B8G8R8A8_UNORM",
+   "B8G8R8A8_USCALED",
+   "E5B9G9R9_UFLOAT_PACK32",
+   "R10X6G10X6_UINT_2PACK16_ARM",
+   "R10X6G10X6_UNORM_2PACK16",
+   "R12X4G12X4_UINT_2PACK16_ARM",
+   "R12X4G12X4_UNORM_2PACK16",
+   "R14X2G14X2_UINT_2PACK16_ARM",
+   "R14X2G14X2_UNORM_2PACK16_ARM",
+   "R16G16_SFIXED5_NV",
+   "R16G16_SFLOAT",
+   "R16G16_SINT",
+   "R16G16_SNORM",
+   "R16G16_SSCALED",
+   "R16G16_UINT",
+   "R16G16_UNORM",
+   "R16G16_USCALED",
+   "R32_SFLOAT",
+   "R32_SINT",
+   "R32_UINT",
+   "R8G8B8A8_SINT",
+   "R8G8B8A8_SNORM",
+   "R8G8B8A8_SRGB",
+   "R8G8B8A8_SSCALED",
+   "R8G8B8A8_UINT",
+   "R8G8B8A8_UNORM",
+   "R8G8B8A8_USCALED"
+  ],
+  "32-bit B8G8R8G8": [
+   "B8G8R8G8_422_UNORM"
+  ],
+  "32-bit G8B8G8R8": [
+   "G8B8G8R8_422_UNORM"
+  ],
+  "48-bit": [
+   "R16G16B16_SFLOAT",
+   "R16G16B16_SINT",
+   "R16G16B16_SNORM",
+   "R16G16B16_SSCALED",
+   "R16G16B16_UINT",
+   "R16G16B16_UNORM",
+   "R16G16B16_USCALED"
+  ],
+  "64-bit": [
+   "R16G16B16A16_SFLOAT",
+   "R16G16B16A16_SINT",
+   "R16G16B16A16_SNORM",
+   "R16G16B16A16_SSCALED",
+   "R16G16B16A16_UINT",
+   "R16G16B16A16_UNORM",
+   "R16G16B16A16_USCALED",
+   "R32G32_SFLOAT",
+   "R32G32_SINT",
+   "R32G32_UINT",
+   "R64_SFLOAT",
+   "R64_SINT",
+   "R64_UINT"
+  ],
+  "64-bit B10G10R10G10": [
+   "B10X6G10X6R10X6G10X6_422_UNORM_4PACK16"
+  ],
+  "64-bit B12G12R12G12": [
+   "B12X4G12X4R12X4G12X4_422_UNORM_4PACK16"
+  ],
+  "64-bit B16G16R16G16": [
+   "B16G16R16G16_422_UNORM"
+  ],
+  "64-bit G10B10G10R10": [
+   "G10X6B10X6G10X6R10X6_422_UNORM_4PACK16"
+  ],
+  "64-bit G12B12G12R12": [
+   "G12X4B12X4G12X4R12X4_422_UNORM_4PACK16"
+  ],
+  "64-bit G16B16G16R16": [
+   "G16B16G16R16_422_UNORM"
+  ],
+  "64-bit R10G10B10A10": [
+   "R10X6G10X6B10X6A10X6_UINT_4PACK16_ARM",
+   "R10X6G10X6B10X6A10X6_UNORM_4PACK16"
+  ],
+  "64-bit R12G12B12A12": [
+   "R12X4G12X4B12X4A12X4_UINT_4PACK16_ARM",
+   "R12X4G12X4B12X4A12X4_UNORM_4PACK16"
+  ],
+  "64-bit R14G14B14A14": [
+   "R14X2G14X2B14X2A14X2_UINT_4PACK16_ARM",
+   "R14X2G14X2B14X2A14X2_UNORM_4PACK16_ARM"
+  ],
+  "8-bit": [
+   "R4G4_UNORM_PACK8",
+   "R8_BOOL_ARM",
+   "R8_SFLOAT_FPENCODING_FLOAT8E4M3_ARM",
+   "R8_SFLOAT_FPENCODING_FLOAT8E5M2_ARM",
+   "R8_SINT",
+   "R8_SNORM",
+   "R8_SRGB",
+   "R8_SSCALED",
+   "R8_UINT",
+   "R8_UNORM",
+   "R8_USCALED"
+  ],
+  "8-bit alpha": [
+   "A8_UNORM"
+  ],
+  "96-bit": [
+   "R32G32B32_SFLOAT",
+   "R32G32B32_SINT",
+   "R32G32B32_UINT"
+  ],
+  "ASTC_10x10": [
+   "ASTC_10x10_SFLOAT_BLOCK",
+   "ASTC_10x10_SRGB_BLOCK",
+   "ASTC_10x10_UNORM_BLOCK"
+  ],
+  "ASTC_10x5": [
+   "ASTC_10x5_SFLOAT_BLOCK",
+   "ASTC_10x5_SRGB_BLOCK",
+   "ASTC_10x5_UNORM_BLOCK"
+  ],
+  "ASTC_10x6": [
+   "ASTC_10x6_SFLOAT_BLOCK",
+   "ASTC_10x6_SRGB_BLOCK",
+   "ASTC_10x6_UNORM_BLOCK"
+  ],
+  "ASTC_10x8": [
+   "ASTC_10x8_SFLOAT_BLOCK",
+   "ASTC_10x8_SRGB_BLOCK",
+   "ASTC_10x8_UNORM_BLOCK"
+  ],
+  "ASTC_12x10": [
+   "ASTC_12x10_SFLOAT_BLOCK",
+   "ASTC_12x10_SRGB_BLOCK",
+   "ASTC_12x10_UNORM_BLOCK"
+  ],
+  "ASTC_12x12": [
+   "ASTC_12x12_SFLOAT_BLOCK",
+   "ASTC_12x12_SRGB_BLOCK",
+   "ASTC_12x12_UNORM_BLOCK"
+  ],
+  "ASTC_3x3x3": [
+   "ASTC_3x3x3_SFLOAT_BLOCK_EXT",
+   "ASTC_3x3x3_SRGB_BLOCK_EXT",
+   "ASTC_3x3x3_UNORM_BLOCK_EXT"
+  ],
+  "ASTC_4x3x3": [
+   "ASTC_4x3x3_SFLOAT_BLOCK_EXT",
+   "ASTC_4x3x3_SRGB_BLOCK_EXT",
+   "ASTC_4x3x3_UNORM_BLOCK_EXT"
+  ],
+  "ASTC_4x4": [
+   "ASTC_4x4_SFLOAT_BLOCK",
+   "ASTC_4x4_SRGB_BLOCK",
+   "ASTC_4x4_UNORM_BLOCK"
+  ],
+  "ASTC_4x4x3": [
+   "ASTC_4x4x3_SFLOAT_BLOCK_EXT",
+   "ASTC_4x4x3_SRGB_BLOCK_EXT",
+   "ASTC_4x4x3_UNORM_BLOCK_EXT"
+  ],
+  "ASTC_4x4x4": [
+   "ASTC_4x4x4_SFLOAT_BLOCK_EXT",
+   "ASTC_4x4x4_SRGB_BLOCK_EXT",
+   "ASTC_4x4x4_UNORM_BLOCK_EXT"
+  ],
+  "ASTC_5x4": [
+   "ASTC_5x4_SFLOAT_BLOCK",
+   "ASTC_5x4_SRGB_BLOCK",
+   "ASTC_5x4_UNORM_BLOCK"
+  ],
+  "ASTC_5x4x4": [
+   "ASTC_5x4x4_SFLOAT_BLOCK_EXT",
+   "ASTC_5x4x4_SRGB_BLOCK_EXT",
+   "ASTC_5x4x4_UNORM_BLOCK_EXT"
+  ],
+  "ASTC_5x5": [
+   "ASTC_5x5_SFLOAT_BLOCK",
+   "ASTC_5x5_SRGB_BLOCK",
+   "ASTC_5x5_UNORM_BLOCK"
+  ],
+  "ASTC_5x5x4": [
+   "ASTC_5x5x4_SFLOAT_BLOCK_EXT",
+   "ASTC_5x5x4_SRGB_BLOCK_EXT",
+   "ASTC_5x5x4_UNORM_BLOCK_EXT"
+  ],
+  "ASTC_5x5x5": [
+   "ASTC_5x5x5_SFLOAT_BLOCK_EXT",
+   "ASTC_5x5x5_SRGB_BLOCK_EXT",
+   "ASTC_5x5x5_UNORM_BLOCK_EXT"
+  ],
+  "ASTC_6x5": [
+   "ASTC_6x5_SFLOAT_BLOCK",
+   "ASTC_6x5_SRGB_BLOCK",
+   "ASTC_6x5_UNORM_BLOCK"
+  ],
+  "ASTC_6x5x5": [
+   "ASTC_6x5x5_SFLOAT_BLOCK_EXT",
+   "ASTC_6x5x5_SRGB_BLOCK_EXT",
+   "ASTC_6x5x5_UNORM_BLOCK_EXT"
+  ],
+  "ASTC_6x6": [
+   "ASTC_6x6_SFLOAT_BLOCK",
+   "ASTC_6x6_SRGB_BLOCK",
+   "ASTC_6x6_UNORM_BLOCK"
+  ],
+  "ASTC_6x6x5": [
+   "ASTC_6x6x5_SFLOAT_BLOCK_EXT",
+   "ASTC_6x6x5_SRGB_BLOCK_EXT",
+   "ASTC_6x6x5_UNORM_BLOCK_EXT"
+  ],
+  "ASTC_6x6x6": [
+   "ASTC_6x6x6_SFLOAT_BLOCK_EXT",
+   "ASTC_6x6x6_SRGB_BLOCK_EXT",
+   "ASTC_6x6x6_UNORM_BLOCK_EXT"
+  ],
+  "ASTC_8x5": [
+   "ASTC_8x5_SFLOAT_BLOCK",
+   "ASTC_8x5_SRGB_BLOCK",
+   "ASTC_8x5_UNORM_BLOCK"
+  ],
+  "ASTC_8x6": [
+   "ASTC_8x6_SFLOAT_BLOCK",
+   "ASTC_8x6_SRGB_BLOCK",
+   "ASTC_8x6_UNORM_BLOCK"
+  ],
+  "ASTC_8x8": [
+   "ASTC_8x8_SFLOAT_BLOCK",
+   "ASTC_8x8_SRGB_BLOCK",
+   "ASTC_8x8_UNORM_BLOCK"
+  ],
+  "BC1_RGB": [
+   "BC1_RGB_SRGB_BLOCK",
+   "BC1_RGB_UNORM_BLOCK"
+  ],
+  "BC1_RGBA": [
+   "BC1_RGBA_SRGB_BLOCK",
+   "BC1_RGBA_UNORM_BLOCK"
+  ],
+  "BC2": [
+   "BC2_SRGB_BLOCK",
+   "BC2_UNORM_BLOCK"
+  ],
+  "BC3": [
+   "BC3_SRGB_BLOCK",
+   "BC3_UNORM_BLOCK"
+  ],
+  "BC4": [
+   "BC4_SNORM_BLOCK",
+   "BC4_UNORM_BLOCK"
+  ],
+  "BC5": [
+   "BC5_SNORM_BLOCK",
+   "BC5_UNORM_BLOCK"
+  ],
+  "BC6H": [
+   "BC6H_SFLOAT_BLOCK",
+   "BC6H_UFLOAT_BLOCK"
+  ],
+  "BC7": [
+   "BC7_SRGB_BLOCK",
+   "BC7_UNORM_BLOCK"
+  ],
+  "D16": [
+   "D16_UNORM"
+  ],
+  "D16S8": [
+   "D16_UNORM_S8_UINT"
+  ],
+  "D24": [
+   "X8_D24_UNORM_PACK32"
+  ],
+  "D24S8": [
+   "D24_UNORM_S8_UINT"
+  ],
+  "D32": [
+   "D32_SFLOAT"
+  ],
+  "D32S8": [
+   "D32_SFLOAT_S8_UINT"
+  ],
+  "EAC_R": [
+   "EAC_R11_SNORM_BLOCK",
+   "EAC_R11_UNORM_BLOCK"
+  ],
+  "EAC_RG": [
+   "EAC_R11G11_SNORM_BLOCK",
+   "EAC_R11G11_UNORM_BLOCK"
+  ],
+  "ETC2_EAC_RGBA": [
+   "ETC2_R8G8B8A8_SRGB_BLOCK",
+   "ETC2_R8G8B8A8_UNORM_BLOCK"
+  ],
+  "ETC2_RGB": [
+   "ETC2_R8G8B8_SRGB_BLOCK",
+   "ETC2_R8G8B8_UNORM_BLOCK"
+  ],
+  "ETC2_RGBA": [
+   "ETC2_R8G8B8A1_SRGB_BLOCK",
+   "ETC2_R8G8B8A1_UNORM_BLOCK"
+  ],
+  "PVRTC1_2BPP": [
+   "PVRTC1_2BPP_SRGB_BLOCK_IMG",
+   "PVRTC1_2BPP_UNORM_BLOCK_IMG"
+  ],
+  "PVRTC1_4BPP": [
+   "PVRTC1_4BPP_SRGB_BLOCK_IMG",
+   "PVRTC1_4BPP_UNORM_BLOCK_IMG"
+  ],
+  "PVRTC2_2BPP": [
+   "PVRTC2_2BPP_SRGB_BLOCK_IMG",
+   "PVRTC2_2BPP_UNORM_BLOCK_IMG"
+  ],
+  "PVRTC2_4BPP": [
+   "PVRTC2_4BPP_SRGB_BLOCK_IMG",
+   "PVRTC2_4BPP_UNORM_BLOCK_IMG"
+  ],
+  "S8": [
+   "S8_UINT"
+  ]
+ },
+ "formats": {
+  "A1B5G5R5_UNORM_PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "A1R5G5B5_UNORM_PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": "B5G5R5A1_UNORM"
+  },
+  "A2B10G10R10_SINT_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "R10G10B10A2_SINT"
+  },
+  "A2B10G10R10_SNORM_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "R10G10B10A2_SNORM"
+  },
+  "A2B10G10R10_SSCALED_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "R10G10B10A2_SSCALED"
+  },
+  "A2B10G10R10_UINT_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "R10G10B10A2_UINT"
+  },
+  "A2B10G10R10_UNORM_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "R10G10B10A2_UNORM"
+  },
+  "A2B10G10R10_USCALED_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "R10G10B10A2_USCALED"
+  },
+  "A2R10G10B10_SINT_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "B10G10R10A2_SINT"
+  },
+  "A2R10G10B10_SNORM_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "B10G10R10A2_SNORM"
+  },
+  "A2R10G10B10_SSCALED_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "B10G10R10A2_SSCALED"
+  },
+  "A2R10G10B10_UINT_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "B10G10R10A2_UINT"
+  },
+  "A2R10G10B10_UNORM_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "B10G10R10A2_UNORM"
+  },
+  "A2R10G10B10_USCALED_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "B10G10R10A2_USCALED"
+  },
+  "A4B4G4R4_UNORM_PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "A4R4G4B4_UNORM_PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "A8B8G8R8_SINT_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "RGBA8888_SINT"
+  },
+  "A8B8G8R8_SNORM_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "RGBA8888_SNORM"
+  },
+  "A8B8G8R8_SRGB_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "RGBA8888_SRGB"
+  },
+  "A8B8G8R8_SSCALED_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "RGBA8888_SSCALED"
+  },
+  "A8B8G8R8_UINT_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "RGBA8888_UINT"
+  },
+  "A8B8G8R8_UNORM_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "RGBA8888_UNORM"
+  },
+  "A8B8G8R8_USCALED_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "RGBA8888_USCALED"
+  },
+  "A8_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "8-bit alpha",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_10x10_SFLOAT_BLOCK": {
+   "blockExtent": [
+    10,
+    10,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_10x10",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_10x10_SRGB_BLOCK": {
+   "blockExtent": [
+    10,
+    10,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_10x10",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_10x10_UNORM_BLOCK": {
+   "blockExtent": [
+    10,
+    10,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_10x10",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_10x5_SFLOAT_BLOCK": {
+   "blockExtent": [
+    10,
+    5,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_10x5",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_10x5_SRGB_BLOCK": {
+   "blockExtent": [
+    10,
+    5,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_10x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_10x5_UNORM_BLOCK": {
+   "blockExtent": [
+    10,
+    5,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_10x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_10x6_SFLOAT_BLOCK": {
+   "blockExtent": [
+    10,
+    6,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_10x6",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_10x6_SRGB_BLOCK": {
+   "blockExtent": [
+    10,
+    6,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_10x6",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_10x6_UNORM_BLOCK": {
+   "blockExtent": [
+    10,
+    6,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_10x6",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_10x8_SFLOAT_BLOCK": {
+   "blockExtent": [
+    10,
+    8,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_10x8",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_10x8_SRGB_BLOCK": {
+   "blockExtent": [
+    10,
+    8,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_10x8",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_10x8_UNORM_BLOCK": {
+   "blockExtent": [
+    10,
+    8,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_10x8",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_12x10_SFLOAT_BLOCK": {
+   "blockExtent": [
+    12,
+    10,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_12x10",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_12x10_SRGB_BLOCK": {
+   "blockExtent": [
+    12,
+    10,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_12x10",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_12x10_UNORM_BLOCK": {
+   "blockExtent": [
+    12,
+    10,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_12x10",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_12x12_SFLOAT_BLOCK": {
+   "blockExtent": [
+    12,
+    12,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_12x12",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_12x12_SRGB_BLOCK": {
+   "blockExtent": [
+    12,
+    12,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_12x12",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_12x12_UNORM_BLOCK": {
+   "blockExtent": [
+    12,
+    12,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_12x12",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_3x3x3_SFLOAT_BLOCK_EXT": {
+   "blockExtent": [
+    3,
+    3,
+    3
+   ],
+   "blockSize": 16,
+   "class": "ASTC_3x3x3",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_3x3x3_SRGB_BLOCK_EXT": {
+   "blockExtent": [
+    3,
+    3,
+    3
+   ],
+   "blockSize": 16,
+   "class": "ASTC_3x3x3",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_3x3x3_UNORM_BLOCK_EXT": {
+   "blockExtent": [
+    3,
+    3,
+    3
+   ],
+   "blockSize": 16,
+   "class": "ASTC_3x3x3",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_4x3x3_SFLOAT_BLOCK_EXT": {
+   "blockExtent": [
+    4,
+    3,
+    3
+   ],
+   "blockSize": 16,
+   "class": "ASTC_4x3x3",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_4x3x3_SRGB_BLOCK_EXT": {
+   "blockExtent": [
+    4,
+    3,
+    3
+   ],
+   "blockSize": 16,
+   "class": "ASTC_4x3x3",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_4x3x3_UNORM_BLOCK_EXT": {
+   "blockExtent": [
+    4,
+    3,
+    3
+   ],
+   "blockSize": 16,
+   "class": "ASTC_4x3x3",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_4x4_SFLOAT_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_4x4",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_4x4_SRGB_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_4x4",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_4x4_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_4x4",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_4x4x3_SFLOAT_BLOCK_EXT": {
+   "blockExtent": [
+    4,
+    4,
+    3
+   ],
+   "blockSize": 16,
+   "class": "ASTC_4x4x3",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_4x4x3_SRGB_BLOCK_EXT": {
+   "blockExtent": [
+    4,
+    4,
+    3
+   ],
+   "blockSize": 16,
+   "class": "ASTC_4x4x3",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_4x4x3_UNORM_BLOCK_EXT": {
+   "blockExtent": [
+    4,
+    4,
+    3
+   ],
+   "blockSize": 16,
+   "class": "ASTC_4x4x3",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_4x4x4_SFLOAT_BLOCK_EXT": {
+   "blockExtent": [
+    4,
+    4,
+    4
+   ],
+   "blockSize": 16,
+   "class": "ASTC_4x4x4",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_4x4x4_SRGB_BLOCK_EXT": {
+   "blockExtent": [
+    4,
+    4,
+    4
+   ],
+   "blockSize": 16,
+   "class": "ASTC_4x4x4",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_4x4x4_UNORM_BLOCK_EXT": {
+   "blockExtent": [
+    4,
+    4,
+    4
+   ],
+   "blockSize": 16,
+   "class": "ASTC_4x4x4",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x4_SFLOAT_BLOCK": {
+   "blockExtent": [
+    5,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x4",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x4_SRGB_BLOCK": {
+   "blockExtent": [
+    5,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x4",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x4_UNORM_BLOCK": {
+   "blockExtent": [
+    5,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x4",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x4x4_SFLOAT_BLOCK_EXT": {
+   "blockExtent": [
+    5,
+    4,
+    4
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x4x4",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x4x4_SRGB_BLOCK_EXT": {
+   "blockExtent": [
+    5,
+    4,
+    4
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x4x4",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x4x4_UNORM_BLOCK_EXT": {
+   "blockExtent": [
+    5,
+    4,
+    4
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x4x4",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x5_SFLOAT_BLOCK": {
+   "blockExtent": [
+    5,
+    5,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x5",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x5_SRGB_BLOCK": {
+   "blockExtent": [
+    5,
+    5,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x5_UNORM_BLOCK": {
+   "blockExtent": [
+    5,
+    5,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x5x4_SFLOAT_BLOCK_EXT": {
+   "blockExtent": [
+    5,
+    5,
+    4
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x5x4",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x5x4_SRGB_BLOCK_EXT": {
+   "blockExtent": [
+    5,
+    5,
+    4
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x5x4",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x5x4_UNORM_BLOCK_EXT": {
+   "blockExtent": [
+    5,
+    5,
+    4
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x5x4",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x5x5_SFLOAT_BLOCK_EXT": {
+   "blockExtent": [
+    5,
+    5,
+    5
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x5x5",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x5x5_SRGB_BLOCK_EXT": {
+   "blockExtent": [
+    5,
+    5,
+    5
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x5x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_5x5x5_UNORM_BLOCK_EXT": {
+   "blockExtent": [
+    5,
+    5,
+    5
+   ],
+   "blockSize": 16,
+   "class": "ASTC_5x5x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x5_SFLOAT_BLOCK": {
+   "blockExtent": [
+    6,
+    5,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x5",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x5_SRGB_BLOCK": {
+   "blockExtent": [
+    6,
+    5,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x5_UNORM_BLOCK": {
+   "blockExtent": [
+    6,
+    5,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x5x5_SFLOAT_BLOCK_EXT": {
+   "blockExtent": [
+    6,
+    5,
+    5
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x5x5",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x5x5_SRGB_BLOCK_EXT": {
+   "blockExtent": [
+    6,
+    5,
+    5
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x5x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x5x5_UNORM_BLOCK_EXT": {
+   "blockExtent": [
+    6,
+    5,
+    5
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x5x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x6_SFLOAT_BLOCK": {
+   "blockExtent": [
+    6,
+    6,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x6",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x6_SRGB_BLOCK": {
+   "blockExtent": [
+    6,
+    6,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x6",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x6_UNORM_BLOCK": {
+   "blockExtent": [
+    6,
+    6,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x6",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x6x5_SFLOAT_BLOCK_EXT": {
+   "blockExtent": [
+    6,
+    6,
+    5
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x6x5",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x6x5_SRGB_BLOCK_EXT": {
+   "blockExtent": [
+    6,
+    6,
+    5
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x6x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x6x5_UNORM_BLOCK_EXT": {
+   "blockExtent": [
+    6,
+    6,
+    5
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x6x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x6x6_SFLOAT_BLOCK_EXT": {
+   "blockExtent": [
+    6,
+    6,
+    6
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x6x6",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x6x6_SRGB_BLOCK_EXT": {
+   "blockExtent": [
+    6,
+    6,
+    6
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x6x6",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_6x6x6_UNORM_BLOCK_EXT": {
+   "blockExtent": [
+    6,
+    6,
+    6
+   ],
+   "blockSize": 16,
+   "class": "ASTC_6x6x6",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_8x5_SFLOAT_BLOCK": {
+   "blockExtent": [
+    8,
+    5,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_8x5",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_8x5_SRGB_BLOCK": {
+   "blockExtent": [
+    8,
+    5,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_8x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_8x5_UNORM_BLOCK": {
+   "blockExtent": [
+    8,
+    5,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_8x5",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_8x6_SFLOAT_BLOCK": {
+   "blockExtent": [
+    8,
+    6,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_8x6",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_8x6_SRGB_BLOCK": {
+   "blockExtent": [
+    8,
+    6,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_8x6",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_8x6_UNORM_BLOCK": {
+   "blockExtent": [
+    8,
+    6,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_8x6",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_8x8_SFLOAT_BLOCK": {
+   "blockExtent": [
+    8,
+    8,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_8x8",
+   "compressed": "ASTC HDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_8x8_SRGB_BLOCK": {
+   "blockExtent": [
+    8,
+    8,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_8x8",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "ASTC_8x8_UNORM_BLOCK": {
+   "blockExtent": [
+    8,
+    8,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ASTC_8x8",
+   "compressed": "ASTC LDR",
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "B10G11R11_UFLOAT_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "R11G11B10_FLOAT"
+  },
+  "B10X6G10X6R10X6G10X6_422_UNORM_4PACK16": {
+   "blockExtent": [
+    2,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit B10G10R10G10",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "B12X4G12X4R12X4G12X4_422_UNORM_4PACK16": {
+   "blockExtent": [
+    2,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit B12G12R12G12",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "B16G16R16G16_422_UNORM": {
+   "blockExtent": [
+    2,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit B16G16R16G16",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "B4G4R4A4_UNORM_PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": "A4R4G4B4_UNORM"
+  },
+  "B5G5R5A1_UNORM_PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": "A1R5G5B5_UNORM"
+  },
+  "B5G6R5_UNORM_PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": "R5G6B5_UNORM"
+  },
+  "B8G8R8A8_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8A8_SINT"
+  },
+  "B8G8R8A8_SNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8A8_SNORM"
+  },
+  "B8G8R8A8_SRGB": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8A8_SRGB"
+  },
+  "B8G8R8A8_SSCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8A8_SSCALED"
+  },
+  "B8G8R8A8_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8A8_UINT"
+  },
+  "B8G8R8A8_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8A8_UNORM"
+  },
+  "B8G8R8A8_USCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8A8_USCALED"
+  },
+  "B8G8R8G8_422_UNORM": {
+   "blockExtent": [
+    2,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit B8G8R8G8",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "B8G8R8_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8_SINT"
+  },
+  "B8G8R8_SNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8_SNORM"
+  },
+  "B8G8R8_SRGB": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8_SRGB"
+  },
+  "B8G8R8_SSCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8_SSCALED"
+  },
+  "B8G8R8_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8_UINT"
+  },
+  "B8G8R8_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8_UNORM"
+  },
+  "B8G8R8_USCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "B8G8R8_USCALED"
+  },
+  "BC1_RGBA_SRGB_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "BC1_RGBA",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "DXT1_SRGBA"
+  },
+  "BC1_RGBA_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "BC1_RGBA",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "DXT1_RGBA"
+  },
+  "BC1_RGB_SRGB_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "BC1_RGB",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "DXT1_SRGB"
+  },
+  "BC1_RGB_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "BC1_RGB",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "DXT1_RGB"
+  },
+  "BC2_SRGB_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "BC2",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "DXT3_SRGBA"
+  },
+  "BC2_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "BC2",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "DXT3_RGBA"
+  },
+  "BC3_SRGB_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "BC3",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "DXT5_SRGBA"
+  },
+  "BC3_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "BC3",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "DXT5_RGBA"
+  },
+  "BC4_SNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "BC4",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "RGTC1_SNORM"
+  },
+  "BC4_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "BC4",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "RGTC1_UNORM"
+  },
+  "BC5_SNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "BC5",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "RGTC2_SNORM"
+  },
+  "BC5_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "BC5",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "RGTC2_UNORM"
+  },
+  "BC6H_SFLOAT_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "BC6H",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "BPTC_RGB_FLOAT"
+  },
+  "BC6H_UFLOAT_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "BC6H",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "BPTC_RGB_UFLOAT"
+  },
+  "BC7_SRGB_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "BC7",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "BPTC_SRGBA"
+  },
+  "BC7_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "BC7",
+   "compressed": "BC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "BPTC_RGBA_UNORM"
+  },
+  "D16_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "D16",
+   "compressed": null,
+   "kind": "depth-stencil",
+   "packed": null,
+   "pipe": "Z16_UNORM"
+  },
+  "D16_UNORM_S8_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "D16S8",
+   "compressed": null,
+   "kind": "depth-stencil",
+   "packed": null,
+   "pipe": "Z16_UNORM_S8_UINT"
+  },
+  "D24_UNORM_S8_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "D24S8",
+   "compressed": null,
+   "kind": "depth-stencil",
+   "packed": null,
+   "pipe": "Z24_UNORM_S8_UINT"
+  },
+  "D32_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "D32",
+   "compressed": null,
+   "kind": "depth-stencil",
+   "packed": null,
+   "pipe": "Z32_FLOAT"
+  },
+  "D32_SFLOAT_S8_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 5,
+   "class": "D32S8",
+   "compressed": null,
+   "kind": "depth-stencil",
+   "packed": null,
+   "pipe": "Z32_FLOAT_S8X24_UINT"
+  },
+  "E5B9G9R9_UFLOAT_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "32",
+   "pipe": "R9G9B9E5_FLOAT"
+  },
+  "EAC_R11G11_SNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "EAC_RG",
+   "compressed": "EAC",
+   "kind": "color",
+   "packed": null,
+   "pipe": "ETC2_RG11_SNORM"
+  },
+  "EAC_R11G11_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "EAC_RG",
+   "compressed": "EAC",
+   "kind": "color",
+   "packed": null,
+   "pipe": "ETC2_RG11_UNORM"
+  },
+  "EAC_R11_SNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "EAC_R",
+   "compressed": "EAC",
+   "kind": "color",
+   "packed": null,
+   "pipe": "ETC2_R11_SNORM"
+  },
+  "EAC_R11_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "EAC_R",
+   "compressed": "EAC",
+   "kind": "color",
+   "packed": null,
+   "pipe": "ETC2_R11_UNORM"
+  },
+  "ETC2_R8G8B8A1_SRGB_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "ETC2_RGBA",
+   "compressed": "ETC2",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "ETC2_SRGB8A1"
+  },
+  "ETC2_R8G8B8A1_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "ETC2_RGBA",
+   "compressed": "ETC2",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "ETC2_RGB8A1"
+  },
+  "ETC2_R8G8B8A8_SRGB_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ETC2_EAC_RGBA",
+   "compressed": "ETC2",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "ETC2_SRGBA8"
+  },
+  "ETC2_R8G8B8A8_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 16,
+   "class": "ETC2_EAC_RGBA",
+   "compressed": "ETC2",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "ETC2_RGBA8"
+  },
+  "ETC2_R8G8B8_SRGB_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "ETC2_RGB",
+   "compressed": "ETC2",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "ETC2_SRGB8"
+  },
+  "ETC2_R8G8B8_UNORM_BLOCK": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "ETC2_RGB",
+   "compressed": "ETC2",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": "ETC2_RGB8"
+  },
+  "G10X6B10X6G10X6R10X6_422_UNORM_4PACK16": {
+   "blockExtent": [
+    2,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit G10B10G10R10",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "10-bit 2-plane 420",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "10-bit 2-plane 422",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "10-bit 2-plane 444",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "10-bit 3-plane 420",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "10-bit 3-plane 422",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "10-bit 3-plane 444",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G12X4B12X4G12X4R12X4_422_UNORM_4PACK16": {
+   "blockExtent": [
+    2,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit G12B12G12R12",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "12-bit 2-plane 420",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "12-bit 2-plane 422",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "12-bit 2-plane 444",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "12-bit 3-plane 420",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "12-bit 3-plane 422",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "12-bit 3-plane 444",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G14X2_B14X2R14X2_2PLANE_420_UNORM_3PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "14-bit 2-plane 420",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G14X2_B14X2R14X2_2PLANE_422_UNORM_3PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "14-bit 2-plane 422",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": "16",
+   "pipe": null
+  },
+  "G16B16G16R16_422_UNORM": {
+   "blockExtent": [
+    2,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit G16B16G16R16",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "G16_B16R16_2PLANE_420_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "16-bit 2-plane 420",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": null,
+   "pipe": null
+  },
+  "G16_B16R16_2PLANE_422_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "16-bit 2-plane 422",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": null,
+   "pipe": null
+  },
+  "G16_B16R16_2PLANE_444_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "16-bit 2-plane 444",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": null,
+   "pipe": null
+  },
+  "G16_B16_R16_3PLANE_420_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "16-bit 3-plane 420",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": null,
+   "pipe": null
+  },
+  "G16_B16_R16_3PLANE_422_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "16-bit 3-plane 422",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": null,
+   "pipe": null
+  },
+  "G16_B16_R16_3PLANE_444_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "16-bit 3-plane 444",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": null,
+   "pipe": null
+  },
+  "G8B8G8R8_422_UNORM": {
+   "blockExtent": [
+    2,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit G8B8G8R8",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "G8_B8R8_2PLANE_420_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "8-bit 2-plane 420",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": null,
+   "pipe": null
+  },
+  "G8_B8R8_2PLANE_422_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "8-bit 2-plane 422",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": null,
+   "pipe": null
+  },
+  "G8_B8R8_2PLANE_444_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "8-bit 2-plane 444",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": null,
+   "pipe": null
+  },
+  "G8_B8_R8_3PLANE_420_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "8-bit 3-plane 420",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": null,
+   "pipe": null
+  },
+  "G8_B8_R8_3PLANE_422_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "8-bit 3-plane 422",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": null,
+   "pipe": null
+  },
+  "G8_B8_R8_3PLANE_444_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "8-bit 3-plane 444",
+   "compressed": null,
+   "kind": "multi-planar",
+   "packed": null,
+   "pipe": null
+  },
+  "PVRTC1_2BPP_SRGB_BLOCK_IMG": {
+   "blockExtent": [
+    8,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "PVRTC1_2BPP",
+   "compressed": "PVRTC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": null
+  },
+  "PVRTC1_2BPP_UNORM_BLOCK_IMG": {
+   "blockExtent": [
+    8,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "PVRTC1_2BPP",
+   "compressed": "PVRTC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": null
+  },
+  "PVRTC1_4BPP_SRGB_BLOCK_IMG": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "PVRTC1_4BPP",
+   "compressed": "PVRTC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": null
+  },
+  "PVRTC1_4BPP_UNORM_BLOCK_IMG": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "PVRTC1_4BPP",
+   "compressed": "PVRTC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": null
+  },
+  "PVRTC2_2BPP_SRGB_BLOCK_IMG": {
+   "blockExtent": [
+    8,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "PVRTC2_2BPP",
+   "compressed": "PVRTC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": null
+  },
+  "PVRTC2_2BPP_UNORM_BLOCK_IMG": {
+   "blockExtent": [
+    8,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "PVRTC2_2BPP",
+   "compressed": "PVRTC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": null
+  },
+  "PVRTC2_4BPP_SRGB_BLOCK_IMG": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "PVRTC2_4BPP",
+   "compressed": "PVRTC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": null
+  },
+  "PVRTC2_4BPP_UNORM_BLOCK_IMG": {
+   "blockExtent": [
+    4,
+    4,
+    1
+   ],
+   "blockSize": 8,
+   "class": "PVRTC2_4BPP",
+   "compressed": "PVRTC",
+   "kind": "compressed",
+   "packed": null,
+   "pipe": null
+  },
+  "R10X6G10X6B10X6A10X6_UINT_4PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit R10G10B10A10",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R10X6G10X6B10X6A10X6_UNORM_4PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit R10G10B10A10",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R10X6G10X6_UINT_2PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R10X6G10X6_UNORM_2PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R10X6_UINT_PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R10X6_UNORM_PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R12X4G12X4B12X4A12X4_UINT_4PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit R12G12B12A12",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R12X4G12X4B12X4A12X4_UNORM_4PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit R12G12B12A12",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R12X4G12X4_UINT_2PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R12X4G12X4_UNORM_2PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R12X4_UINT_PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R12X4_UNORM_PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R14X2G14X2B14X2A14X2_UINT_4PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit R14G14B14A14",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R14X2G14X2B14X2A14X2_UNORM_4PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit R14G14B14A14",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R14X2G14X2_UINT_2PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R14X2G14X2_UNORM_2PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R14X2_UINT_PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R14X2_UNORM_PACK16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": null
+  },
+  "R16G16B16A16_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16A16_FLOAT"
+  },
+  "R16G16B16A16_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16A16_SINT"
+  },
+  "R16G16B16A16_SNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16A16_SNORM"
+  },
+  "R16G16B16A16_SSCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16A16_SSCALED"
+  },
+  "R16G16B16A16_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16A16_UINT"
+  },
+  "R16G16B16A16_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16A16_UNORM"
+  },
+  "R16G16B16A16_USCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16A16_USCALED"
+  },
+  "R16G16B16_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "48-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16_FLOAT"
+  },
+  "R16G16B16_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "48-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16_SINT"
+  },
+  "R16G16B16_SNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "48-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16_SNORM"
+  },
+  "R16G16B16_SSCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "48-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16_SSCALED"
+  },
+  "R16G16B16_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "48-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16_UINT"
+  },
+  "R16G16B16_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "48-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16_UNORM"
+  },
+  "R16G16B16_USCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 6,
+   "class": "48-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16B16_USCALED"
+  },
+  "R16G16_SFIXED5_NV": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "R16G16_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16_FLOAT"
+  },
+  "R16G16_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16_SINT"
+  },
+  "R16G16_SNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16_SNORM"
+  },
+  "R16G16_SSCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16_SSCALED"
+  },
+  "R16G16_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16_UINT"
+  },
+  "R16G16_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16_UNORM"
+  },
+  "R16G16_USCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16G16_USCALED"
+  },
+  "R16_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16_FLOAT"
+  },
+  "R16_SFLOAT_FPENCODING_BFLOAT16_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "R16_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16_SINT"
+  },
+  "R16_SNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16_SNORM"
+  },
+  "R16_SSCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16_SSCALED"
+  },
+  "R16_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16_UINT"
+  },
+  "R16_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16_UNORM"
+  },
+  "R16_USCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R16_USCALED"
+  },
+  "R32G32B32A32_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 16,
+   "class": "128-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R32G32B32A32_FLOAT"
+  },
+  "R32G32B32A32_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 16,
+   "class": "128-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R32G32B32A32_SINT"
+  },
+  "R32G32B32A32_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 16,
+   "class": "128-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R32G32B32A32_UINT"
+  },
+  "R32G32B32_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 12,
+   "class": "96-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R32G32B32_FLOAT"
+  },
+  "R32G32B32_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 12,
+   "class": "96-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R32G32B32_SINT"
+  },
+  "R32G32B32_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 12,
+   "class": "96-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R32G32B32_UINT"
+  },
+  "R32G32_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R32G32_FLOAT"
+  },
+  "R32G32_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R32G32_SINT"
+  },
+  "R32G32_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R32G32_UINT"
+  },
+  "R32_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R32_FLOAT"
+  },
+  "R32_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R32_SINT"
+  },
+  "R32_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R32_UINT"
+  },
+  "R4G4B4A4_UNORM_PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": "A4B4G4R4_UNORM"
+  },
+  "R4G4_UNORM_PACK8": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "8-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "8",
+   "pipe": null
+  },
+  "R5G5B5A1_UNORM_PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": "A1B5G5R5_UNORM"
+  },
+  "R5G6B5_UNORM_PACK16": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": "16",
+   "pipe": "B5G6R5_UNORM"
+  },
+  "R64G64B64A64_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 32,
+   "class": "256-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R64G64B64A64_FLOAT"
+  },
+  "R64G64B64A64_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 32,
+   "class": "256-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R64G64B64A64_SINT"
+  },
+  "R64G64B64A64_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 32,
+   "class": "256-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R64G64B64A64_UINT"
+  },
+  "R64G64B64_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 24,
+   "class": "192-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R64G64B64_FLOAT"
+  },
+  "R64G64B64_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 24,
+   "class": "192-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R64G64B64_SINT"
+  },
+  "R64G64B64_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 24,
+   "class": "192-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R64G64B64_UINT"
+  },
+  "R64G64_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 16,
+   "class": "128-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R64G64_FLOAT"
+  },
+  "R64G64_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 16,
+   "class": "128-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R64G64_SINT"
+  },
+  "R64G64_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 16,
+   "class": "128-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R64G64_UINT"
+  },
+  "R64_SFLOAT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R64_FLOAT"
+  },
+  "R64_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R64_SINT"
+  },
+  "R64_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 8,
+   "class": "64-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R64_UINT"
+  },
+  "R8G8B8A8_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8A8_SINT"
+  },
+  "R8G8B8A8_SNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8A8_SNORM"
+  },
+  "R8G8B8A8_SRGB": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8A8_SRGB"
+  },
+  "R8G8B8A8_SSCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8A8_SSCALED"
+  },
+  "R8G8B8A8_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8A8_UINT"
+  },
+  "R8G8B8A8_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8A8_UNORM"
+  },
+  "R8G8B8A8_USCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "32-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8A8_USCALED"
+  },
+  "R8G8B8_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8_SINT"
+  },
+  "R8G8B8_SNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8_SNORM"
+  },
+  "R8G8B8_SRGB": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8_SRGB"
+  },
+  "R8G8B8_SSCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8_SSCALED"
+  },
+  "R8G8B8_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8_UINT"
+  },
+  "R8G8B8_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8_UNORM"
+  },
+  "R8G8B8_USCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 3,
+   "class": "24-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8B8_USCALED"
+  },
+  "R8G8_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8_SINT"
+  },
+  "R8G8_SNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8_SNORM"
+  },
+  "R8G8_SRGB": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8_SRGB"
+  },
+  "R8G8_SSCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8_SSCALED"
+  },
+  "R8G8_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8_UINT"
+  },
+  "R8G8_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8_UNORM"
+  },
+  "R8G8_USCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 2,
+   "class": "16-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8G8_USCALED"
+  },
+  "R8_BOOL_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "8-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "R8_SFLOAT_FPENCODING_FLOAT8E4M3_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "8-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "R8_SFLOAT_FPENCODING_FLOAT8E5M2_ARM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "8-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": null
+  },
+  "R8_SINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "8-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8_SINT"
+  },
+  "R8_SNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "8-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8_SNORM"
+  },
+  "R8_SRGB": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "8-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8_SRGB"
+  },
+  "R8_SSCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "8-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8_SSCALED"
+  },
+  "R8_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "8-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8_UINT"
+  },
+  "R8_UNORM": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "8-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8_UNORM"
+  },
+  "R8_USCALED": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "8-bit",
+   "compressed": null,
+   "kind": "color",
+   "packed": null,
+   "pipe": "R8_USCALED"
+  },
+  "S8_UINT": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 1,
+   "class": "S8",
+   "compressed": null,
+   "kind": "depth-stencil",
+   "packed": null,
+   "pipe": "S8_UINT"
+  },
+  "X8_D24_UNORM_PACK32": {
+   "blockExtent": [
+    1,
+    1,
+    1
+   ],
+   "blockSize": 4,
+   "class": "D24",
+   "compressed": null,
+   "kind": "depth-stencil",
+   "packed": "32",
+   "pipe": "Z24X8_UNORM"
+  }
+ },
+ "pipe_to_vk": {
+  "A1B5G5R5_UNORM": "R5G5B5A1_UNORM_PACK16",
+  "A1R5G5B5_UNORM": "B5G5R5A1_UNORM_PACK16",
+  "A4B4G4R4_UNORM": "R4G4B4A4_UNORM_PACK16",
+  "A4R4G4B4_UNORM": "B4G4R4A4_UNORM_PACK16",
+  "A8_UNORM": "A8_UNORM_KHR",
+  "B10G10R10A2_SINT": "A2R10G10B10_SINT_PACK32",
+  "B10G10R10A2_SNORM": "A2R10G10B10_SNORM_PACK32",
+  "B10G10R10A2_SSCALED": "A2R10G10B10_SSCALED_PACK32",
+  "B10G10R10A2_UINT": "A2R10G10B10_UINT_PACK32",
+  "B10G10R10A2_UNORM": "A2R10G10B10_UNORM_PACK32",
+  "B10G10R10A2_USCALED": "A2R10G10B10_USCALED_PACK32",
+  "B4G4R4A4_UNORM": "A4R4G4B4_UNORM_PACK16",
+  "B5G5R5A1_UNORM": "A1R5G5B5_UNORM_PACK16",
+  "B5G6R5_UNORM": "R5G6B5_UNORM_PACK16",
+  "B8G8_R8G8_UNORM": "B8G8R8G8_422_UNORM",
+  "BPTC_RGBA_UNORM": "BC7_UNORM_BLOCK",
+  "BPTC_RGB_FLOAT": "BC6H_SFLOAT_BLOCK",
+  "BPTC_RGB_UFLOAT": "BC6H_UFLOAT_BLOCK",
+  "BPTC_SRGBA": "BC7_SRGB_BLOCK",
+  "DXT1_RGB": "BC1_RGB_UNORM_BLOCK",
+  "DXT1_RGBA": "BC1_RGBA_UNORM_BLOCK",
+  "DXT1_SRGB": "BC1_RGB_SRGB_BLOCK",
+  "DXT1_SRGBA": "BC1_RGBA_SRGB_BLOCK",
+  "DXT3_RGBA": "BC2_UNORM_BLOCK",
+  "DXT3_SRGBA": "BC2_SRGB_BLOCK",
+  "DXT5_RGBA": "BC3_UNORM_BLOCK",
+  "DXT5_SRGBA": "BC3_SRGB_BLOCK",
+  "ETC1_RGB8": "ETC2_R8G8B8_UNORM_BLOCK",
+  "ETC2_R11_SNORM": "EAC_R11_SNORM_BLOCK",
+  "ETC2_R11_UNORM": "EAC_R11_UNORM_BLOCK",
+  "ETC2_RG11_SNORM": "EAC_R11G11_SNORM_BLOCK",
+  "ETC2_RG11_UNORM": "EAC_R11G11_UNORM_BLOCK",
+  "ETC2_RGB8": "ETC2_R8G8B8_UNORM_BLOCK",
+  "ETC2_RGB8A1": "ETC2_R8G8B8A1_UNORM_BLOCK",
+  "ETC2_RGBA8": "ETC2_R8G8B8A8_UNORM_BLOCK",
+  "ETC2_SRGB8": "ETC2_R8G8B8_SRGB_BLOCK",
+  "ETC2_SRGB8A1": "ETC2_R8G8B8A1_SRGB_BLOCK",
+  "ETC2_SRGBA8": "ETC2_R8G8B8A8_SRGB_BLOCK",
+  "G8B8_G8R8_UNORM": "G8B8G8R8_422_UNORM",
+  "G8_B8R8_420_UNORM": "G8_B8R8_2PLANE_420_UNORM",
+  "G8_B8_R8_420_UNORM": "G8_B8_R8_3PLANE_420_UNORM",
+  "R10G10B10A2_SINT": "A2B10G10R10_SINT_PACK32",
+  "R10G10B10A2_SNORM": "A2B10G10R10_SNORM_PACK32",
+  "R10G10B10A2_SSCALED": "A2B10G10R10_SSCALED_PACK32",
+  "R10G10B10A2_UINT": "A2B10G10R10_UINT_PACK32",
+  "R10G10B10A2_UNORM": "A2B10G10R10_UNORM_PACK32",
+  "R10G10B10A2_USCALED": "A2B10G10R10_USCALED_PACK32",
+  "R11G11B10_FLOAT": "B10G11R11_UFLOAT_PACK32",
+  "R4G4B4A4_UNORM": "A4B4G4R4_UNORM_PACK16",
+  "R5G5B5A1_UNORM": "A1B5G5R5_UNORM_PACK16_KHR",
+  "R5G6B5_UNORM": "B5G6R5_UNORM_PACK16",
+  "R9G9B9E5_FLOAT": "E5B9G9R9_UFLOAT_PACK32",
+  "RGBA8888_SRGB": "A8B8G8R8_SRGB_PACK32",
+  "RGTC1_SNORM": "BC4_SNORM_BLOCK",
+  "RGTC1_UNORM": "BC4_UNORM_BLOCK",
+  "RGTC2_SNORM": "BC5_SNORM_BLOCK",
+  "RGTC2_UNORM": "BC5_UNORM_BLOCK",
+  "S8_UINT": "S8_UINT",
+  "X4G12_X4B12X4R12_420_UNORM": "G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16",
+  "X4R12X4G12_UNORM": "R12X4G12X4_UNORM_2PACK16",
+  "X4R12_UNORM": "R12X4_UNORM_PACK16",
+  "X6G10_X6B10X6R10_420_UNORM": "G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16",
+  "X6G10_X6B10X6R10_422_UNORM": "G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16",
+  "X6R10X6G10X6B10X6A10_UNORM": "R10X6G10X6B10X6A10X6_UNORM_4PACK16",
+  "X6R10X6G10_UNORM": "R10X6G10X6_UNORM_2PACK16",
+  "X6R10_UNORM": "R10X6_UNORM_PACK16",
+  "Z16_UNORM": "D16_UNORM",
+  "Z16_UNORM_S8_UINT": "D16_UNORM_S8_UINT",
+  "Z24X8_UNORM": "X8_D24_UNORM_PACK32",
+  "Z24_UNORM_S8_UINT": "D24_UNORM_S8_UINT",
+  "Z32_FLOAT": "D32_SFLOAT",
+  "Z32_FLOAT_S8X24_UINT": "D32_SFLOAT_S8_UINT"
+ },
+ "provenance": {
+  "generator": "scripts/gen-vk-fmt-classes.py",
+  "vk.xml": "KhronosGroup/Vulkan-Docs @f7de774cace1",
+  "vk_format.c": "mesa @6dfa32a"
+ }
+}
