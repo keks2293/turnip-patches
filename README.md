@@ -21,14 +21,42 @@ Three patches lift the gate and close the hole that lifting it opens: on
 A740 a sparse resource must not be linear, otherwise it silently reads back
 as zeros.
 
+## Prebuilt driver
+
+Releases: <https://github.com/keks2293/turnip-patches/releases>. The current
+one is [`27.0.0-devel-p14`](https://github.com/keks2293/turnip-patches/releases/tag/27.0.0-devel-p14):
+
+| asset | what it is |
+|---|---|
+| `Turnip_27.0.0-devel_p14.zip` | `libvulkan_freedreno.so` (the tested binary, unstripped), `freedreno_icd.json`, `meta.json` for driver managers, `README.txt`, `SHA256SUMS` |
+| `turnip-p14-source-bundle.tar.gz` | patches 0001-0014 + `HOW-TO-APPLY.txt`: the Mesa base commit, the sha256 of the applied diff, the build command |
+
+The library is `sha256 c17d02bcaae9a960a1350d98b81786dd75f1b5149cc79cb52b0409b59c345815`
+(Mesa `27.0.0-devel` @ `6dfa32a85f91`, stack 0001-0014, aarch64 Linux/glibc +
+MSM KMD - not an Android build). It is the binary the 94/94 matrix in
+`results/test-0014-ship.log` was run on.
+
+Run against it without installing anything:
+
+```sh
+unzip Turnip_27.0.0-devel_p14.zip -d turnip-p14
+export VK_DRIVER_FILES=$PWD/turnip-p14/freedreno_icd.json
+vulkaninfo --summary | grep -E 'driverName|apiVersion|driverVersion'
+```
+
+The pipeline cache UUID is derived from the build id, so the first run after
+swapping the driver rebuilds `vkd3d-proton.cache`; that is expected. How the
+release is made and what to check before publishing - `docs/release.md`.
+
 ## What's here
 
 | | |
 |---|---|
 | `docs/analysis.md` | the analysis: symptom, cause, measurements, applicability boundaries, reproduction; `docs/rp6-vkd3d-analysis.md` - the original short analysis (21.09.2026) it grew out of |
-| `docs/mesa-27-plan.md` | the move to Mesa 27.0-devel: the rebase matrix of 0001-0012, what changed upstream, the build rules with the cache in `/tmp` |
-| `patches/` | 0001-0012 - the Mesa patches that ship; `PATCHES.md` - the origin of 0001-0003 |
-| `experiments/` | `exp-1`-`exp-13` - **not** for commit: reproducible checks of the analysis' conclusions (exp-12 was retired 18.11, the verdict is in `analysis.md` §21.9) |
+| `docs/mesa-27-plan.md` | the move to Mesa 27.0-devel: the rebase matrix of 0001-0014, what changed upstream, the build rules with the cache in `/tmp` |
+| `docs/release.md` | how a driver release is made here: the tree that must be built, the hashes to record, the checklist before publishing |
+| `patches/` | 0001-0014 - the Mesa patches that ship; `PATCHES.md` - the origin of 0001-0003 |
+| `experiments/` | `exp-1`-`exp-15` - **not** for commit: reproducible checks of the analysis' conclusions (exp-12 was retired 18.11, the verdict is in `analysis.md` §21.9) |
 | `tests/` | `rp6-vkd3d-sparse-test.c` + shaders; every result was obtained with it |
 | `scripts/` | build and runs, including the experiment script and game launch |
 | `container/` | toolchain Containerfile (there is no compiler on the device) |
@@ -58,14 +86,21 @@ be lost.
 | **0010** | a list where a single-channel format disagrees with a multi-channel one stays tiled: tiling of the vkd3d typeless-BGRA8 list under UAV | probe V: list `linear -> tiled`; BGRA8 side `roundtrip EXACT 0/262144`; the R32 view diverges from linear in `261120/262144` |
 | **0011** | rows for `R16_*` and `R10G10B10A2_*` in `fd6_ubwc_compat_mode()`: the stock table has none, and any vkd3d list with R16 silently loses UBWC | model: 36 -> 44 UBWC classes out of 72; probe CEIL: a ceiling exists (`0x82000`/`0x102000`), the gate removes it. Caveat below |
 | **0012** | `_SFLOAT` members in the integer UBWC compat classes of `fd6_ubwc_compat_mode()`: a vkd3d list mixing `_SFLOAT` and integers no longer loses UBWC wholesale | probe U: for five TYPELESS classes the list kept UBWC (`list=0x102000`); an isolated A/B on the stack - exactly 5 log lines. Caveat below |
+| **0013** | on A7XX, mark a CCU color clean after `vkCmdCopyBufferToImage`: the CP_BLIT writes stay in the CCU and a blit reader in the same submit sees pre-copy memory | stock: 19 MISMATCH; 0013: 94/94 EXACT, stable over 3 repeats. Form chosen by the exp-15 matrix (lazy bits, nothing per copy) |
+| **0014** | a mutable image with no format list answers the tiling predicates with its base format's compatibility class instead of `NULL` | probe NL: 8/8 layouts match the class model, 8/8 roundtrips byte-exact; in-game deposed linear 3801 -> 1631 MiB (-57.1%, model: -57.9%). Caveat below |
 
 Relations between the patches (details in each header, the `Relations:`
 line): 0010 requires 0005 (which adds
 `tu6_format_list_swaps_are_uniform()`); 0009 builds on the 0004 refusal;
+0013 needs nothing; 0014 needs 0004 only because
+`tu6_mutable_format_list_forces_linear()` appears there; 0013 is required for
+the 0014 content check (the fill is a buffer->image copy);
 0006, 0011 and 0012 edit one compat table `fd6_ubwc_compat_mode()` but
-different rows of it, and apply together without conflicts (verified by
-laying the whole stack 0005-0012 onto a clean HEAD). 0007 and 0008 are
-independent of everything.
+different rows of it, and apply together without conflicts (verified 19.11
+by laying the whole stack 0001-0014 onto a clean HEAD of `6dfa32a85f91`: the
+resulting tree is byte-for-byte the tree the released `.so` was built from,
+and the reverse apply of 0013+0014 followed by a re-apply gives the same).
+0007 and 0008 are independent of everything.
 
 0004 is needed for gen2 only (FD730/735/740, FD740v3, A32, X1-45, X1-85):
 on gen3 and a8xx it is unreachable, the hole does not occur there.
@@ -157,6 +192,13 @@ format interpretation, and a wrong value will only show where an
 application does a fast-clear through a view with float interpretation.
 No probe closes this; the risk is recorded in the patch header.
 
+Caveat for 0014 of its own: it changes tiling only, not compression - a
+no-list mutable image still loses UBWC exactly as in stock (`ubwc_list`
+in `tu_image_init()`). And the content check is a fill/readback in the
+base format; a read through a *different* member of the same class is
+justified by the layout argument, not measured. Both points are in the
+patch header and `docs/analysis.md` §21.12.
+
 Patches **0007** (`TU_FORCE_PROPS`, diagnostics only) and **0008**
 (`gen2`: `has_generic_clear` + `r8g8_faulty_fast_clear_quirk`, renamed
 in Mesa 27 to the quirk `QCTDD12766770_r8g8_fc_alignment`) live in
@@ -214,7 +256,7 @@ all messages translated into English (semantically, keeping the
 The DGC commits (stages M2.0-M2.3) are a separate development line in
 mesa and do not correspond to patches `0001-00XX`; the internal stage
 numbers survive only in the original messages of the `fix-auth` branch.
-Patches `0005`, `0006`, `0009-0012` have not been moved to mesa yet -
+Patches `0005`, `0006`, `0009-0014` have not been moved to mesa yet -
 the mapping grows as things are ported.
 
 ### Experiment -> patch -> mesa
@@ -237,7 +279,9 @@ never go to mesa themselves - only their results do, as `patches/000N`.
 | `exp-10-is-mutable-without-ubwc` | is_mutable alone does not break anything (§21.4) | — | — |
 | `exp-11-ubwc-compat-r16-and-10bit` | 8 of 72 classes with UBWC, the gate is what lifts it (§21.6) | `0011` | not moved yet |
 | `exp-12-ubwc-bc-stageA/stageB` (retired 18.11, files removed) | the HW A740 does BC+UBWC: CEIL nonmut > lin (BC1 `0x20000` → `0x22000`, BC3/7 `0x40000` → `0x44000`), the list path keeps UBWC after stage B. Not shipped: not a perf lever (RE4 BC textures are sparse, UBWC is forbidden for them regardless - §21.9), and stacking lossless compression on BC is a deliberate industry norm (AMD DCC and Intel CCS exclude block formats too); the files are restorable from history `39e103d`. Its verification thread found a real defect instead - the r2d readback zero-windows (bugs-found Bug 2, §21.8) | — | — |
-| `exp-13-i2b-ccu-clean-env-bundle` + `exp-13b-b2i-ccu-clean-candidate` | the r2d readback defect is root-caused: A7XX CP_BLIT writes sit in the CCU, the public copy commands emit no clean and an outside-renderpass barrier emits nothing mid-submit, so the next reader in the same submit sees pre-copy memory. One `FD_CCU_CLEAN_COLOR`+WFI = 91/91 EXACT (§21.10); mesa main has the same gap | not into the RE4 stack - games submit between copy and use, this is an upstream/CTS finding | — |
+| `exp-13-i2b-ccu-clean-env-bundle` + `exp-13b-b2i-ccu-clean-candidate` | the r2d readback defect is root-caused: A7XX CP_BLIT writes sit in the CCU, the public copy commands emit no clean and an outside-renderpass barrier emits nothing mid-submit, so the next reader in the same submit sees pre-copy memory. One `FD_CCU_CLEAN_COLOR`+WFI = 91/91 EXACT (§21.10); mesa main has the same gap | `0013` | not moved yet |
+| `exp-14-image-inventory` | byte budget per created image (`TU_IMG_INV=1`): 4062 MiB of 7977 are `MUT listn=0` in linear, i.e. the target of 0014 | `0014` | not moved yet |
+| `exp-15-b2i-sync-env-bundle` | 16 forms of the post-b2i cache op: mode 7 (lazy `CCU_CLEAN_COLOR\|WAIT_FOR_IDLE` bits) is 94/94 over 3 repeats and the cheapest; blit-cache modes fail, invalidate modes pass but cost two events (§21.11) | `0013` | not moved yet |
 
 ## What was verified by measurement
 

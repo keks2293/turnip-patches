@@ -41,6 +41,12 @@ Verification date: 17.11.2026.
 | **0011** | clean | - | - |
 | **0012** | clean | - | - |
 
+Patches 0013 and 0014 were written later, directly against this same
+27.0-devel tree, so they need no rebase: 0013 touches only the end of
+`tu_copy_buffer_to_image()` (`tu_clear_blit.cc`), 0014 adds a function to
+`tu_formats.cc`/`.h` and one block in `tu_image_init()`. Both apply on top of
+0001-0012 in order and reverse-apply cleanly (`git apply --check -R`).
+
 ### 0008: quirk rename
 
 In Mesa 26 the flag was called `r8g8_faulty_fast_clear_quirk` and lived in

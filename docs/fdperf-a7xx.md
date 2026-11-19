@@ -83,6 +83,33 @@ Consequences for interpreting the sampler file:
   saturated 3D pipe, i.e. GPU-bound, not CPU-bound (MangoHud confirms the CPU
   side: cpu_load ~58%).
 
+### Where the clock actually comes from (devfreq, not pp_dpm_sclk)
+
+On this kernel the GPU is a devfreq device, and that is the only clock control:
+
+```sh
+cat /sys/class/devfreq/3d00000.gpu/cur_freq              # Hz
+cat /sys/class/devfreq/3d00000.gpu/governor              # simple_ondemand
+cat /sys/class/devfreq/3d00000.gpu/available_frequencies # 220..680 MHz
+```
+
+`/sys/class/drm/card0/device/pp_dpm_sclk` does not exist here - `card0` is the
+display controller (`msm_dpu`), not the GPU. For the fdperf alignment use
+`3d00000.gpu/cur_freq` (see the wrapper at the end of this file), and pin the
+governor (`performance`) only when a fixed frequency is the point of the
+measurement; RE4 is memory/latency-bound at 680 MHz (findings 2026-11-19,
+section 6.2), so pinning alone does not move fps.
+
+### Healthy vs degenerate window
+
+An RE4 window is usable only if MangoHud's `clocks` column holds 680 in-window
+and `gpu_load` is 97-100%. The degenerate signature - flat ~1.86 fps,
+`clocks=[220]`, `gpu_load` <= 21%, swap > 5 GiB, `min == max` - is a run that
+never left the idle clock step (memory pressure, leftover `winedevice.exe`),
+not a driver effect. Re-check `free -m` and kill leftovers before repeating;
+never compare a window of one kind against the other.
+
+
 ## Multi-instance dividers
 
 Raw `*_BUSY_CYCLES` sum all hardware instances of a block, so "busy% of the core

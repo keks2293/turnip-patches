@@ -1,0 +1,121 @@
+# 0014 in-game inventory A/B - how much of the game's memory 0014 moves back
+# to tiled, measured on the device (RE4, DX12 via vkd3d-proton).
+#
+# Method. experiments/exp-14-image-inventory.patch prints one line per created
+# image (format, width, height, samples, tiling, size). It is a measurement
+# patch, it is not part of the driver. The sample is a fixed protocol: game
+# boot -> load the save -> walk the depot corridor -> sit in the inventory for
+# 180 s (this is where the game allocates the render scale targets) -> quit.
+# The same path was walked on both builds, 2 samples per build; the two
+# samples of a build agree to ~3%, and the effect below is 57%, so one sample
+# per build is enough to state the number.
+#
+# Only 'mutable, no format list' images are counted, because those are what
+# 0014 changes. scripts/fmt-list-gate-check.py --no-list classifies every
+# image of a raw log by the same rule the driver uses, and reports the
+# 'deposed' set: images the driver put in linear although their class would be
+# allowed tiled. The difference between the two runs is what the class answer
+# moved to tiled.
+#
+# The raw logs (results/raw/) are NOT committed: a log of this run is ~1 MB of
+# device output tied to one specific save file and one specific session. They
+# are on disk next to this file. The classifier and the experiment patch are
+# committed, so the number can be re-measured.
+#
+#   baseline  2026-11-18 build, stock no-list answer, imginv4
+#             raw: results/raw/game-patched-imginv4.log
+#   candidate build 050375a18b7b (0013+0014), imginv5
+#             raw: results/raw/game-patched-imginv5.log
+#
+# HUD window 40-50 s of the same session (HUDINTERVAL=100): baseline
+# clocks=[220] fps p25 10.2 gpu_load 73%; candidate clocks=[220, 670] fps p25
+# 15.4 gpu_load 88%. Recorded for completeness only: the fps of this game
+# turned out to be dominated by GPU clock ramping, not by layout (see
+# docs/fdperf-a7xx.md), so this row is not the proof of 0014 - the byte-exact
+# matrix and the memory number are.
+
+
+== baseline (imginv4)
+### no-list, the predicates as they are now
+
+-> tiled         8-bit          359 imgs    1171 MiB (30.8%)
+                                 R8_UNORM
+                                 no member of the class needs a channel swap
+   stays linear 32-bit         614 imgs     993 MiB (26.1%)
+                                 R10G10B10A2_UNORM, R11G11B10_FLOAT, R16G16_FLOAT, R32_FLOAT, R32_UINT, R8G8B8A8_SNORM, R8G8B8A8_SRGB, R8G8B8A8_UNORM
+                                 the class members disagree about the channel order
+   stays linear 16-bit         327 imgs     600 MiB (15.8%)
+                                 R16_SNORM, R16_UNORM, R8G8_UNORM
+                                 r8g8 <-> r16 inside the class
+-> tiled         64-bit         116 imgs     585 MiB (15.4%)
+                                 R16G16B16A16_FLOAT, R16G16B16A16_UNORM, R32G32_FLOAT
+                                 no member of the class needs a channel swap
+-> tiled         BC1_RGBA       174 imgs     192 MiB ( 5.1%)
+                                 DXT1_RGBA, DXT1_SRGBA
+                                 no member of the class needs a channel swap
+-> tiled         BC7            318 imgs     181 MiB ( 4.7%)
+                                 BPTC_RGBA_UNORM, BPTC_SRGBA
+                                 no member of the class needs a channel swap
+-> tiled         BC6H            24 imgs      52 MiB ( 1.4%)
+                                 BPTC_RGB_UFLOAT
+                                 no member of the class needs a channel swap
+-> tiled         BC3              6 imgs      14 MiB ( 0.4%)
+                                 DXT5_SRGBA
+                                 no member of the class needs a channel swap
+   stays linear 16-bit          21 imgs       8 MiB ( 0.2%)
+                                 R16_FLOAT
+                                 the class members disagree about the channel order
+-> tiled         BC4             15 imgs       5 MiB ( 0.1%)
+                                 RGTC1_UNORM
+                                 no member of the class needs a channel swap
+-> tiled         BC5              9 imgs       1 MiB ( 0.0%)
+                                 RGTC2_UNORM
+                                 no member of the class needs a channel swap
+
+  back to tiled: 2201 MiB of 3801 MiB (57.9% of the deposed bytes)
+
+== candidate (imginv5)
+### no-list, the predicates as they are now
+
+   stays linear 32-bit         624 imgs    1023 MiB (62.8%)
+                                 R10G10B10A2_UNORM, R11G11B10_FLOAT, R16G16_FLOAT, R32_FLOAT, R32_UINT, R8G8B8A8_SNORM, R8G8B8A8_SRGB, R8G8B8A8_UNORM
+                                 the class members disagree about the channel order
+   stays linear 16-bit         327 imgs     600 MiB (36.8%)
+                                 R16_SNORM, R16_UNORM, R8G8_UNORM
+                                 r8g8 <-> r16 inside the class
+   stays linear 16-bit          20 imgs       7 MiB ( 0.4%)
+                                 R16_FLOAT
+                                 the class members disagree about the channel order
+-> tiled         BC4              3 imgs       0 MiB ( 0.0%)
+                                 RGTC1_UNORM
+                                 no member of the class needs a channel swap
+-> tiled         64-bit          17 imgs       0 MiB ( 0.0%)
+                                 R16G16B16A16_FLOAT, R32G32_FLOAT
+                                 no member of the class needs a channel swap
+-> tiled         BC1_RGBA        15 imgs       0 MiB ( 0.0%)
+                                 DXT1_RGBA, DXT1_SRGBA
+                                 no member of the class needs a channel swap
+-> tiled         BC7             15 imgs       0 MiB ( 0.0%)
+                                 BPTC_RGBA_UNORM, BPTC_SRGBA
+                                 no member of the class needs a channel swap
+-> tiled         8-bit            3 imgs       0 MiB ( 0.0%)
+                                 R8_UNORM
+                                 no member of the class needs a channel swap
+
+  back to tiled: 1 MiB of 1631 MiB (0.0% of the deposed bytes)
+
+== comparison
+total sampled bytes (all TU_IMG_INV lines):
+  results/raw/game-patched-imginv4.log: 3644 images, 7764 MiB
+  results/raw/game-patched-imginv5.log: 4183 images, 8110 MiB
+deposed linear: 3801 MiB -> 1631 MiB (-2170 MiB, -57.1%); model predicted -2201 MiB (-57.9%)
+HUD window 40-50 s: clocks 220/680, gpu_load avg 88%, fps p25 15.4 (inventory run, fps not the point)
+
+== how to reproduce
+  1. apply experiments/exp-14-image-inventory.patch to the tree (both the
+     baseline and the candidate build; on the baseline revert patch 0014
+     first: git apply -R patches/0014-turnip-mutable-no-list-tiling.patch)
+  2. rebuild, run: TU_IMG_INV=1 ./scripts/run-game.sh
+  3. walk the protocol above; the log lands in results/game-patched.log
+  4. python3 scripts/fmt-list-gate-check.py --no-list <log> | grep -B1 deposed
+     -> 'total deposed' is the number compared above

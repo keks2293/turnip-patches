@@ -126,7 +126,7 @@ is in the addressing, not in the codec.
 | E | `BLT_CNTL.type=IMG_BUFFER` | **was not tested (dead code, Bug 1)** -> E2 |
 | F | src PITCH = block row (2048/1024) | executed, rejected (byte-identical failures) |
 | G | the register space at large | closed: GEOMDBG shows the programmed src registers structurally identical on failing and passing geometries; `TU_I2B_R3D=1` moves some cases and breaks others, the core fails on both engines |
-| H | **CCU coherence, not addressing** | **CONFIRMED - see the final section**; the whole 0013 numbering is retired, the fix is candidate `exp-13b` |
+| H | **CCU coherence, not addressing** | **CONFIRMED - see the final section**; the fix is `patches/0013-turnip-b2i-ccu-clean.patch` (mode 7 of exp-15), the 0013v1/A/B/C/D/F numbering stays retired |
 
 ## Final (18.11): root cause - no CCU clean between buffer->image and the next reader in the same submit (A7XX)
 
@@ -172,26 +172,67 @@ plain RGBA32 128x128 are one and the same defect.
 The closed blob reads the same geometries correctly, so the HW only needs the
 event write that turnip omits.
 
-**Fix**: `experiments/exp-13b-b2i-ccu-clean-candidate.patch` - at the end of
-`tu_copy_buffer_to_image` (CHIP >= A7XX), in the native flush-tracking idiom:
-`cmd->state.cache.flush_bits |= TU_CMD_FLAG_CCU_CLEAN_COLOR |
-TU_CMD_FLAG_WAIT_FOR_IDLE; tu_emit_cache_flush<CHIP>(cmd)` (tu6_emit_flushes
-orders the WFI after the clean - both are required). Validated 91/91 EXACT with
-no env: raw-event-write form `results/test-BCcopy-0013cand.log`, flush_bits form
-`results/test-BCcopy-0013candb.log`. Open before shipping as 0013: the RE4 cost
-of one clean+WFI per b2i (b2i is the texture-upload hot path). The zero-cost
-form, and what upstream would actually write: b2i only *marks* the bit and the
-outside-renderpass pipeline barrier executes the pending `cmd->state.cache`
-flushes on the spot (all app patterns that submit between copy and use stay
-flush-free, and b2i->shader-read in one submit gets fixed too). The env-knob
-bundle used for the A/B is `experiments/exp-13-i2b-ccu-clean-env-bundle.patch`.
+**Fix**: `patches/0013-turnip-b2i-ccu-clean.patch` - at the end of
+`tu_copy_buffer_to_image` (CHIP >= A7XX), two lines in the native flush-tracking
+idiom:
 
-**Shipping decision (18.11): not a candidate for the RE4 stack, no game
-measurement.** Games/vkd3d-proton submit between the copy and its use (readbacks
-run as their own command list, uploads are submitted before use), so RE4 never
-executes the in-submit chain - that is exactly why the game always looked fine
-while the CTS-style probe failed 19/19. The producer-side clean would add a
-clean+WFI to every upload blit to fix a path the game does not walk: pure cost,
-zero benefit. The thread's output is a standalone upstream/CTS correctness
-finding (mesa main affected; blob unaffected), with both fix forms validated and
-the barrier form being the one worth posting upstream, with a CTS repro.
+```c
+cmd->state.cache.flush_bits |= TU_CMD_FLAG_CCU_CLEAN_COLOR |
+                               TU_CMD_FLAG_WAIT_FOR_IDLE;
+```
+
+Nothing is executed at the copy. The next natural flush point emits one clean +
+WFI for the whole group of copies, and a command buffer that ends there merges
+into the CCU clean `tu_EndCommandBuffer` already emits. That form is mode 7 of
+the exp-15 matrix: 94/94 EXACT over three repeats, and the only correct form
+that costs nothing per copy (`docs/analysis.md` §21.11). The earlier
+raw-event-write / `tu_emit_cache_flush` forms (`exp-13b`) are correct too but
+pay a WFI per copy; the blit-cache aperture is simply the wrong one (19
+MISMATCH, exactly like no fix).
+
+**Shipping decision (19.11): shipped, and the game A/B is not what justifies
+it.** The concern from 18.11 was the cost of a clean+WFI on every upload blit;
+the lazy form removes that concern (zero commands per copy). The benefit is a
+real in-submit hole that vkd3d `CopyTextureRegion` texture->buffer can walk
+(and that the CTS-style probe walks 19/19): without it, a blit reader in the
+same submit sees pre-copy memory. RE4 itself submits between copy and use, so
+its fps is not expected to move - and indeed the patch adds no work to a submit
+that does not already end in a flush point. Upstream still wants the model form
+(a separate blit-write access bit) plus a CTS repro; 0013 is the two-line local
+form for this stack.
+
+## Bug 4. (upstream, design) a MUTABLE image without a format list always answers the worst case
+
+`VkImageFormatListCreateInfo` with `viewFormatCount == 0` on a `MUTABLE` image
+is legal and is what vkd3d-proton passes for most of its resources. The driver
+then hands `NULL` to the three tiling predicates in `tu_image_init()`:
+
+```
+tu6_format_list_has_swaps(NULL)              = true
+tu6_format_list_reinterprets_r8g8_r16(NULL)  = true
+tu6_format_list_swaps_are_uniform(NULL)      = false
+```
+
+i.e. "assume there is a swap and it is not uniform", and the image goes linear
+even when every format it can legally be viewed as describes the same memory.
+Measured on RE4 (`experiments/exp-14-image-inventory.patch`): of 7977 MiB of
+created images, 4062 MiB (50.9%) are `MUTABLE` with an empty list in linear.
+
+Upstream comment in `tu6_mutable_format_list_forces_linear()` says "we do not
+know which format the image will be used as, so we have to assume the worst".
+The assumption is stronger than it needs to be: the layout can only be a
+function of the texel block, so a format outside the block class of the base
+format can never describe the image, and the set of formats that can is known
+without the app telling us.
+
+**Fix**: `patches/0014-turnip-mutable-no-list-tiling.patch` -
+`tu6_mutable_compat_class()` builds that set (same block size, block width and
+height, compressed-ness, and only formats turnip supports at all) and the same
+predicates run on it; `tu6_mutable_format_list_forces_linear()` synthesizes the
+same class, so the format query and the create agree. Tiling only: the UBWC
+predicates keep seeing the original `NULL`. Measured: 8-bit, 64-bit and
+block-compressed classes become tiled, 4- and 2-byte classes stay linear (their
+class really does hold both channel orders), 94/94 byte-exact
+(`results/test-0014-ship.log`), and the in-game deposed set drops from 3801 MiB
+to 1631 MiB (`results/test-0014-inventory-ab.log`). Full analysis:
+`docs/analysis.md` §21.12.

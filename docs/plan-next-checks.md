@@ -110,13 +110,16 @@ roundtrip BC1/BC3/BC7 EXACT on the base and on A+B.
   `experiments/exp-13b-b2i-ccu-clean-candidate.patch` (validated as-is, no env:
   `results/test-BCcopy-0013cand.log`). The old "route BC through r3d" fallback is
   moot - the defect reproduces on r3d too and the fix is engine-agnostic.
-- Closed 18.11, no game measurement (decision): the block is **not a candidate
-  for the RE4 stack** - games/vkd3d-proton submit between the copy and its use,
-  RE4 never executes the in-submit chain, the producer-side clean would be pure
-  upload cost with zero benefit. What remains is optional and upstream-shaped:
-  the barrier-form patch + a CTS repro, posted by the user (we do not post to
-  mesa); `experiments/exp-13*` and the final section of `bugs-found.md` carry
-  everything needed for it. mesa27-src is back at HEAD.
+- **Shipped (19.11) as `patches/0013-turnip-b2i-ccu-clean.patch`**, in the form
+  the exp-15 matrix picked (mode 7: mark `CCU_CLEAN_COLOR|WAIT_FOR_IDLE` in
+  `flush_bits`, execute nothing at the copy) - 94/94 EXACT over three repeats
+  and zero cost per copy. The 18.11 objection (a clean+WFI per upload blit
+  would be pure cost) applied to the per-copy forms only; the lazy form adds no
+  work to a submit that does not already end in a flush point. Still no game
+  fps A/B, and none is expected to show anything: RE4 submits between copy and
+  use. Upstream remains the model form + a CTS repro, posted by the user (we do
+  not post to mesa); `experiments/exp-13*`, `exp-15` and the final section of
+  `bugs-found.md` carry everything needed for it.
 
 ---
 

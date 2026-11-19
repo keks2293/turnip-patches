@@ -1158,6 +1158,25 @@ The task was to raise FPS in RE4 by editing the driver. It didn't work out, and
 this is a positive result: **stock Mesa gives the same 13 fps** as the patched
 one.
 
+### 13.0 Measurement protocol (standard, 2026-11-18)
+
+The comparison window is **elapsed 40–50 s from launch**: the first 40 s are the
+game's fixed intro, the next 10 s are the 3D main menu. The scene is
+deterministic and needs no scripted gameplay, so every run reproduces it
+exactly. Notes:
+
+- in the MangoHud CSV `elapsed` is in **nanoseconds** (divide by 1e9); a parser
+  that filters it as seconds silently gets an empty window;
+- the metric is `p25` of `fps` inside the window, 100 ms sampling
+  (`HUDINTERVAL=100`), ~100 samples;
+- a run may only be compared window-to-window and with the **same driver
+  build**, checked by `sha256sum` of `build/out/libvulkan_freedreno.so`. Any
+  rebuild invalidates the earlier windows of that series; cross-version numbers
+  are reference only.
+
+The tables below predate this protocol and were measured as described in each
+section.
+
 ### 13.1 What was checked
 
 The same segment, nine configurations. The metric is `p25` of the scene's frame
@@ -1212,6 +1231,37 @@ memory, not a turnip defect. FPS here cannot be raised by the driver.
 `ps -eLo` gives average CPU since process start, not instantaneous, and a
 process's `pcpu` can exceed 100%. For an instantaneous per-thread picture,
 deltas of `/proc/<pid>/task/*/stat` over a fixed window are computed.
+
+### 13.5 GPU frequency governor: not a lever (18.11, protocol 13.0)
+
+Hypothesis: `simple_ondemand` oscillates 220-680 MHz (18k transitions in
+`trans_stat` since boot) and costs fps; `performance` pins 680. Checked per
+13.0 — window 40-50 s, same build (sha256 `c9dad346…` of
+`build/out/libvulkan_freedreno.so` in all three runs), governor switched
+through `/sys/class/devfreq/3d00000.gpu/governor` (root), `trans_stat` reset
+before the runs.
+
+| run, governor | p25 | mean | min/max | frametime | clocks in window |
+|---|---|---|---|---|---|
+| 16:28, `performance` | 15.01 | 15.38 | 14.2/17.5 | 65.1 ms | 680 |
+| 16:44, `simple_ondemand` | 14.94 | 15.37 | 13.2/17.9 | 65.2 ms | 680 |
+| 16:49, `performance` | 15.09 | 15.42 | 14.3/17.4 | 64.9 ms | 680 |
+
+`performance` versus `simple_ondemand`: +0.10 fps by p25 — noise. The reason is
+visible in every row: gpu_load 98% and 680 MHz already in the window,
+i.e. `ondemand` reaches the ceiling there (as `docs/fdperf-a7xx.md` warned from
+the counter side). The end state is the distro default `simple_ondemand`.
+
+CSVs: `results/fps-gov-{ondemand,performance}.csv` (the 16:28 CSV was deleted
+by the next run — `HUDLOG` recreates the log directory, so keep CSVs out of
+`/tmp/opencode/mangologs` right after a run; the row above records the parsed
+numbers, same build).
+
+Side observation from the same runs (vmstat delta over ~180 s with the game,
+16:44-16:52): `pgmajfault` +159886 (~900/s), `pswpin` +159328 pages (~620 MB
+from zram), `pswpout` +4771. The system runs with zram ~7.0/7.9 GiB used; the
+game thrashes swap. That is a lever candidate for the memory side, not the
+GPU side.
 
 ## 14. The hypothesis "the driver doesn't use the capabilities of the 750/830" — checked and rejected
 
@@ -2467,7 +2517,7 @@ measurement split things that the model reported as one block:
 
 | format | stock | conclusion |
 |---|---|---|
-| `R8_UNORM`, `R8_UINT` | `nonmut == lin` | **no ceiling.** `has_8bpp_ubwc = false` is a workaround for a text corruption bug (`0f770caa232`, "Disable 8bpp_ubwc on a6xx gen2", corruption in VSCode on a680), not a measured incapability — but it also cannot be re-enabled without reproducing the bug again |
+| `R8_UNORM`, `R8_UINT` | `nonmut == lin` | **no ceiling.** `has_8bpp_ubwc = false` is a workaround for a text corruption bug (`0f770caa232`, "Disable 8bpp_ubwc on a6xx gen2", corruption in VSCode on a680), not a measured incapability — re-enabled and measured (21.7, re-verified 18.11 in split-submit mode): the contents of a740 are corrupted, the flag must stay False |
 | `R32G32B32_SFLOAT/UINT/SINT` | `nonmut == lin` | **no ceiling.** The rows exist in `fd6_format_table.c` but without a render buffer: `VT_(R32G32B32_UINT/SINT/FLOAT)` — vertex and texture only (`VT_` = `FMT(pipe, fmt, fmt, NONE, swap)`, file header), while `V__` for UNORM/SNORM has no texture at all. There are no rows in the compat table, and UBWC is not visible in the measurements |
 | `R16_*` (4 classes) | `nonmut = 0x82000` > `lin = 0x80000`, `list = 0x80000` | **the gate removed what the format can do.** There is a ceiling |
 | `R10G10B10A2_TYPELESS` | `nonmut = 0x102000` > `lin = 0x100000`, `list = 0x100000` | **same.** There is a ceiling |
@@ -2598,7 +2648,7 @@ worth recording because the obvious name is wrong:
   lines**, not by measurement. The measurement confirmed the two main groups
   (`R8`, `R32G32B32`) as "no ceiling", but it wasn't run separately for all 18.
 
-### 21.7 R8 and `has_8bpp_ubwc`: there is a memreq ceiling, the contents are corrupted (measurement 2026-10-02)
+### 21.7 R8 and `has_8bpp_ubwc`: there is a memreq ceiling, the contents are corrupted (measurement 2026-10-02, re-verified 2026-11-18 with split submits)
 
 The question "`has_8bpp_ubwc = false` on gen2 — protection against corruption
 or does nothing break?" was settled by a measurement, without rebuilding: the
@@ -2662,6 +2712,25 @@ Practical summary:
 Logs: `results/test-r8-has8bpp-on.log`, `results/test-r8-has8bpp-off.log`
 (full `rp6-vkd3d-sparse-test` run with the added R8 probes, baseline
 `drv-base.so`).
+
+**Re-verification (18.11, lesson of 21.10 applied).** Conclusion 2 rested on a
+`probe_ubwc_class` that executes b2i and i2b in one submit - exactly the chain
+the CCU-clean bug (21.10) poisons: a readback can return pre-fill memory. The
+October verdict was therefore method-suspect, "maybe the corruption was the
+readback bug". Added `RK_SPLIT_SUBMITS=1` to the test: fill and readback go in
+separate submits with a wait between them, the way games/vkd3d do it. Re-run on
+build `c9dad346…` both ways:
+
+| run | R8 nonmut memreq | R8 nonmut roundtrip | controls (RGBA8/BGRA8/R32_*, incl. UBWC nonmut) |
+|---|---|---|---|
+| baseline | 0x40000 (= lin, no UBWC) | 0 bad | 0 bad |
+| `FD_DEV_FEATURES=has_8bpp_ubwc=1` | 0x42000 (UBWC) | 65536/65536 bad, all zeros | 0 bad |
+
+Split mode itself is clean - every 4bpp control with real UBWC round-trips
+exactly across submits, so cross-submit visibility is not the issue. The zeros
+follow only the 8bpp UBWC mode. Conclusion 2 survives the BC lesson: this is
+**content corruption, not a readback artifact**; keep `has_8bpp_ubwc` False.
+Logs: `results/test-r8-split-on.log`, `results/test-r8-split-off.log`.
 
 ### 21.8 BC copy (r2d): fill OK, readback broken; 0013v1 rejected, 0013-A - the dst-buffer surrogate format (18.11)
 
@@ -2807,9 +2876,185 @@ final section, `experiments/exp-13b-b2i-ccu-clean-candidate.patch`, logs
 `results/test-BCcopy-i2b*.log` and `results/test-BCcopy-0013cand*.log` (both the
 raw event-write form and the idiomatic `flush_bits |= CCU_CLEAN_COLOR |
 WAIT_FOR_IDLE; tu_emit_cache_flush()` form give 91/91). Closed without a game
-A/B and **not shipped into the RE4 stack**: games/vkd3d-proton submit between
-the copy and its use, RE4 never executes the in-submit chain - which is why the
-game always looked fine. The finding is for upstream/CTS (mesa main affected,
-blob unaffected); the upstream-shaped patch is the zero-cost barrier form - b2i
-only marks the pending flush bit and the outside-renderpass pipeline barrier
-executes it, which also covers b2i -> shader reads in one submit.
+A/B: games/vkd3d-proton submit between the copy and its use, RE4 never executes
+the in-submit chain - which is why the game always looked fine.
+
+Shipped anyway, as `patches/0013-turnip-b2i-ccu-clean.patch`, in the form
+chosen by the exp-15 matrix (§21.11): lazy bits, no command at the copy. The
+game A/B was not needed to justify it - it adds no work to a submit that does
+not already end in a flush point, and it closes a real in-submit hole that
+vkd3d `CopyTextureRegion` texture->buffer can hit. The upstream-shaped patch is
+the model form (a separate blit-write access bit); 0013 is the two-line local
+form for this stack.
+
+## 21.11. The form of the fix: the exp-15 matrix and why mode 7 (18.11)
+
+Rig: `experiments/exp-15-b2i-sync-env-bundle.patch` (NOT FOR COMMIT),
+`TU_B2I_SYNC=0..15` selects what the driver does after every
+`vkCmdCopyBufferToImage`; `TU_B2I_COUNT` counts copies. `|8` is the deferred
+form: do nothing at the copy, flush what has accumulated once in the setup of
+the next blit in the same command buffer. Thirteen modes were run; the full
+matrix (94 checks, `tests/rp6-vkd3d-sparse-test.c`, logs
+`results/test-b2isync-{0..15}.log`, build `cd436fd897f2`):
+
+| mode | what it does | MISMATCH | EXACT | verdict |
+|---|---|---|---|---|
+| 0 | off (the defect) | 19 | 75 | FAIL |
+| 1 | `CCU_CLEAN_COLOR` + WFI per copy | 0 | 94 | PASS |
+| 2 | `CCU_CLEAN_BLIT_CACHE` + WFI | 19 | 75 | FAIL |
+| 3 | `CCU_CLEAN_BLIT_CACHE` | 19 | 75 | FAIL |
+| 4 | `CLEAN_COLOR` + `CACHE_INVALIDATE` + WFI | 0 | 94 | PASS |
+| 5 | `CLEAN_BLIT_CACHE` + `CACHE_INVALIDATE` + WFI | 19 | 75 | FAIL |
+| 6 | `CLEAN_COLOR` + `CACHE_INVALIDATE`, no WFI | 0 | 94 | PASS |
+| **7** | **lazy bits: `flush_bits \|= CLEAN_COLOR \| WFI`** | **0** | **94** | **PASS - chosen** |
+| 15 | lazy bits without the WFI (control) | 0 | 94 | PASS |
+| 9 | 1\|8 (deferred clean+WFI) | 0 | 94 | PASS |
+| 12 | 4\|8 | 0 | 94 | PASS |
+| 14 | 6\|8 | 0 | 94 | PASS |
+| 10 | 2\|8 | 19 | 75 | FAIL |
+| 13 | 5\|8 | 19 | 75 | FAIL |
+
+What follows from it:
+
+* **The aperture matters.** `CCU_CLEAN_COLOR` is the right one;
+  `CCU_CLEAN_BLIT_CACHE` does nothing at all (2/3/5/10/13 behave exactly like
+  0). The reason is that r2d writes to sysmem through CCU color, while the
+  blit cache is a different mechanism (`tu_cmd_buffer.cc:5887`, the
+  `CP_EVENT_WRITE::BLIT` -> GMEM-read dependency). It also explains why the
+  existing `BLIT_CACHE_CLEAN` cannot "cure" the defect.
+* **The WFI is needed only for a bare clean.** Mode 4 (with invalidate) passes
+  without the WFI as well (6): `CACHE_INVALIDATE` orders by itself. The
+  expectation "6 is the negative control" did not hold; the invalidate form is
+  just more expensive (two events per copy) and is not needed for the fix.
+* **Mode 7 is stable**: 94/94 over three repeats, and it is the only form that
+  pays nothing in the middle of a sequence of copies. Cost:
+
+  | form | per copy | per group |
+  |---|---|---|
+  | 0 (no fix) | 0 | 0 |
+  | 1 (clean+WFI inline) | 1 clean + 1 WFI | N |
+  | 7 (lazy bits) | 0 | 1 clean + 1 WFI |
+  | 4/6 (with invalidate) | 2 events + WFI | N |
+
+* **The `DST_FLUSH` rule is not touched.** `tu_cmd_buffer.cc:5847` -
+  `DST_FLUSH(CCU_COLOR, CCU_CLEAN_COLOR, CCU_INVALIDATE_COLOR)`: when the
+  barrier destination is in CCU_COLOR, i.e. it is a blit, the pending color
+  clean is excluded from `ALL_CLEAN` (`& ~CCU_CLEAN_COLOR`) - "a blit does not
+  read through the CCU". That is why the barrier after b2i could not flush
+  anything; 0013 does not change the rule, it puts the bit straight into
+  `flush_bits`, where the nearest natural flush point picks it up.
+* **The "`CmdExecuteCommands` loses the lazy bits" hypothesis is refuted.**
+  `tu_EndCommandBuffer` for a non-renderpass CB always does
+  `tu_clean_all_pending()` + `tu_emit_cache_flush()` (and adds its own
+  `CCU_CLEAN_COLOR|CCU_CLEAN_DEPTH`), and `tu_CmdExecuteCommands` does the
+  same for the primary before chaining the secondaries
+  (`tu_cmd_buffer.cc:6480-6487`). `WAIT_FOR_IDLE` is not in `ALL_CLEAN`, but
+  0013 puts it straight into `flush_bits`, so it is executed too. No separate
+  bit carry is needed; 0014 (the next section) is about something else.
+
+## 21.12. A mutable image without a list: the compatibility class instead of NULL (18.11)
+
+The inventory (`experiments/exp-14-image-inventory.patch`, `TU_IMG_INV=1`,
+`results/raw/game-patched-imginv4.log`): of 7977 MiB of created images,
+**4062 MiB (50.9%) are MUTABLE with `listn=0` in linear**. This is not the
+"one bad format in the list" case (that one is cured by
+0005/0009/0010/0011/0012), it is the absence of a list: the driver does not
+know which format the image will be viewed as, so the three predicates get a
+`NULL` and answer the worst case:
+
+```
+tu6_format_list_has_swaps(NULL)              = true
+tu6_format_list_reinterprets_r8g8_r16(NULL)  = true
+tu6_format_list_swaps_are_uniform(NULL)      = false
+```
+
+i.e. "there is a swap, there is an R8G8/R16 reinterpretation, and the swaps
+are not uniform" - linear, even when every format the image may legally be
+viewed as describes the same memory.
+
+**The model.** `tu6_mutable_compat_class()` (0014) builds the set of formats
+the base format may be viewed as, and the same predicates run on that set.
+The grouping is the texel block: the same bits per block, the same block
+width and height, the same compressed-ness. The tiled layout is a function of
+the block size (`fd6_layout.c`: `layout->cpp =
+util_format_get_blocksize()`, the tile height follows cpp), so a format
+outside the block class can never describe the same memory. It is a
+**superset** of the spec class ("occupies the same number of bits per texel
+block"), and a superset can only make the answer more conservative. What is
+left inside the class is the channel order - exactly what
+`tu6_format_list_has_swaps()` and `tu6_format_list_swaps_are_uniform()`
+already compare.
+
+The "format is usable at all" filter has to consult both sides: the
+block-compressed formats are texture-only in `fd6_format_table.c` (`_T_`
+leaves `rb = NONE`), so `fd6_color_format() == NONE` alone drops them. With
+only `fd6_color_format()` BC lost the tiling for nothing - measured: BC7
+stayed linear until the `fd6_texture_format()` check was added.
+
+**Measurement (probe NL, `tests/rp6-vkd3d-sparse-test.c`, 500x500 - not a
+multiple of the tile, `results/test-0014-ship.log`, build `c17d02bcaae9`;
+the same matrix on the instrumented build `050375a18b7b` is
+`results/test-0014-final.log`; the intermediate build `97072a8f6376`, taken
+before the UBWC-gate split below, gave the same 94/94):**
+
+| class | base format | layout | why |
+|---|---|---|---|
+| 8-bit (1 B/texel) | `R8_UNORM` | tiled | no member needs a swap |
+| 8-byte (64 bit) | `R16G16B16A16_FLOAT`, `R32G32_FLOAT` | tiled | every member is `WZYX` |
+| block-compressed | `BC7_UNORM` | tiled | every member is `WZYX` |
+| 4-byte (32 bit) | `R8G8B8A8_UNORM`, `R32_UINT` | linear | the class holds both RGBA8 and BGRA8 |
+| 2-byte (16 bit) | `R8G8_UNORM`, `R16_UNORM` | linear | the class holds both R8G8 and R16 |
+
+The last two rows are not an omission: it is the same demotion that
+0005/0009/0010 guard on explicit lists, and a cross-order read through such a
+class is genuinely undefined by the layout.
+
+**The layout detector.** `memreq` separates the layouts only when the image is
+not a multiple of the tile: tiled pads to the tile, linear pads rows. For BC
+at 500x500 both totals are equal (`0x40000`), so the authoritative detector is
+the sparse create: a linear image cannot be sparse (`tu_image_init()` refuses
+it, see 0004), so `SUCCESS` means tiled and `FEATURE_NOT_PRESENT` means
+linear. Both detectors agree with the model on all 8 probes, and all 8
+fill+readback roundtrips are byte-exact (0 bytes differ). The roundtrip needs
+0013: the fill is a `buffer->image` copy, and without the CCU clean its writes
+are not visible to the reader.
+
+**Agreement with the format query.** `tu_get_image_format_properties()`
+refuses sparse+mutable when `tu6_mutable_format_list_forces_linear()` says
+"linear", and it sees the same `NULL`. It now synthesizes the same class:
+8-bit and 64-bit pass, 4- and 2-byte do not. The sparse-create column of the
+probe is that agreement observed from the other side.
+
+**The byte result.** Of the 3801 MiB "deposed" (that is how much of the
+4062 MiB the script could classify by format), **2201 MiB (57.9%) go back to
+tiled**: 1171 MiB 8-bit, 585 MiB 64-bit, 445 MiB BC; without BC (they need the
+texture-side filter) - 1756 MiB. The per-class breakdown is
+`scripts/fmt-list-gate-check.py --no-list results/raw/game-patched-imginv4.log`.
+
+**Checked on the game.** The same script on the inventory taken with 0014
+(`results/raw/game-patched-imginv5.log`, build `050375a18b7b`,
+`results/test-0014-inventory-ab.log`): the deposed set is down to **1631 MiB
+from 3801** - minus 2170 MiB, i.e. 57.1% against the predicted 57.9%. The
+remainder is exactly the 32- and 16-bit classes (1023 + 600 + 7 MiB), as the
+model said; slightly more was sampled than before (8110 vs 7764 MiB), so this
+is not "the game loaded less". The 40-50 s window was healthy (680 MHz,
+gpu_load 88%), but fps is not what this run measures - the inventory is
+static.
+
+**UBWC is deliberately not touched.** `tu6_mutable_format_list_ubwc_compatible()`
+and `format_list_ubwc_possible()` are still handed the original pointer
+(`ubwc_list` in `tu_image_init()`), which is NULL when the app passed no list,
+so a no-list mutable image still loses UBWC exactly as in stock. Only the
+tiling predicates are answered with the class. Keeping compression on such an
+image would need its own content check (UBWC metadata reinterpretation is what
+0011/0012 and exp-1/exp-2 were about), and mixing the two decisions in one
+patch would make the byte result above unattributable. The 0014 patch header
+states this too.
+
+**Residual risk.** The content was checked in the base format; a read through
+a *different* member of the same class (`R32_FLOAT` over `R8G8B8A8`) was not
+run. The justification for it is the layout argument, not a measurement. For
+the classes the patch actually moves to tiled, the argument is the same one
+0005/0006 use for explicit lists: all members are `WZYX` with the same block,
+so there is nothing to disagree about; but the honest statement is that the
+tiled-no-list cross-view read has not been exercised.
