@@ -36,6 +36,11 @@ The library is `sha256 c17d02bcaae9a960a1350d98b81786dd75f1b5149cc79cb52b0409b59
 MSM KMD - not an Android build). It is the binary the 94/94 matrix in
 `results/test-0014-ship.log` was run on.
 
+The bundle contains the patches as shipped with the release. Branch `test` has
+moved past them since: its `patches/0014-turnip-mutable-no-list-tiling.patch`
+is a different, smaller answer to the same problem, not built and not tested
+yet, so the bundle's `HOW-TO-APPLY.txt` hash does not describe that branch.
+
 Run against it without installing anything:
 
 ```sh
