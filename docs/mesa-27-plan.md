@@ -29,7 +29,7 @@ Verification date: 17.11.2026.
 | Patch | 27.0-devel | What changed in upstream | What was done |
 |---|---|---|---|
 | **0001** | rebase | the `extra_wait_count`/`extra_signal_count` block moved from `msm_queue_submit` 1257 -> 997; `vk_zalloc` is wrapped in `static_cast` | context line `(struct drm_msm_syncobj *) vk_zalloc(` -> `static_cast<struct drm_msm_syncobj *>(vk_zalloc(` |
-| **0002** | rebase | upstream already added `GPUId(chip_id=0xffff44050001, name="Adreno (TM) 830v1")` | the duplicate was removed from the patch; one line remains - KGSL `0x44050000` |
+| **0002** | rebase | upstream added `GPUId(chip_id=0xffff44050001, …)` **and** the KGSL `0x44050000` (read off `git show HEAD:…freedreno_devices.py`, 20.11) | two of the three original ids were dropped; the one line left duplicates an upstream row, so on Mesa 27 the patch changes nothing (the table matches on the first entry). Kept for file-list parity with the image build; see the correction inside the patch file |
 | **0003** | clean | - | - |
 | **0004** | rebase | `tu_format_linear_filtering_supported` became non-`static`; the tail of `tu_formats.h` changed; line shifts in `tu_device.cc`/`tu_image.cc` | context `static bool` -> `bool`; the declarations in `tu_formats.h` were inserted before the new function; the `tu_image.cc` hunks applied with an offset of 1-29 lines |
 | **0005** | rebase | the same `static` rename | context `static bool` -> `bool` |

@@ -20,6 +20,16 @@ Not testable here: no A830 on the bench, the A740 does not read these ids.
 The change is a table row in freedreno_devices.py; the generated
 freedreno_dev_info.h is what carries it into the driver.
 
+Correction (20.11, read off upstream 6dfa32a85f91): on Mesa 27 the "still
+missing" id is not missing - upstream already lists all four
+(`0xffff44050000`, `0xffff44050001`, KGSL `0x44050000`, KGSL `0x44050001`).
+Applied to Mesa 27 this patch therefore adds a second, identical
+`GPUId(chip_id=0x44050000, …)` row. The generated table matches on the first
+entry, so the effect is zero (and the stack matrix is 94 EXACT with and without
+it); the row is kept so the file list stays what the ArmadOS image builds. On
+Mesa 26.2.3 the twin file is still a real change. Nobody should read this patch
+as "A830 support was added here".
+
 diff --git a/src/freedreno/common/freedreno_devices.py b/src/freedreno/common/freedreno_devices.py
 index a1ec052..27e20ea 100644
 --- a/src/freedreno/common/freedreno_devices.py
