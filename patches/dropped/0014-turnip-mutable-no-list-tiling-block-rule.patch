@@ -1,0 +1,151 @@
+0014: a mutable image with no format list keeps the tiled layout of its texel
+block.
+
+Status: DRAFT - not built and not run. The p14 release shipped the other form
+of this change (enumerating a compatibility class and passing a synthesized
+list); that form is what tag 27.0.0-devel-p14 and the release's source bundle
+contain. This file replaces it on this branch. The gate before it ships is at
+the end.
+
+Why. A VkImageCreateInfo with VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT and no
+VkImageFormatListCreateInfo may be viewed as any format compatible with its
+base format, but the driver does not know which, so the predicates in
+tu6_mutable_format_list_forces_linear() are handed a NULL and answer the worst
+case: has_swaps true, reinterprets_r8g8_r16 true, swaps_are_uniform false. The
+image goes linear although every format the app may legally view it as has the
+same layout. Not a corner case: 50.9% of the sampled texture bytes in the RE4
+inventory (results/raw/game-patched-imginv4.log) are MUTABLE with listn=0 and
+all of them are linear.
+
+The rule. An absent list means "any format with the same texel block", and the
+tiled layout is a function of the block alone, so the question is whether two
+members of one block describe different memory. They do in exactly one class,
+the 2-byte one:
+
+  - A stored tiled image carries no channel order. fd6_pipe2swap()
+    (fdl/fd6_format_table.c) returns WZYX for every tiled format that is not
+    is_mutable - "It seems CCU ignores swap and always uses WZYX when tiled.
+    TP, on the other hand, always respects swap" - and a view is programmed
+    with its own format, so an R8G8B8A8 image read through a B8G8R8A8 view is
+    the reinterpretation the spec describes, not a layout disagreement. The
+    comment at this same decision in tu_image_init() says it too ("tiled
+    images are stored without the swap") and leaves a TODO about BGRA8.
+  - UBWC is already off for such an image: there is no list to judge
+    compression against, so tu_image_init() clears ubwc_enabled in this
+    branch. The swap is only a problem once compressed, which is what the two
+    predicates below the new one are for.
+  - The 2-byte class is the exception, and it is a layout fact rather than an
+    order one: R8G8 has a tile height and a pitch alignment of its own, and
+    fdl/fd6_layout.c keeps that variant only while the image is not flagged
+    is_mutable ("cpp == 2 && nr_components == 2 && !is_mutable"). A part
+    without ubwc_all_formats_compatible never sets that flag on A7xx, so an
+    R8G8 image cannot be reinterpreted as R16 in the layout it gets. The
+    answer for an absent list is the r8g8 question and nothing else.
+
+What changes. Two files:
+
+  - tu_formats.cc: after the depth/stencil, NV12 and ubwc_all_formats_compatible
+    cases of tu6_mutable_format_list_forces_linear(), an absent or empty list
+    returns tu_is_r8g8_compatible(base format) instead of falling through to
+    the swap predicates. The comment at the call site in
+    tu_get_image_format_properties(), which used to say a query without a list
+    "cannot know this", now says the opposite: the same predicate answers for
+    the base format, so the query cannot promise a combination the create
+    would refuse.
+  - tu_image.cc: the create-side branch spelled the same three predicates
+    inline. It now calls the function the query calls, so the two cannot drift
+    apart. UBWC stays cleared in that branch, as before.
+
+This deliberately does not touch device props. The other way to answer this
+question is info->props.ubwc_all_formats_compatible, which is the A750 feature
+bit: it makes every part mutable at the layout level and is read by the sparse
+residency gate as well (tu_formats.cc). It measured broken on A740 - garbage
+cast reads - see docs/a7xx-gen-props.md row 23 and
+results/test-props-ubwc_all_formats_compatible.log, so it stays off here and
+the answer comes from the texel block instead.
+
+Relations. Depends on 0005 (the swap predicates this patch stops using for the
+no-list case) and on nothing else. Independent of 0013.
+
+Gate, before this is fit to ship. One thing has never been measured: a read
+through a view whose format is a different member of the base format's block
+class, on a tiled image with UBWC off. v1 did not measure it either - its own
+header says so. tests/rp6-vkd3d-sparse-test.c is extended with that probe: a
+B8G8R8A8 MUTABLE image with no list, filled through 0013's buffer->image path,
+read back through an R8G8B8A8 view (expect the R and B bytes exchanged) and an
+R32_UINT view (expect the raw word), both through the TP path because
+vkCmdCopyImageToBuffer reads with the image format, not the view's. The guard
+case has to stay refused: R16 over R8G8 must still be linear. Then the 94-check
+matrix, then the RE4 inventory; the expected gain is the 4-byte class, about
+1600 MiB of the 3801 MiB that p14's v1 left in linear.
+
+Not built, not run. `git apply --check` passes for 0001-0014 on Mesa
+`6dfa32a85f91` with no --3way and no fuzz. The device is the test bench and its
+build script refuses to start while re4.exe runs, so no compile was attempted.
+diff --git a/src/freedreno/vulkan/tu_formats.cc b/src/freedreno/vulkan/tu_formats.cc
+--- a/src/freedreno/vulkan/tu_formats.cc
++++ b/src/freedreno/vulkan/tu_formats.cc
+@@ -288,6 +288,29 @@ tu6_mutable_format_list_forces_linear(const struct fd_dev_info *info,
+    if (info->props.ubwc_all_formats_compatible)
+       return false;
+ 
++   /* Without a list the image may be viewed as any format with the same texel
++    * block, and the tiled layout is a function of the block alone.  A stored
++    * tiled image carries no channel order: fd6_pipe2swap() returns WZYX for
++    * every tiled format that is not is_mutable ("CCU ignores swap and always
++    * uses WZYX when tiled", fdl/fd6_format_table.c), and a view decodes with
++    * its own format, so two members of one block class describe the same
++    * bytes.  Reading one as the other is the reinterpretation the spec
++    * describes, not a layout disagreement.
++    *
++    * UBWC is off for such an image - there is no list to judge compression
++    * against - and that is the only case in which the swap mattered, which is
++    * what the predicates below are for.
++    *
++    * The one block class whose members do not share a layout is the 2-byte
++    * one: R8G8 has a tile height and a pitch alignment of its own, and the
++    * layout keeps that variant only while the image is not flagged is_mutable
++    * (fdl/fd6_layout.c: "cpp == 2 && nr_components == 2 && !is_mutable"),
++    * which a part without ubwc_all_formats_compatible never sets.  So the
++    * answer for an absent list is the r8g8 question and nothing else.
++    */
++   if (!fmt_list || !fmt_list->viewFormatCount)
++      return tu_is_r8g8_compatible(vk_format_to_pipe_format(format));
++
+    if (tu6_format_list_reinterprets_r8g8_r16(vk_format_to_pipe_format(format),
+                                              fmt_list))
+       return true;
+@@ -809,8 +832,9 @@ tu_get_image_format_properties(
+ 
+       /* Same for a mutable image whose format list demotes it to linear: the
+        * create is refused (see tu_image_init()), so don't advertise the
+-       * combination here either.  A query without a format list cannot know
+-       * this, and stays as it is.
++       * combination here either.  Without a list the same predicate answers
++       * for the compatibility class of the base format, so the query cannot
++       * promise a combination the create would refuse.
+        */
+       if (info->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
+          const VkImageFormatListCreateInfo *format_list =
+diff --git a/src/freedreno/vulkan/tu_image.cc b/src/freedreno/vulkan/tu_image.cc
+--- a/src/freedreno/vulkan/tu_image.cc
++++ b/src/freedreno/vulkan/tu_image.cc
+@@ -593,12 +593,12 @@ tu_image_init(struct tu_device *device, struct tu_image *image,
+                ubwc_enabled = false;
+             }
+ 
+-            bool r8g8_r16 = tu6_format_list_reinterprets_r8g8_r16(vk_format_to_pipe_format(image->vk.format), fmt_list);
+-            bool fmt_list_has_swaps = tu6_format_list_has_swaps(fmt_list);
+-
+-            if (r8g8_r16 ||
+-                (fmt_list_has_swaps &&
+-                 !tu6_format_list_swaps_are_uniform(fmt_list))) {
++            /* The predicate the format query uses, spelled once: the create
++             * and what vkGetPhysicalDeviceImageFormatProperties2 advertised
++             * cannot drift apart this way.
++             */
++            if (tu6_mutable_format_list_forces_linear(
++                   device->physical_device->info, image->vk.format, fmt_list)) {
+                ubwc_enabled = false;
+                force_linear_tile = true;
+             }
