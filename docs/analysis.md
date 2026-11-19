@@ -2732,6 +2732,41 @@ follow only the 8bpp UBWC mode. Conclusion 2 survives the BC lesson: this is
 **content corruption, not a readback artifact**; keep `has_8bpp_ubwc` False.
 Logs: `results/test-r8-split-on.log`, `results/test-r8-split-off.log`.
 
+**Third pass (20.11): the counter that cannot fail, and the metadata grid.**
+Counting non-zero words is not a content check: `texelFetch` of a 1- or
+2-channel format returns alpha = 255, so the word is non-zero whatever `r`
+holds, and for `R8_UNORM`/`R8G8_UNORM` the `T[...]` line can never fail (it
+only says something where alpha comes from the data). The split-submit numbers
+above do compare values, but only on the copy path, so "the write is broken"
+vs. "the i2b read lies" was still not separated. Probe `Y` does that: a
+checkerboard written by `vkCmdCopyBufferToImage` in its own submit, then values
+compared on two independent read paths (d2r copy, `texelFetch`), with 2 and
+4 B/texel controls in the same run.
+
+| `has_8bpp_ubwc` | R8_UNORM 512x512, d2r copy | R8_UNORM 512x512, `texelFetch` | R16/R8G8/RGBA8 controls |
+|---|---|---|---|
+| `0` (as shipped) | `0/262144 EXACT` | `0/262144 EXACT` | EXACT |
+| `1` | `261120/262144` bad, `got=0x00` | `261120/262144` bad, `want=0xff000007 got=0xff000000` | EXACT |
+
+(`results/test-y-8bpp-off.log`, `results/test-y-8bpp-on.log`, lines `Y[...]`;
+256x256, 128x128, 130x66 and `R8_UINT` behave like 512x512.) With UBWC on both
+readers agree the content is gone, so the "only the copy read lies" branch is
+closed and the off-run being exact shows the probe, the copies and the barriers
+are fine — the failure is specific to UBWC-on-8bpp.
+
+The one hypothesis left was the metadata grid: `fdl6_get_ubwc_blockwidth()`
+gives cpp=1 the generic {16, 4}, while the other 8bpp UBWC users in the same
+function — `PIPE_FORMAT_Y8_UNORM` and the Y plane of 2-plane YUV, which are
+**not** gated by `has_8bpp_ubwc` — get {32, 8}, and r8g8 / the UV plane get
+{16, 8}. Tested with a throwaway env override
+(`experiments/exp-17-cpp1-ubwc-blockwidth.patch`, since reverted; the override
+is live — `1x1` grows the R8 metadata plane from `0x2000` to `0x40000`):
+{16,4}, {32,4}, {64,4} corrupt the content identically, {16,8}, {32,8}, {8,8}
+take the GPU down with `VK_ERROR_DEVICE_LOST`
+(`results/test-y-8bpp-sweep-blockwidth.log`). The grid is not the cause.
+Conclusion 1 (a740 does emit 8bpp UBWC metadata) and Conclusion 2 both stand;
+`has_8bpp_ubwc` stays False, now on value-compared evidence.
+
 ### 21.8 BC copy (r2d): fill OK, readback broken; 0013v1 rejected, 0013-A - the dst-buffer surrogate format (18.11)
 
 Task: after 0012 A+B, check the byte roundtrip of BC through the copy
