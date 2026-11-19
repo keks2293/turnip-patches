@@ -17,7 +17,9 @@ set -euo pipefail
 TIMEOUT="${1:-180}"
 HUDLOG="${HUDLOG:-$TIMEOUT}"
 
-GAME_DIR="/run/media/armada/Z Slim/Games/Wolfenstein The New Order"
+# Same as in run-game.sh: the mount point is named after the exFAT volume label, so
+# the path is detected rather than hard-coded (the label has already changed once).
+GAME_DIR="${GAME_DIR:-$(ls -d "/run/media/armada/"*/Games/"Wolfenstein The New Order" 2>/dev/null | head -1 || true)}"
 GAME_EXE="$GAME_DIR/WolfNewOrder_x64.exe"
 # The prefix name must contain a digit: protonfixes pulls the game number out of
 # STEAM_COMPAT_DATA_PATH (re.findall(r'\d+')) and fails without digits (wtno → IndexError).

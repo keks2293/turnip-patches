@@ -23,13 +23,20 @@ set -euo pipefail
 MODE="${1:-patched}"
 TIMEOUT="${2:-180}"
 
-GAME_DIR="/run/media/armada/Z Slim/Games/Resident.Evil.4.Gold.Edition-InsaneRamZes"
+# GAME_DIR is auto-detected, with GAME_DIR= as an override: the mount point of the
+# exFAT drive is named after its label, and the label changed ("Z Slim" -> "Slim"),
+# so a hard-coded path stops resolving while the game itself is in place.
+# Check by hand with:  ls -d /run/media/armada/*/Games/Resident*
+GAME_DIR="${GAME_DIR:-$(ls -d /run/media/armada/*/Games/Resident.Evil.4.Gold.Edition-InsaneRamZes 2>/dev/null | head -1 || true)}"
 GAME_EXE="$GAME_DIR/re4.exe"
 PREFIX="/var/home/armada/Games/Heroic/Prefixes/re4"
 PROTON="/usr/share/steam/compatibilitytools.d/proton-cachyos-11.0-arm64/proton"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PATCHED_ICD="$REPO/../build/out/freedreno_icd.json"
+# ICD is taken from ICD= when it is set (an experiment build outside build/out,
+# e.g. ICD=../build/out-stock-flag/freedreno_icd_stock_flag.json), otherwise the
+# usual patched driver in build/out — the same rule as RP6_TEST_BIN in run-test.sh.
+PATCHED_ICD="${ICD:-$REPO/../build/out/freedreno_icd.json}"
 
 case "$MODE" in
   patched)
@@ -60,6 +67,7 @@ if [ -n "${DRIRC_TEST:-}" ]; then
 fi
 
 [ -x "$PROTON" ] || { echo "no proton: $PROTON" >&2; exit 1; }
+[ -n "$GAME_DIR" ] || { echo "drive with the games is not mounted: udisksctl mount -b /dev/disk/by-label/<label>" >&2; exit 1; }
 [ -f "$GAME_EXE" ] || { echo "no game: $GAME_EXE" >&2; exit 1; }
 [ -d "$PREFIX" ]  || { echo "no prefix: $PREFIX" >&2; exit 1; }
 
