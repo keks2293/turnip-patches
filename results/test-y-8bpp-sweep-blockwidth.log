@@ -1,0 +1,90 @@
+##### TU_8BPP_UBWC=<unset> FD_DEV_FEATURES=has_8bpp_ubwc=1
+Y[R8_UNORM 512x512] cpu-dump: data nonzero=252960/262144  meta nonzero=8160/8192
+Y[R8_UNORM 512x512 bpt=1 ubwc=yes] i2b: 261120/262144 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r511,c511) zeros=262144 untouched=0 pat=0x07 got=0x00
+Y[R8_UNORM 512x512] texelFetch: 261120/262144 words MISMATCH  bad[0]=(r0,c0) bad[N]=(r511,c511) zeros=0 want=0xff000007 got=0xff000000
+Y[R8_UNORM] VERDICT: content is CORRUPTED on both reads
+Y[R8_UNORM 256x256] cpu-dump: data nonzero=61216/65536  meta nonzero=4064/4096
+Y[R8_UNORM 256x256 bpt=1 ubwc=yes] i2b: 65280/65536 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r255,c255) zeros=65536 untouched=0 pat=0x07 got=0x00
+Y[R8_UNORM 128x128] cpu-dump: data nonzero=12240/16384  meta nonzero=4080/4096
+Y[R8_UNORM 128x128 bpt=1 ubwc=yes] i2b: 16320/16384 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r127,c127) zeros=16384 untouched=0 pat=0x07 got=0x00
+Y[R8_UNORM 130x66] cpu-dump: data nonzero=8224/16384  meta nonzero=323/12288
+Y[R8_UNORM 130x66 bpt=1 ubwc=yes] i2b: 8547/8580 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r65,c129) zeros=8580 untouched=0 pat=0x07 got=0x00
+Y[R8_UINT 512x512] cpu-dump: data nonzero=252960/262144  meta nonzero=8160/8192
+Y[R8_UINT 512x512 bpt=1 ubwc=yes] i2b: 261120/262144 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r511,c511) zeros=262144 untouched=0 pat=0x07 got=0x00
+Y[R16_UNORM 512x512] cpu-dump: data nonzero=162352/524288  meta nonzero=2512/8192
+Y[R16_UNORM 512x512 bpt=2 ubwc=yes] i2b: 0/524288 bytes EXACT
+Y[R8G8_UNORM 512x512] cpu-dump: data nonzero=156992/524288  meta nonzero=1216/4096
+Y[R8G8_UNORM 512x512 bpt=2 ubwc=yes] i2b: 0/524288 bytes EXACT
+Y[CTRL_RGBA8 512x512] cpu-dump: data nonzero=269272/1048576  meta nonzero=2088/8192
+Y[CTRL_RGBA8 512x512 bpt=4 ubwc=yes] i2b: 0/1048576 bytes EXACT
+Y[CTRL_RGBA8 512x512] texelFetch: 0/262144 words EXACT
+Y[CTRL_RGBA8] VERDICT: both EXACT: UBWC works
+##### TU_8BPP_UBWC=16x4 FD_DEV_FEATURES=has_8bpp_ubwc=1
+Y[R8_UNORM 512x512] cpu-dump: data nonzero=252960/262144  meta nonzero=8160/8192
+Y[R8_UNORM 512x512 bpt=1 ubwc=yes] i2b: 261120/262144 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r511,c511) zeros=262144 untouched=0 pat=0x07 got=0x00
+Y[R8_UNORM 512x512] texelFetch: 261120/262144 words MISMATCH  bad[0]=(r0,c0) bad[N]=(r511,c511) zeros=0 want=0xff000007 got=0xff000000
+Y[R8_UNORM] VERDICT: content is CORRUPTED on both reads
+Y[R8_UNORM 256x256] cpu-dump: data nonzero=61216/65536  meta nonzero=4064/4096
+Y[R8_UNORM 256x256 bpt=1 ubwc=yes] i2b: 65280/65536 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r255,c255) zeros=65536 untouched=0 pat=0x07 got=0x00
+Y[R8_UNORM 128x128] cpu-dump: data nonzero=12240/16384  meta nonzero=4080/4096
+Y[R8_UNORM 128x128 bpt=1 ubwc=yes] i2b: 16320/16384 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r127,c127) zeros=16384 untouched=0 pat=0x07 got=0x00
+Y[R8_UNORM 130x66] cpu-dump: data nonzero=8224/16384  meta nonzero=323/12288
+Y[R8_UNORM 130x66 bpt=1 ubwc=yes] i2b: 8547/8580 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r65,c129) zeros=8580 untouched=0 pat=0x07 got=0x00
+Y[R8_UINT 512x512] cpu-dump: data nonzero=252960/262144  meta nonzero=8160/8192
+Y[R8_UINT 512x512 bpt=1 ubwc=yes] i2b: 261120/262144 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r511,c511) zeros=262144 untouched=0 pat=0x07 got=0x00
+Y[R16_UNORM 512x512] cpu-dump: data nonzero=162352/524288  meta nonzero=2512/8192
+Y[R16_UNORM 512x512 bpt=2 ubwc=yes] i2b: 0/524288 bytes EXACT
+Y[R8G8_UNORM 512x512] cpu-dump: data nonzero=156992/524288  meta nonzero=1216/4096
+Y[R8G8_UNORM 512x512 bpt=2 ubwc=yes] i2b: 0/524288 bytes EXACT
+Y[CTRL_RGBA8 512x512] cpu-dump: data nonzero=269272/1048576  meta nonzero=2088/8192
+Y[CTRL_RGBA8 512x512 bpt=4 ubwc=yes] i2b: 0/1048576 bytes EXACT
+Y[CTRL_RGBA8 512x512] texelFetch: 0/262144 words EXACT
+Y[CTRL_RGBA8] VERDICT: both EXACT: UBWC works
+##### TU_8BPP_UBWC=32x4 FD_DEV_FEATURES=has_8bpp_ubwc=1
+Y[R8_UNORM 512x512] cpu-dump: data nonzero=252960/262144  meta nonzero=8160/8192
+Y[R8_UNORM 512x512 bpt=1 ubwc=yes] i2b: 261120/262144 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r511,c511) zeros=262144 untouched=0 pat=0x07 got=0x00
+Y[R8_UNORM 512x512] texelFetch: 261120/262144 words MISMATCH  bad[0]=(r0,c0) bad[N]=(r511,c511) zeros=0 want=0xff000007 got=0xff000000
+Y[R8_UNORM] VERDICT: content is CORRUPTED on both reads
+Y[R8_UNORM 256x256] cpu-dump: data nonzero=61216/65536  meta nonzero=4064/4096
+Y[R8_UNORM 256x256 bpt=1 ubwc=yes] i2b: 65280/65536 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r255,c255) zeros=65536 untouched=0 pat=0x07 got=0x00
+Y[R8_UNORM 128x128] cpu-dump: data nonzero=12240/16384  meta nonzero=4080/4096
+Y[R8_UNORM 128x128 bpt=1 ubwc=yes] i2b: 16320/16384 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r127,c127) zeros=16384 untouched=0 pat=0x07 got=0x00
+Y[R8_UNORM 130x66] cpu-dump: data nonzero=8224/16384  meta nonzero=323/12288
+Y[R8_UNORM 130x66 bpt=1 ubwc=yes] i2b: 8547/8580 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r65,c129) zeros=8580 untouched=0 pat=0x07 got=0x00
+Y[R8_UINT 512x512] cpu-dump: data nonzero=252960/262144  meta nonzero=8160/8192
+Y[R8_UINT 512x512 bpt=1 ubwc=yes] i2b: 261120/262144 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r511,c511) zeros=262144 untouched=0 pat=0x07 got=0x00
+Y[R16_UNORM 512x512] cpu-dump: data nonzero=162352/524288  meta nonzero=2512/8192
+Y[R16_UNORM 512x512 bpt=2 ubwc=yes] i2b: 0/524288 bytes EXACT
+Y[R8G8_UNORM 512x512] cpu-dump: data nonzero=156992/524288  meta nonzero=1216/4096
+Y[R8G8_UNORM 512x512 bpt=2 ubwc=yes] i2b: 0/524288 bytes EXACT
+Y[CTRL_RGBA8 512x512] cpu-dump: data nonzero=269272/1048576  meta nonzero=2088/8192
+Y[CTRL_RGBA8 512x512 bpt=4 ubwc=yes] i2b: 0/1048576 bytes EXACT
+Y[CTRL_RGBA8 512x512] texelFetch: 0/262144 words EXACT
+Y[CTRL_RGBA8] VERDICT: both EXACT: UBWC works
+##### TU_8BPP_UBWC=64x4 FD_DEV_FEATURES=has_8bpp_ubwc=1
+Y[R8_UNORM 512x512] cpu-dump: data nonzero=252960/262144  meta nonzero=8160/8192
+Y[R8_UNORM 512x512 bpt=1 ubwc=yes] i2b: 261120/262144 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r511,c511) zeros=262144 untouched=0 pat=0x07 got=0x00
+Y[R8_UNORM 512x512] texelFetch: 261120/262144 words MISMATCH  bad[0]=(r0,c0) bad[N]=(r511,c511) zeros=0 want=0xff000007 got=0xff000000
+Y[R8_UNORM] VERDICT: content is CORRUPTED on both reads
+Y[R8_UNORM 256x256] cpu-dump: data nonzero=61216/65536  meta nonzero=4064/4096
+Y[R8_UNORM 256x256 bpt=1 ubwc=yes] i2b: 65280/65536 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r255,c255) zeros=65536 untouched=0 pat=0x07 got=0x00
+Y[R8_UNORM 128x128] cpu-dump: data nonzero=12240/16384  meta nonzero=4080/4096
+Y[R8_UNORM 128x128 bpt=1 ubwc=yes] i2b: 16320/16384 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r127,c127) zeros=16384 untouched=0 pat=0x07 got=0x00
+Y[R8_UNORM 130x66] cpu-dump: data nonzero=8224/16384  meta nonzero=323/12288
+Y[R8_UNORM 130x66 bpt=1 ubwc=yes] i2b: 8547/8580 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r65,c129) zeros=8580 untouched=0 pat=0x07 got=0x00
+Y[R8_UINT 512x512] cpu-dump: data nonzero=252960/262144  meta nonzero=8160/8192
+Y[R8_UINT 512x512 bpt=1 ubwc=yes] i2b: 261120/262144 bytes MISMATCH  bad[0]=(r0,c0) bad[N]=(r511,c511) zeros=262144 untouched=0 pat=0x07 got=0x00
+Y[R16_UNORM 512x512] cpu-dump: data nonzero=162352/524288  meta nonzero=2512/8192
+Y[R16_UNORM 512x512 bpt=2 ubwc=yes] i2b: 0/524288 bytes EXACT
+Y[R8G8_UNORM 512x512] cpu-dump: data nonzero=156992/524288  meta nonzero=1216/4096
+Y[R8G8_UNORM 512x512 bpt=2 ubwc=yes] i2b: 0/524288 bytes EXACT
+Y[CTRL_RGBA8 512x512] cpu-dump: data nonzero=269272/1048576  meta nonzero=2088/8192
+Y[CTRL_RGBA8 512x512 bpt=4 ubwc=yes] i2b: 0/1048576 bytes EXACT
+Y[CTRL_RGBA8 512x512] texelFetch: 0/262144 words EXACT
+Y[CTRL_RGBA8] VERDICT: both EXACT: UBWC works
+##### TU_8BPP_UBWC=16x8 FD_DEV_FEATURES=has_8bpp_ubwc=1
+   (device lost)
+##### TU_8BPP_UBWC=32x8 FD_DEV_FEATURES=has_8bpp_ubwc=1
+   (device lost)
+##### TU_8BPP_UBWC=8x8 FD_DEV_FEATURES=has_8bpp_ubwc=1
+   (device lost)

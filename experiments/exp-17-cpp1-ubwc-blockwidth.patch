@@ -1,0 +1,62 @@
+EXP 17 (diagnostic, NOT FOR SHIP): override the cpp=1 row of the UBWC
+metadata geometry table from the environment.
+
+Why: with FD_DEV_FEATURES=has_8bpp_ubwc=1 the new Y probe (values, not the
+vacuous non-zero counter) shows that for R8_UNORM+UBWC the pixels AND the
+metadata really are written, yet both readers decode the clear value:
+
+  cpu-dump:   data nonzero=252960/262144  meta nonzero=8160/8192
+  i2b:        261120/262144 bytes MISMATCH  got=0x00
+  texelFetch: 261120/262144 words MISMATCH  want=0xff000007 got=0xff000000
+
+with has_8bpp_ubwc=0 the same probe is EXACT on both paths, so the probe,
+the copies and the barriers are fine and the failure is specific to
+UBWC-on-8bpp.  Two different readers agreeing on "clear colour" is the
+signature of a metadata grid the hardware did not write.
+
+fdl6_get_ubwc_blockwidth() gives cpp=1 the generic {16, 4}, while the only
+other 8bpp UBWC users in the same function - PIPE_FORMAT_Y8_UNORM and the Y
+plane of 2-plane YUV, which are NOT gated by has_8bpp_ubwc - get {32, 8},
+and the UV plane/r8g8 get {16, 8}.  Same bytes per texel, three grids.
+
+TU_8BPP_UBWC="<w>x<h>" replaces the generic cpp=1 row; unset or "keep" =
+the table.  Used only to find out whether any grid makes 8bpp UBWC
+round-trip on a740; if one does, the next step is a real quirk (a property
+of the format, not of the environment).  The Y8/r8g8/2-plane-YUV special
+cases return before this override, so only plain 8bpp colour (R8*) is
+affected.
+
+Apply in /var/home/armada/opencode/mesa27-src with patch -p1, revert with
+patch -R -p1.  File: src/freedreno/fdl/fd6_layout.c
+diff --git a/src/freedreno/fdl/fd6_layout.c b/src/freedreno/fdl/fd6_layout.c
+index 19c38a2..9cafd04 100644
+--- a/src/freedreno/fdl/fd6_layout.c
++++ b/src/freedreno/fdl/fd6_layout.c
+@@ -71,6 +71,27 @@ fdl6_get_ubwc_blockwidth(const struct fdl_layout *layout,
+ 
+    uint32_t cpp = fdl_cpp_shift(layout);
+    assert(cpp < ARRAY_SIZE(blocksize));
++
++   /* EXP 17, NOT FOR SHIP: TU_8BPP_UBWC=<w>x<h> replaces the cpp=1 row. */
++   if (cpp == 0) {
++      static int bw = -1, bh = -1;
++      if (bw < 0) {
++         const char *e = getenv("TU_8BPP_UBWC");
++         int w = 16, h = 4;
++         if (e && !strchr(e, 'x')) {
++            /* "keep": the table verbatim */
++         } else if (e && sscanf(e, "%dx%d", &w, &h) != 2) {
++            w = 16;
++            h = 4;
++         }
++         bw = w;
++         bh = h;
++      }
++      *blockwidth = bw;
++      *blockheight = bh;
++      return;
++   }
++
+    *blockwidth = blocksize[cpp].width;
+    *blockheight = blocksize[cpp].height;
+ }
