@@ -306,3 +306,27 @@ with R32G32B32A32.
   at the same time (RAM 7.3 GiB); `-j2`; fdperf ROOT only.
 - Verification of each step: the patch is in the binary, the loaded driver = the built one
   (hash/mtime), CEIL controls; RC=0 from ninja is not proof of a build.
+
+## Status (19.11): 0014 replaced by the block-only rule (branch `test`)
+
+`patches/0014-turnip-mutable-no-list-tiling.patch` on this branch is not the
+form that shipped as `27.0.0-devel-p14`. The shipped one enumerates the base
+format's compatibility class and hands the predicates a synthesized
+`VkImageFormatListCreateInfo`. This one answers the no-list question from the
+texel block alone: an absent list returns `tu_is_r8g8_compatible(base)` and
+nothing else, and `tu_image_init()` now calls the same predicate the format
+query calls instead of repeating it inline. `ubwc_all_formats_compatible` is
+not touched - it is the A750 feature bit, it also gates sparse residency, and
+it measured broken on A740 (a7xx-gen-props.md row 23).
+
+What is still open is not the gain but the safety: a read through a view of a
+*different member* of the block, on a tiled image with UBWC off, has never been
+measured - by either form. Section XV of the test does that (texelFetch through
+the view, so r2d's use of the image format cannot hide it) with the 2-byte class
+as the guard. Until XV, the 94-check matrix and the RE4 inventory have been run
+on it, this patch is DRAFT: the file says so in its own header.
+
+Checked so far: `git apply --check` for 0001-0014 on `6dfa32a85f91`, no `--3way`
+and no fuzz; the test compiles clean with `scripts/build-test.sh` flags. Not
+built as a driver, not run: the device is the bench and the build script refuses
+to start while `re4.exe` runs.

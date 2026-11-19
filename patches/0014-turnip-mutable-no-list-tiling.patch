@@ -1,323 +1,151 @@
-0014: a mutable image without a format list keeps the tiling its class allows.
+0014: a mutable image with no format list keeps the tiled layout of its texel
+block.
+
+Status: DRAFT - not built and not run. The p14 release shipped the other form
+of this change (enumerating a compatibility class and passing a synthesized
+list); that form is what tag 27.0.0-devel-p14 and the release's source bundle
+contain. This file replaces it on this branch. The gate before it ships is at
+the end.
 
 Why. A VkImageCreateInfo with VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT and no
 VkImageFormatListCreateInfo may be viewed as any format compatible with its
-base format, but the driver does not know which, so the three predicates in
-tu6_mutable_format_list_forces_linear() are handed a NULL and answer the
-worst case:
+base format, but the driver does not know which, so the predicates in
+tu6_mutable_format_list_forces_linear() are handed a NULL and answer the worst
+case: has_swaps true, reinterprets_r8g8_r16 true, swaps_are_uniform false. The
+image goes linear although every format the app may legally view it as has the
+same layout. Not a corner case: 50.9% of the sampled texture bytes in the RE4
+inventory (results/raw/game-patched-imginv4.log) are MUTABLE with listn=0 and
+all of them are linear.
 
-  tu6_format_list_has_swaps(NULL)                = true
-  tu6_format_list_reinterprets_r8g8_r16(NULL)    = true
-  tu6_format_list_swaps_are_uniform(NULL)        = false
+The rule. An absent list means "any format with the same texel block", and the
+tiled layout is a function of the block alone, so the question is whether two
+members of one block describe different memory. They do in exactly one class,
+the 2-byte one:
 
-i.e. "there is a swap, there is an R8G8/R16 reinterpretation, and the swaps
-are not uniform" - the image goes linear even when every format the app can
-legally view it as has the same layout. This is not a corner case: in the
-RE4 inventory (results/raw/game-patched-imginv4.log) 4062 MiB of 7977 MiB
-sampled, 50.9%, are MUTABLE images with listn=0, and all of them are in
-linear.
+  - A stored tiled image carries no channel order. fd6_pipe2swap()
+    (fdl/fd6_format_table.c) returns WZYX for every tiled format that is not
+    is_mutable - "It seems CCU ignores swap and always uses WZYX when tiled.
+    TP, on the other hand, always respects swap" - and a view is programmed
+    with its own format, so an R8G8B8A8 image read through a B8G8R8A8 view is
+    the reinterpretation the spec describes, not a layout disagreement. The
+    comment at this same decision in tu_image_init() says it too ("tiled
+    images are stored without the swap") and leaves a TODO about BGRA8.
+  - UBWC is already off for such an image: there is no list to judge
+    compression against, so tu_image_init() clears ubwc_enabled in this
+    branch. The swap is only a problem once compressed, which is what the two
+    predicates below the new one are for.
+  - The 2-byte class is the exception, and it is a layout fact rather than an
+    order one: R8G8 has a tile height and a pitch alignment of its own, and
+    fdl/fd6_layout.c keeps that variant only while the image is not flagged
+    is_mutable ("cpp == 2 && nr_components == 2 && !is_mutable"). A part
+    without ubwc_all_formats_compatible never sets that flag on A7xx, so an
+    R8G8 image cannot be reinterpreted as R16 in the layout it gets. The
+    answer for an absent list is the r8g8 question and nothing else.
 
-The class. tu6_mutable_compat_class() builds the set of formats the base
-format may be viewed as, and the existing predicates then run on that set
-instead of on NULL. Two properties make this safe without a copy of the
-Vulkan compatibility table:
+What changes. Two files:
 
-  - the grouping is the texel block: same bits per block, same block width
-    and height, same compressed-ness. The tiled layout is a function of the
-    block size alone (fd6_layout.c: layout->cpp =
-    util_format_get_blocksize(), and the tile height follows cpp), so a
-    format outside the block class can never describe the same memory. It
-    is therefore a superset of the spec class ("occupies the same number of
-    bits per texel block"), and a superset can only make the answer more
-    conservative;
-  - what is left inside the block class is the channel order, and that is
-    exactly what tu6_format_list_has_swaps() and
-    tu6_format_list_swaps_are_uniform() already compare. So the same
-    reasoning that decides an explicit list decides the class.
+  - tu_formats.cc: after the depth/stencil, NV12 and ubwc_all_formats_compatible
+    cases of tu6_mutable_format_list_forces_linear(), an absent or empty list
+    returns tu_is_r8g8_compatible(base format) instead of falling through to
+    the swap predicates. The comment at the call site in
+    tu_get_image_format_properties(), which used to say a query without a list
+    "cannot know this", now says the opposite: the same predicate answers for
+    the base format, so the query cannot promise a combination the create
+    would refuse.
+  - tu_image.cc: the create-side branch spelled the same three predicates
+    inline. It now calls the function the query calls, so the two cannot drift
+    apart. UBWC stays cleared in that branch, as before.
 
-Only formats the driver can actually use are put into the class: a view is
-either sampled or written, and block-compressed formats are texture-only in
-fd6_format_table.c (_T_ leaves rb = NONE), so the filter has to consult
-fd6_color_format() and fd6_texture_format() together. With
-fd6_color_format() alone every BC format would drop out of its own class and
-BC would lose the tiling for no reason (measured: BC7 stayed linear until
-the texture side was added).
+This deliberately does not touch device props. The other way to answer this
+question is info->props.ubwc_all_formats_compatible, which is the A750 feature
+bit: it makes every part mutable at the layout level and is read by the sparse
+residency gate as well (tu_formats.cc). It measured broken on A740 - garbage
+cast reads - see docs/a7xx-gen-props.md row 23 and
+results/test-props-ubwc_all_formats_compatible.log, so it stays off here and
+the answer comes from the texel block instead.
 
-What the class answer is, per block class. Measured with probe NL in
-tests/rp6-vkd3d-sparse-test.c, 500x500 (not a multiple of the tile, so the
-two layouts have different totals), results/test-0014-ship.log (sha256
-c17d02bcaae9, no instrumentation in the tree; the same matrix on the
-instrumented build 050375a18b7b is results/test-0014-final.log; the
-intermediate build 97072a8f6376, before the UBWC-gate split below, gave the
-same 94/94):
+Relations. Depends on 0005 (the swap predicates this patch stops using for the
+no-list case) and on nothing else. Independent of 0013.
 
-  class                        base format            layout   why
-  8-bit (1 B/texel)            R8_UNORM               tiled    no member needs a swap
-  8-byte (64 bit)              R16G16B16A16_FLOAT,    tiled    every member is WZYX
-                               R32G32_FLOAT
-  block-compressed             BC7_UNORM              tiled    every member is WZYX
-  4-byte (32 bit)              R8G8B8A8_UNORM,        linear   the class holds both
-                               R32_UINT                        RGBA8 and BGRA8 orders
-  2-byte (16 bit)              R8G8_UNORM, R16_UNORM  linear   the class holds R8G8
-                                                               and R16
+Gate, before this is fit to ship. One thing has never been measured: a read
+through a view whose format is a different member of the base format's block
+class, on a tiled image with UBWC off. v1 did not measure it either - its own
+header says so. tests/rp6-vkd3d-sparse-test.c is extended with that probe: a
+B8G8R8A8 MUTABLE image with no list, filled through 0013's buffer->image path,
+read back through an R8G8B8A8 view (expect the R and B bytes exchanged) and an
+R32_UINT view (expect the raw word), both through the TP path because
+vkCmdCopyImageToBuffer reads with the image format, not the view's. The guard
+case has to stay refused: R16 over R8G8 must still be linear. Then the 94-check
+matrix, then the RE4 inventory; the expected gain is the 4-byte class, about
+1600 MiB of the 3801 MiB that p14's v1 left in linear.
 
-The last two rows are not a limitation to be fixed later: they are the same
-demotion that 0005/0009/0010 guard on explicit lists, and the cross-order
-read through such a class is genuinely undefined by the layout. The gain is
-in the first three: from the same inventory, 2201 MiB of the 3801 MiB
-deposed (57.9%) go back to tiled - 1171 MiB of 8-bit, 585 MiB of 64-bit,
-445 MiB of BC; without the BC classes, which need the texture-side filter
-above, 1756 MiB.
-
-How the layout is detected. memreq separates the two layouts only when the
-image is not a multiple of the tile: tiled pads to the tile, linear pads
-rows. For block-compressed formats at 500x500 the two totals are equal
-(0x40000 both), so the authoritative detector is the sparse create: a
-linear image cannot be sparse (tu_image_init() refuses it, see 0004), so
-SUCCESS means tiled and FEATURE_NOT_PRESENT means linear. Both detectors
-agree with the class model on all 8 probes, and all 8 fill+readback
-roundtrips are byte-exact (0 bytes differ) - the tiled layout the class
-allows is one the r2d paths can address. The roundtrip needs 0013: the fill
-is a buffer->image copy, whose writes are not visible to the reader without
-the CCU clean.
-
-The format query has to agree. tu_get_image_format_properties() refuses
-sparse+mutable when tu6_mutable_format_list_forces_linear() says the image
-would be linear, and it sees the same NULL. It now synthesizes the same
-class, so a sparse+mutable image without a list is advertised and created
-for the 8-bit and 64-bit classes and refused for the 4-byte and 2-byte ones
-- the probe's sparse-create column is that agreement, observed from the
-other side.
-
-UBWC is deliberately not touched.  tu6_mutable_format_list_ubwc_compatible()
-and format_list_ubwc_possible() are still handed the original list pointer
-(ubwc_list), which is NULL when the app passed none, so a no-list mutable
-image still loses UBWC exactly as in stock.  Only the tiling predicates are
-answered with the class.  Keeping compression on such an image would need its
-own content check (UBWC metadata reinterpretation is the thing 0011/0012 and
-exp-1/exp-2 were about), and mixing the two decisions in one patch would make
-the byte result above unattributable.
-
-What stays out / residual risk. The content check is a fill and readback in
-the base format; a view through a *different* member of the same class
-(R32_FLOAT over R8G8B8A8, say) is not exercised here, and the justification
-for it is the layout argument, not a measurement. For the classes this
-patch actually moves to tiled that argument is the same one 0005/0006 use
-for explicit lists, and the class members there are all WZYX with the same
-block, so there is nothing to disagree about; but the honest statement is
-that the tiled-no-list cross-view read has not been run.
-
-Relations: standalone in mechanism, depends on 0004 only because
-tu6_mutable_format_list_forces_linear() is introduced there. Complements
-0005/0009/0010 (they decide explicit lists, this decides the absent one)
-and 0013 (needed for the roundtrip). No effect on explicit lists: the class
-is only built when the app passed none.
-
-Applied form: the tu_image.cc hunk was exported with one blank context line
-after vk_find_struct_const() that 6dfa32a does not have and that no patch of
-0001-0013 puts there, so the file as published failed `git apply --check` on
-its own base tree. Corrected 19.11.2026 by dropping that line; the hunk
-counts are -552,7 +552,33 now and the added and removed lines are untouched.
-Checked by applying 0001-0014 in order into a clean clone of 6dfa32a: every
-patch passes `git apply --check`, 9 files change, and
-`git diff 6dfa32a | sha256sum` = 93ab719ce512c622b75d5a8ae487392ea959de127677dfc57e12feb5a8d1e065.
-
+Not built, not run. `git apply --check` passes for 0001-0014 on Mesa
+`6dfa32a85f91` with no --3way and no fuzz. The device is the test bench and its
+build script refuses to start while re4.exe runs, so no compile was attempted.
+diff --git a/src/freedreno/vulkan/tu_formats.cc b/src/freedreno/vulkan/tu_formats.cc
 --- a/src/freedreno/vulkan/tu_formats.cc
 +++ b/src/freedreno/vulkan/tu_formats.cc
-@@ -261,11 +261,120 @@
-    return true;
- }
- 
-+/* The formats an image created with VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT and no
-+ * VkImageFormatListCreateInfo may be viewed as: every color format with the
-+ * same texel block, i.e. the same number of bits per block and the same block
-+ * shape.  This is the rule the spec uses for the compatibility class of an
-+ * uncompressed color format ("occupies the same number of bits per texel
-+ * block"), and it is deliberately a superset of it: a superset can only make
-+ * the answer more conservative, and it lets the driver answer without
-+ * carrying a copy of the format table.
-+ *
-+ * The block shape is what the tiled layout is a function of (fd6_layout.c:
-+ * layout->cpp = util_format_get_blocksize()), so a format outside the block
-+ * class can never describe the same memory.  What is left inside the class is
-+ * the channel order, and that is what the format-list predicates already
-+ * compare.
-+ *
-+ * Returns 0 for images whose layout is not a plain color layout (depth,
-+ * stencil, multi-planar) and when the class does not fit into max; the caller
-+ * then keeps the conservative "no list" answer.
-+ */
-+unsigned
-+tu6_mutable_compat_class(VkFormat format, VkFormat *list, unsigned max)
-+{
-+   enum pipe_format base = vk_format_to_pipe_format(format);
-+
-+   if (base == PIPE_FORMAT_NONE || vk_format_get_plane_count(format) > 1 ||
-+       util_format_is_depth_or_stencil(base))
-+      return 0;
-+
-+   const struct util_format_description *base_desc =
-+      util_format_description(base);
-+   const bool base_compressed = util_format_is_compressed(base);
-+
-+   if (!base_compressed && base_desc->layout != UTIL_FORMAT_LAYOUT_PLAIN)
-+      return 0;
-+
-+   unsigned n = 0;
-+   for (unsigned p = 0; p < PIPE_FORMAT_COUNT; p++) {
-+      enum pipe_format f = (enum pipe_format) p;
-+      const struct util_format_description *desc;
-+
-+      if (f == PIPE_FORMAT_NONE || util_format_is_depth_or_stencil(f))
-+         continue;
-+
-+      /* Only a format the driver can actually use can be a view of this
-+       * image; the rest would only make the answer more conservative than it
-+       * has to be.  A view is either sampled or written, and block-compressed
-+       * formats are texture-only (fd6_format_table.c: _T_ has rb = NONE), so
-+       * both sides have to be consulted.
-+       */
-+      if (fd6_color_format(f, TILE6_LINEAR) == FMT6_NONE &&
-+          fd6_texture_format(f, TILE6_LINEAR, false) == FMT6_NONE)
-+         continue;
-+
-+      desc = util_format_description(f);
-+      if (!desc)
-+         continue;
-+
-+      if (util_format_is_compressed(f) != base_compressed ||
-+          desc->block.bits != base_desc->block.bits ||
-+          desc->block.width != base_desc->block.width ||
-+          desc->block.height != base_desc->block.height)
-+         continue;
-+
-+      VkFormat vk_format = vk_format_from_pipe_format(f);
-+      if (vk_format == VK_FORMAT_UNDEFINED)
-+         continue;
-+
-+      if (n == max)
-+         return 0;
-+
-+      list[n++] = vk_format;
-+   }
-+
-+   return n;
-+}
-+
-+/* Bound the question by the compatibility class when the app passed no list,
-+ * so that the format query and vkCreateImage agree: an image which keeps the
-+ * tiled layout may be created, one which would be demoted to linear is
-+ * refused by both.
-+ */
-+static const VkImageFormatListCreateInfo *
-+tu_mutable_format_list_or_class(VkFormat format,
-+                                const VkImageFormatListCreateInfo *fmt_list,
-+                                VkFormat *compat_list, unsigned compat_max,
-+                                VkImageFormatListCreateInfo *compat_info)
-+{
-+   if (fmt_list)
-+      return fmt_list;
-+
-+   unsigned n = tu6_mutable_compat_class(format, compat_list, compat_max);
-+   if (!n)
-+      return NULL;
-+
-+   compat_info->sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO;
-+   compat_info->pNext = NULL;
-+   compat_info->viewFormatCount = n;
-+   compat_info->pViewFormats = compat_list;
-+
-+   return compat_info;
-+}
-+
- bool
- tu6_mutable_format_list_forces_linear(const struct fd_dev_info *info,
-                                       VkFormat format,
-                                       const VkImageFormatListCreateInfo *fmt_list)
- {
-+   VkFormat compat_list[64];
-+   VkImageFormatListCreateInfo compat_info;
-+
-+   fmt_list = tu_mutable_format_list_or_class(format, fmt_list, compat_list,
-+                                              ARRAY_SIZE(compat_list),
-+                                              &compat_info);
-+
-    /* A list we already consider compatible keeps the tiled layout. */
-    if (tu6_mutable_format_list_ubwc_compatible(info, fmt_list))
+@@ -288,6 +288,29 @@ tu6_mutable_format_list_forces_linear(const struct fd_dev_info *info,
+    if (info->props.ubwc_all_formats_compatible)
        return false;
-@@ -809,8 +918,9 @@
+ 
++   /* Without a list the image may be viewed as any format with the same texel
++    * block, and the tiled layout is a function of the block alone.  A stored
++    * tiled image carries no channel order: fd6_pipe2swap() returns WZYX for
++    * every tiled format that is not is_mutable ("CCU ignores swap and always
++    * uses WZYX when tiled", fdl/fd6_format_table.c), and a view decodes with
++    * its own format, so two members of one block class describe the same
++    * bytes.  Reading one as the other is the reinterpretation the spec
++    * describes, not a layout disagreement.
++    *
++    * UBWC is off for such an image - there is no list to judge compression
++    * against - and that is the only case in which the swap mattered, which is
++    * what the predicates below are for.
++    *
++    * The one block class whose members do not share a layout is the 2-byte
++    * one: R8G8 has a tile height and a pitch alignment of its own, and the
++    * layout keeps that variant only while the image is not flagged is_mutable
++    * (fdl/fd6_layout.c: "cpp == 2 && nr_components == 2 && !is_mutable"),
++    * which a part without ubwc_all_formats_compatible never sets.  So the
++    * answer for an absent list is the r8g8 question and nothing else.
++    */
++   if (!fmt_list || !fmt_list->viewFormatCount)
++      return tu_is_r8g8_compatible(vk_format_to_pipe_format(format));
++
+    if (tu6_format_list_reinterprets_r8g8_r16(vk_format_to_pipe_format(format),
+                                              fmt_list))
+       return true;
+@@ -809,8 +832,9 @@ tu_get_image_format_properties(
  
        /* Same for a mutable image whose format list demotes it to linear: the
         * create is refused (see tu_image_init()), so don't advertise the
 -       * combination here either.  A query without a format list cannot know
 -       * this, and stays as it is.
-+       * combination here either.  Without a list the question is answered for
-+       * the base format's compatibility class, the same set vkCreateImage
-+       * will use.
++       * combination here either.  Without a list the same predicate answers
++       * for the compatibility class of the base format, so the query cannot
++       * promise a combination the create would refuse.
         */
        if (info->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) {
           const VkImageFormatListCreateInfo *format_list =
---- a/src/freedreno/vulkan/tu_formats.h
-+++ b/src/freedreno/vulkan/tu_formats.h
-@@ -34,6 +34,15 @@
- 
- bool tu6_format_list_has_swaps(const VkImageFormatListCreateInfo *fmt_list);
- 
-+/* The formats an image created with VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT and no
-+ * VkImageFormatListCreateInfo may be viewed as, so that the format-list
-+ * predicates have something to say an opinion about instead of being handed a
-+ * NULL.  Returns the number of formats written into list, which must be able
-+ * to hold one entry per pipe format; 0 when the base format has no layout of
-+ * its own and the question does not arise.
-+ */
-+unsigned tu6_mutable_compat_class(VkFormat format, VkFormat *list, unsigned max);
-+
- bool tu6_format_list_reinterprets_r8g8_r16(
-    enum pipe_format format, const VkImageFormatListCreateInfo *fmt_list);
- 
+diff --git a/src/freedreno/vulkan/tu_image.cc b/src/freedreno/vulkan/tu_image.cc
 --- a/src/freedreno/vulkan/tu_image.cc
 +++ b/src/freedreno/vulkan/tu_image.cc
-@@ -552,7 +552,33 @@
-       const VkImageFormatListCreateInfo *fmt_list =
-          vk_find_struct_const(pCreateInfo->pNext, IMAGE_FORMAT_LIST_CREATE_INFO);
-+      /* No list: the image may still be viewed as any format of the base
-+       * format's compatibility class, so answer the predicates with that
-+       * class instead of assuming the worst.  The class is a superset of the
-+       * spec one (same texel block), so the answer can only be conservative.
-+       */
-+      const VkImageFormatListCreateInfo *ubwc_list = fmt_list;
-+      VkFormat compat_list[64];
-+      VkImageFormatListCreateInfo compat_list_info = {
-+         .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO,
-+         .viewFormatCount = 0,
-+         .pViewFormats = compat_list,
-+      };
-+      if (!fmt_list) {
-+         unsigned n = tu6_mutable_compat_class(pCreateInfo->format, compat_list,
-+                                               ARRAY_SIZE(compat_list));
-+         if (n) {
-+            compat_list_info.viewFormatCount = n;
-+            fmt_list = &compat_list_info;
-+         }
-+      }
-+
-+      /* The UBWC gate keeps the stock answer for a missing list: a no-list
-+       * mutable image still loses UBWC.  Only the tiling predicates below are
-+       * answered with the class - enabling compression here would be a
-+       * separate change with its own content check.
-+       */
-       if (!tu6_mutable_format_list_ubwc_compatible(device->physical_device->info,
--                                                   fmt_list)) {
-+                                                   ubwc_list)) {
-          bool mutable_ubwc_fc = device->physical_device->info->props.ubwc_all_formats_compatible;
- 
-          /* NV12 uses a special compression scheme for the Y channel which
-@@ -605,7 +631,7 @@
-             }
-          } else {
-             is_mutable = true;
--            if (!format_list_ubwc_possible(device, fmt_list, pCreateInfo))
-+            if (!format_list_ubwc_possible(device, ubwc_list, pCreateInfo))
+@@ -593,12 +593,12 @@ tu_image_init(struct tu_device *device, struct tu_image *image,
                 ubwc_enabled = false;
-          }
+             }
  
+-            bool r8g8_r16 = tu6_format_list_reinterprets_r8g8_r16(vk_format_to_pipe_format(image->vk.format), fmt_list);
+-            bool fmt_list_has_swaps = tu6_format_list_has_swaps(fmt_list);
+-
+-            if (r8g8_r16 ||
+-                (fmt_list_has_swaps &&
+-                 !tu6_format_list_swaps_are_uniform(fmt_list))) {
++            /* The predicate the format query uses, spelled once: the create
++             * and what vkGetPhysicalDeviceImageFormatProperties2 advertised
++             * cannot drift apart this way.
++             */
++            if (tu6_mutable_format_list_forces_linear(
++                   device->physical_device->info, image->vk.format, fmt_list)) {
+                ubwc_enabled = false;
+                force_linear_tile = true;
+             }

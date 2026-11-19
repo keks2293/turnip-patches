@@ -1383,6 +1383,237 @@ out:
     vkFreeMemory(dev, mem, NULL);
 }
 
+/* XV: the question 0014 v2 rests on, measured rather than assumed.
+ *
+ * A MUTABLE image created without a format list is kept in the tiled layout of
+ * its texel block, which is only sound if a view whose format is a DIFFERENT
+ * member of that block reads the same bytes the fill wrote, in the view's own
+ * channel order.  r2d cannot answer this: vkCmdCopyImageToBuffer reads with the
+ * image format, not the view's, so the read here is a texelFetch through the
+ * view (cast_rgba_spv / cast_r32_spv) and the fill is a buffer->image copy
+ * (0013 covers its visibility on A7XX).
+ *
+ * The views are UINT-typed on purpose.  The block class is the same, and a uint
+ * texture load hands back the stored bytes, while an UNORM view of that block
+ * puts the format's [0,1] decode between the memory and the answer - the d0
+ * line of section D is that effect on full size.
+ *
+ * `swap` says which permutation the view's format implies for the stored bytes:
+ * 1 exchanges the first and third byte (B8G8R8A8 read over R8G8B8A8), 0 expects
+ * the raw word (R32_UINT over R8G8B8A8, or a view of the base format itself).
+ * `expect` is the layout the no-list rule predicts, and swap < 0 means the
+ * content is not judged: that is the guard, whose whole job is to stay linear.
+ *
+ * The pattern's four byte ranges are disjoint (0x11-0x50, 0x55-0x94, 0x99-0xd8,
+ * 0xdd-0xee), so any permutation of a texel's bytes is recognizable by which
+ * range each byte lands in, and "it came back as something else" is reported by
+ * name instead of as a count.
+ */
+static void probe_cross_view(VkDevice dev, VkQueue q, VkCommandPool pool,
+                             const char *tag, VkFormat base, VkFormat view_fmt,
+                             int swap, unsigned w, unsigned h, const char *expect)
+{
+    VkImage img = VK_NULL_HANDLE, lin = VK_NULL_HANDLE;
+    VkDeviceMemory mem = VK_NULL_HANDLE, rbm = VK_NULL_HANDLE;
+    VkBuffer rb = VK_NULL_HANDLE;
+    VkDescriptorSetLayout dsl = VK_NULL_HANDLE;
+    VkPipelineLayout pl = VK_NULL_HANDLE;
+    VkPipeline pipe = VK_NULL_HANDLE;
+    VkDescriptorPool dp = VK_NULL_HANDLE;
+    VkDescriptorSet ds = VK_NULL_HANDLE;
+    VkSampler sam = VK_NULL_HANDLE;
+    VkImageView v = VK_NULL_HANDLE;
+    uint32_t *fill = calloc((size_t)W * H, 4), *got = calloc((size_t)W * H, 4);
+    if (!fill || !got) { printf("XV[%s] OOM\n", tag); return; }
+
+    VkImageCreateInfo ici = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                              .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+                              .imageType = VK_IMAGE_TYPE_2D,
+                              .format = base,
+                              .extent = { w, h, 1 },
+                              .mipLevels = 1, .arrayLayers = 1,
+                              .samples = VK_SAMPLE_COUNT_1_BIT,
+                              .tiling = VK_IMAGE_TILING_OPTIMAL,
+                              .usage = VK_IMAGE_USAGE_SAMPLED_BIT |
+                                       VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                                       VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                              .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                              .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED };
+    VkImageCreateInfo lci = ici;
+    lci.flags = 0;
+    lci.tiling = VK_IMAGE_TILING_LINEAR;
+
+    VkResult rc = vkCreateImage(dev, &ici, NULL, &img);
+    if (rc != VK_SUCCESS) {
+        printf("XV[%-24s] OPTIMAL create: %s\n", tag, vkerr(rc));
+        goto out;
+    }
+    VkMemoryRequirements mr, lr = { 0, 0, 0 };
+    vkGetImageMemoryRequirements(dev, img, &mr);
+    VkResult rl = vkCreateImage(dev, &lci, NULL, &lin);
+    if (rl == VK_SUCCESS)
+        vkGetImageMemoryRequirements(dev, lin, &lr);
+    const char *layout = rl != VK_SUCCESS            ? "linear-twin-refused"
+                       : mr.size > lr.size           ? "tiled"
+                       : mr.size == lr.size          ? "inconclusive"
+                                                     : "linear";
+    printf("XV[%-24s] %ux%u lin=0x%08llx opt=0x%08llx -> layout %s, rule says %s %s\n",
+           tag, w, h, (unsigned long long)lr.size, (unsigned long long)mr.size, layout,
+           expect, strcmp(layout, expect) ? "UNEXPECTED" : "OK");
+
+    chk(alloc_mem(dev, mr.size, 0, &mem), "XV: alloc image");
+    chk(vkBindImageMemory(dev, img, mem, 0), "XV: bind image");
+
+    for (unsigned y = 0; y < h; y++)
+        for (unsigned x = 0; x < w; x++) {
+            unsigned b0 = 0x11 + ((x * 3 + y) & 0x3f);
+            unsigned b1 = 0x55 + ((x ^ y) & 0x3f);
+            unsigned b2 = 0x99 + ((y * 5) & 0x3f);
+            unsigned b3 = 0xdd + ((x + 2 * y) & 0x11);
+            fill[(size_t)y * W + x] = b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
+        }
+
+    const int r32 = view_fmt == VK_FORMAT_R32_UINT;
+    const uint32_t *spv = r32 ? cast_r32_spv : cast_rgba_spv;
+    const size_t spv_len = r32 ? sizeof(cast_r32_spv) : sizeof(cast_rgba_spv);
+
+    VkDescriptorSetLayoutBinding dsb[2] = {
+        { 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
+        { 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
+    };
+    VkDescriptorSetLayoutCreateInfo dslci = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+                                              NULL, 0, 2, dsb };
+    chk(vkCreateDescriptorSetLayout(dev, &dslci, NULL, &dsl), "XV: dsl");
+    VkPipelineLayoutCreateInfo plci = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, NULL, 0, 1,
+                                        &dsl, 0, NULL };
+    chk(vkCreatePipelineLayout(dev, &plci, NULL, &pl), "XV: pipeline layout");
+    pipe = make_compute_pipe(dev, pl, spv, (uint32_t)spv_len);
+    chk(pipe != VK_NULL_HANDLE ? VK_SUCCESS : VK_ERROR_INITIALIZATION_FAILED, "XV: pipeline");
+
+    VkSamplerCreateInfo sci = { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+                                .magFilter = VK_FILTER_NEAREST, .minFilter = VK_FILTER_NEAREST,
+                                .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+                                .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                                .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                                .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE };
+    chk(vkCreateSampler(dev, &sci, NULL, &sam), "XV: sampler");
+
+    VkImageViewCreateInfo ivci = { .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                                   .image = img, .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                                   .format = view_fmt,
+                                   .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+    VkResult rv = vkCreateImageView(dev, &ivci, NULL, &v);
+    if (rv != VK_SUCCESS) {
+        printf("XV[%-24s] view create: %s -> the driver refuses the cross-member view\n",
+               tag, vkerr(rv));
+        goto out;
+    }
+    if (swap < 0) {
+        /* The guard's content cannot be judged with these shaders: an R16 view
+         * hands back two 16-bit channels and the pack below mixes them.  Its
+         * whole job is the layout line above, and the view create here. */
+        printf("XV[%-24s] guard: cross-member view accepted, content not judged\n", tag);
+        goto out;
+    }
+
+    VkBufferCreateInfo rbci = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                                .size = (VkDeviceSize)W * H * 4,
+                                .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                .sharingMode = VK_SHARING_MODE_EXCLUSIVE };
+    chk(vkCreateBuffer(dev, &rbci, NULL, &rb), "XV: readback buffer");
+    VkMemoryRequirements rbr;
+    vkGetBufferMemoryRequirements(dev, rb, &rbr);
+    chk(alloc_mem(dev, rbr.size, 0, &rbm), "XV: readback memory");
+    chk(vkBindBufferMemory(dev, rb, rbm, 0), "XV: bind readback");
+
+    VkDescriptorPoolSize dpsz[2] = { { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1 },
+                                     { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 } };
+    VkDescriptorPoolCreateInfo dpci = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, NULL, 0, 1,
+                                        2, dpsz };
+    chk(vkCreateDescriptorPool(dev, &dpci, NULL, &dp), "XV: descriptor pool");
+    VkDescriptorSetAllocateInfo dai = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, NULL, dp, 1,
+                                        &dsl };
+    chk(vkAllocateDescriptorSets(dev, &dai, &ds), "XV: descriptor set");
+    VkDescriptorImageInfo dii = { sam, v, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+    VkDescriptorBufferInfo bfi = { rb, 0, VK_WHOLE_SIZE };
+    VkWriteDescriptorSet wd[2] = {
+        { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = ds, .dstBinding = 0,
+          .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+          .pImageInfo = &dii },
+        { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = ds, .dstBinding = 1,
+          .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+          .pBufferInfo = &bfi },
+    };
+    vkUpdateDescriptorSets(dev, 2, wd, 0, NULL);
+
+    if (cast_roundtrip(dev, q, pool, img, VK_IMAGE_LAYOUT_UNDEFINED, 0,
+                       (VkExtent3D){ w, h, 1 }, fill, pipe, ds, rbm, got) < 0) {
+        printf("XV[%-24s] roundtrip failed\n", tag);
+        goto out;
+    }
+
+    {
+        const size_t words = (size_t)w * h;
+        unsigned long long bad_id = 0, bad_swap = 0, bad_rev = 0, first_id = ~0ull;
+        for (unsigned y = 0; y < h; y++)
+            for (unsigned x = 0; x < w; x++) {
+                uint32_t f = fill[(size_t)y * W + x], g = got[(size_t)y * W + x];
+                uint32_t sw = (f & 0xff00ff00u) | ((f & 0xffu) << 16) | ((f >> 16) & 0xffu);
+                if (g != f) {
+                    if (!bad_id)
+                        first_id = (unsigned long long)y * w + x;
+                    bad_id++;
+                }
+                if (g != sw)
+                    bad_swap++;
+                if (g != __builtin_bswap32(f))
+                    bad_rev++;
+            }
+        printf("XV[%-24s] read through %s view: %llu/%zu raw, %llu/%zu R<->B, "
+               "%llu/%zu reversed\n",
+               tag, r32 ? "R32_UINT" : "8x4-channel", bad_id, words, bad_swap, words, bad_rev,
+               words);
+        {
+            const unsigned long long want = swap ? bad_swap : bad_id;
+            printf("XV[%-24s] wanted %s -> %s%s\n", tag,
+                   swap ? "the first and third byte exchanged" : "the raw words",
+                   want == 0 ? "OK" : "MISMATCH",
+                   want == 0 ? "" : (bad_id == 0 ? "  (memory is raw: the view is ignored)"
+                                    : bad_swap == 0 ? "  (memory is swapped)"
+                                    : bad_rev == 0 ? "  (memory is byte-reversed)"
+                                                   : "  (some other layout, see the counts)"));
+            if (want)
+                printf("XV[%-24s]   first identity mismatch at texel %llu\n", tag, first_id);
+        }
+    }
+
+out:
+    if (v != VK_NULL_HANDLE)
+        vkDestroyImageView(dev, v, NULL);
+    if (sam != VK_NULL_HANDLE)
+        vkDestroySampler(dev, sam, NULL);
+    if (dp != VK_NULL_HANDLE)
+        vkDestroyDescriptorPool(dev, dp, NULL);
+    if (pipe != VK_NULL_HANDLE)
+        vkDestroyPipeline(dev, pipe, NULL);
+    if (pl != VK_NULL_HANDLE)
+        vkDestroyPipelineLayout(dev, pl, NULL);
+    if (dsl != VK_NULL_HANDLE)
+        vkDestroyDescriptorSetLayout(dev, dsl, NULL);
+    if (rb != VK_NULL_HANDLE)
+        vkDestroyBuffer(dev, rb, NULL);
+    if (rbm != VK_NULL_HANDLE)
+        vkFreeMemory(dev, rbm, NULL);
+    if (img != VK_NULL_HANDLE)
+        vkDestroyImage(dev, img, NULL);
+    if (lin != VK_NULL_HANDLE)
+        vkDestroyImage(dev, lin, NULL);
+    if (mem != VK_NULL_HANDLE)
+        vkFreeMemory(dev, mem, NULL);
+    free(fill);
+    free(got);
+}
+
 /* TP readback: read the image through the texture path (texelFetch in a
  * compute shader) instead of through r2d - a discriminator for the
  * direction of the broken r2d copy:
@@ -4154,10 +4385,14 @@ skip_b:
                                  u[i].bytes0, W, H);
 
             /* NL. MUTABLE images created with no format list at all - 50.9% of
-             * the sampled texture bytes in RE4.  The class model says: 8-bit
-             * and 8-byte classes keep the tiled layout, the 4-byte and 2-byte
-             * ones cannot (their class mixes channel orders / R8G8 with R16),
-             * block compression keeps it because no member needs a swap. */
+             * the sampled texture bytes in RE4.  The rule (0014) bounds the
+             * question by the texel block: a stored tiled image carries no
+             * channel order, so every class keeps the tiled layout except the
+             * 2-byte one, where R8G8 keeps a tile height of its own that the
+             * layout only keeps for a non-mutable image.  On stock, and on the
+             * compatibility-class form shipped as p14, the two 4-byte lines
+             * below print UNEXPECTED: that is the change, and XV measures
+             * whether it is safe. */
             printf("\n=== NL. MUTABLE without a format list ===\n");
             probe_no_list_mutable(dev, q, pool, "R8_UNORM", VK_FORMAT_R8_UNORM, 1,
                                   500, 500, "tiled");
@@ -4166,9 +4401,9 @@ skip_b:
             probe_no_list_mutable(dev, q, pool, "R32G32_FLOAT", VK_FORMAT_R32G32_SFLOAT, 8,
                                   500, 500, "tiled");
             probe_no_list_mutable(dev, q, pool, "R8G8B8A8_UNORM", VK_FORMAT_R8G8B8A8_UNORM, 4,
-                                  500, 500, "linear");
+                                  500, 500, "tiled");
             probe_no_list_mutable(dev, q, pool, "R32_UINT", VK_FORMAT_R32_UINT, 4,
-                                  500, 500, "linear");
+                                  500, 500, "tiled");
             probe_no_list_mutable(dev, q, pool, "R8G8_UNORM", VK_FORMAT_R8G8_UNORM, 2,
                                   500, 500, "linear");
             probe_no_list_mutable(dev, q, pool, "R16_UNORM", VK_FORMAT_R16_UNORM, 2,
@@ -4178,6 +4413,27 @@ skip_b:
              * tell them apart. */
             probe_no_list_mutable(dev, q, pool, "BC7_UNORM", VK_FORMAT_BC7_UNORM_BLOCK, 1,
                                   500, 500, "tiled");
+
+            /* XV. The safety of the rule above, not its effect: the layout only
+             * agrees if a view of a DIFFERENT member of the block reads the
+             * bytes the fill wrote, in the view's own channel order.  r2d
+             * cannot show this (it reads with the image format), so the read is
+             * a texelFetch through the view.  UINT views, so that no [0,1]
+             * decode sits between the memory and the answer. */
+            printf("\n=== XV. cross-member view on a MUTABLE image with no list ===\n");
+            probe_cross_view(dev, q, pool, "RGBA8_as_RGBA8", VK_FORMAT_R8G8B8A8_UINT,
+                             VK_FORMAT_R8G8B8A8_UINT, 0, 500, 500, "tiled");
+            probe_cross_view(dev, q, pool, "RGBA8_as_BGRA8", VK_FORMAT_R8G8B8A8_UINT,
+                             VK_FORMAT_B8G8R8A8_UINT, 1, 500, 500, "tiled");
+            probe_cross_view(dev, q, pool, "BGRA8_as_RGBA8", VK_FORMAT_B8G8R8A8_UINT,
+                             VK_FORMAT_R8G8B8A8_UINT, 0, 500, 500, "tiled");
+            probe_cross_view(dev, q, pool, "RGBA8_as_R32", VK_FORMAT_R8G8B8A8_UINT,
+                             VK_FORMAT_R32_UINT, 0, 500, 500, "tiled");
+            /* The guard: the class the rule keeps demoted.  If this one comes
+             * back tiled, or reads through R16_UINT as anything but the raw
+             * pair of bytes, the rule is wrong and not merely unhelpful. */
+            probe_cross_view(dev, q, pool, "GUARD_R8G8_as_R16", VK_FORMAT_R8G8_UINT,
+                             VK_FORMAT_R16_UINT, -1, 500, 500, "linear");
 
             /* GEOM. The discriminator "BC vs geometry".  The readback goes
              * through TPL1 A2D SRC in 2D mode (fill - through IMG_BUFFER),
