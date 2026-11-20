@@ -344,7 +344,17 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    `0001`/`0002`; `0003` needs offsets resolved by hand, and `ls | head -1` picks the
    mesa26 twin of `0002`. `git checkout`/`git restore` is forbidden there (`AGENTS.md`).
 1. **exp-18 - the 64-bit UBWC class** (no patch file yet). Volume: 650.8 MiB, not 4 GB
-   (journal 28). Shape: (a) move `format_list_reinterprets_r8g8_r16()` and
+   (journal 28). Read from the source on 20.11 (a reading, not a measurement), half of
+   the gate is already answered: in Mesa 27 base `fd6_ubwc_compat_mode()`
+   (`src/freedreno/common/freedreno_ubwc.h:31-83`) gives `R16G16B16A16_UNORM` a compat
+   mode (UNORM, or INT under `ubwc_unorm_snorm_int_compatible`), gives `_UINT`/`_SINT`
+   the INT mode, and returns `FD6_UBWC_UNKNOWN_COMPAT` for `_SFLOAT` (that is what 0012
+   adds) and for `R32G32_FLOAT`, which is absent from the switch as `R32_FLOAT` and
+   `Z32_FLOAT` are, next to the upstream `TODO` about a630 vs a660. So the compat-mode
+   question is closed for `_UNORM`/`_UINT`/`_SINT`. What is still unmeasured is the
+   layout side: whether a UBWC metadata plane is allocated for the class at all - probe
+   `CEIL` on `R16G16B16A16_UNORM` and `_SFLOAT` at 500x500, two minutes once the stack is
+   restored, and the answer decides whether (b) below is worth writing. Shape: (a) move `format_list_reinterprets_r8g8_r16()` and
    `format_list_has_swaps()` out of the `!mutable_ubwc_fc` branch - today the
    `is_mutable` branch skips them, which is why the prop tiles 16-bit no-list images, a
    real hazard; (b) implement `TODO: limit based on compatiblity class` in
@@ -414,7 +424,7 @@ Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on g
 | 7 | 12_1 | blocked by `VK_EXT_fragment_shader_interlock`, which Turnip does not implement (ADR-0011) |
 | 8 | the 32- and 16-bit classes in lazy deposition | they reinterpret the layout; a separate analysis, and the reason 0014 leaves them linear on purpose |
 | 9 | R8 + UBWC: writer or reader | exp-19 (queue 2) |
-| 10 | UBWC format variants for `R16G16B16A16_FLOAT` and `R32G32_FLOAT` | unmeasured, gates exp-18 (queue 1) |
+| 10 | UBWC format variants for `R16G16B16A16_FLOAT` and `R32G32_FLOAT` | half answered by reading the compat table (queue 1): both have no compat mode on base, `_SFLOAT` gets one from 0012; whether the layout allocates metadata for the 64-bit class is still unmeasured, and it gates exp-18 |
 
 ## Pitfalls (reminder)
 
