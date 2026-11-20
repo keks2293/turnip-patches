@@ -339,13 +339,34 @@ with R32G32B32A32.
 Ordered by what unblocks what. A closed branch is not repeated here - it has an ADR in
 [`decisions/`](decisions/); this file owns only the next actions.
 
-0. **Blocker for every measurement build**: restore `0003..0013` in `../mesa27-src` by
-   explicit file names - `0014` is left out on purpose, its replacement is item 11. The
-   tree currently has only the `exp-14` tooling and fragments of `0001`/`0002`; `0003`
-   needs offsets resolved by hand, and `ls | head -1` picks the mesa26 twin of `0002`.
-   `git checkout`/`git restore` is forbidden there (`AGENTS.md`). Leaving `0014` out of a
-   working tree changes nothing that is shipped: the release and `patches/0014-*.patch`
-   stay as they are, and a replacement has to earn them (item 11).
+0. **Done 20.11, so it may become stale again**: `../mesa27-src` carries `0001` and `0002`
+   as commits (`ac08003`, `9845cfb` on base `6dfa32a`) and `0003..0013` plus the `exp-14`
+   inventory hook as working-tree changes - 8 files, +529/-77. `0014` is deliberately not
+   applied: its replacement is item 11. Leaving it out of a working tree changes nothing
+   that is shipped; the release and `patches/0014-*.patch` stand, and a replacement has to
+   earn them by measurement.
+   How it was restored, since `git checkout`/`git restore` is forbidden there
+   (`AGENTS.md`): the three uncommitted edits were saved with `git diff -- <file>` and
+   undone with `git apply -R` (two of them were stale reverts of `0001` and `0002` left by
+   the stock-prop builds; the third was the `exp-14` hook), then `0003..0013` were applied
+   in order and `experiments/exp-14-image-inventory.patch` re-applied from its file.
+   **Correction to the note that `0003` needs offsets resolved by hand**: with `0001` and
+   `0002` committed, all eleven patches pass `git apply --check` and apply cleanly - no
+   offsets, no fuzz, no `--3way`. The offset work was an artifact of applying them onto a
+   tree where those two were missing. What is still true: `ls | head -1` picks the mesa26
+   twin of `0002`, so name the file.
+   Verified by marker, not by counter: `extra_wait_count = 0` (`0001`), the `0x44050000`
+   id line (`0002`), `tu6_mutable_format_list_forces_linear` (`0004`),
+   `tu6_format_list_swaps_are_uniform` (`0005`), `case PIPE_FORMAT_B8G8R8A8_UINT` (`0006`),
+   `TU_FORCE_PROPS` (`0007`), `has_generic_clear` (`0008`), `tu6_format_list_has_swaps`
+   (`0010`), `R16G16B16A16_UNORM` and `case PIPE_FORMAT_R32G32_FLOAT` in
+   `freedreno_ubwc.h` (`0011`, `0012`), the `CLEAN` sites in `tu_clear_blit.cc` (`0013`),
+   `TU_IMG_INV` (`exp-14`) - and `tu6_mutable_compat_class` absent (`0014` off). A marker
+   says the code is present; it does not say it compiles or behaves: that is the rebuild
+   below.
+   Not run: a rebuild of this tree to reproduce the `imginv4` column of
+   `results/imginv-3variants.txt` (`0001..0013` + `exp-14`, the control build that column
+   was made on). Precedent for spending a build on that: `results/test-restore-shipstack.log`.
 1. **exp-18 - the 64-bit UBWC class** (no patch file yet). Volume: 650.8 MiB, not 4 GB
    (journal 28). Read from the source on 20.11 (a reading, not a measurement), half of
    the gate is already answered: in Mesa 27 base `fd6_ubwc_compat_mode()`
