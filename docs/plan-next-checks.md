@@ -339,10 +339,13 @@ with R32G32B32A32.
 Ordered by what unblocks what. A closed branch is not repeated here - it has an ADR in
 [`decisions/`](decisions/); this file owns only the next actions.
 
-0. **Blocker for every measurement build**: restore `0003..0014` in `../mesa27-src` by
-   explicit file names. The tree currently has only the `exp-14` tooling and fragments of
-   `0001`/`0002`; `0003` needs offsets resolved by hand, and `ls | head -1` picks the
-   mesa26 twin of `0002`. `git checkout`/`git restore` is forbidden there (`AGENTS.md`).
+0. **Blocker for every measurement build**: restore `0003..0013` in `../mesa27-src` by
+   explicit file names - `0014` is left out on purpose, its replacement is item 11. The
+   tree currently has only the `exp-14` tooling and fragments of `0001`/`0002`; `0003`
+   needs offsets resolved by hand, and `ls | head -1` picks the mesa26 twin of `0002`.
+   `git checkout`/`git restore` is forbidden there (`AGENTS.md`). Leaving `0014` out of a
+   working tree changes nothing that is shipped: the release and `patches/0014-*.patch`
+   stay as they are, and a replacement has to earn them (item 11).
 1. **exp-18 - the 64-bit UBWC class** (no patch file yet). Volume: 650.8 MiB, not 4 GB
    (journal 28). Read from the source on 20.11 (a reading, not a measurement), half of
    the gate is already answered: in Mesa 27 base `fd6_ubwc_compat_mode()`
@@ -424,6 +427,47 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     is not created here" a complete sentence; a non-zero count means the prop is unsafe on
     a shape that carries volume. The verdict of ADR-0001 does not move either way - the
     prop frees no patch and adds no compression (journal 24.3, 27).
+
+11. **0016 - one layout-decision function, as the replacement for `0014`** (no file yet;
+    number `0015` is spoken for by ADR-0009 and numbers are not reused). The operator's
+    direction: keep the gain, do not enter the broken things, and make the shape a path
+    rather than a patch-shaped exception. What `0014` costs today is three files and five
+    hunks, because it substitutes the class at the *call site* in `tu_image_init()` and
+    then needs a second hunk in `tu_formats.cc` so the format query agrees with the create.
+    The replacement's whole idea is to move the substitution one level down, to where the
+    question is already asked once:
+
+    - `tu6_mutable_format_list_forces_linear()` (`tu_formats.cc`, introduced by `0004`) is
+      the single existing function that answers "must this mutable image be linear?"; it
+      is what the sparse refusal and `vkGetPhysicalDeviceImageFormatProperties2` use, while
+      `tu_image_init()` re-implements the same reasoning inline. One function returning a
+      three-valued answer (`keeps layout` / `keeps tiling, no UBWC` / `linear`) removes the
+      duplication, and `tu_image_init()` calls it instead of duplicating it;
+    - inside it, the no-list case is answered by `tu6_mutable_compat_class()`; when the
+      class is empty (`0`: depth, multi-planar, or a base the driver cannot use) the
+      worst-case answer stays, so NV12 and depth behaviour is untouched;
+    - scope is a dev-info prop set in `a7xx_gen2` only, per the minimal-footprint rule -
+      upstream-shape, but measured on one generation. `info->chip >= 7` would be a lie
+      here: the rule is not a chip capability, it is a predicate we have only measured
+      on gen2.
+
+    Four things it must not enter, each with the record that says so: `is_mutable`/
+    `MUTABLEEN` (journal 21.4, 14.5.1, ADR-0009); the UBWC predicates
+    `format_list_ubwc_possible()` and `tu6_mutable_format_list_ubwc_compatible()` - that is
+    exp-18 and it needs the strict class, not the block class (journal 24.4, 27: +0.2 %);
+    `props.ubwc_all_formats_compatible`, which has three consumers and would also move the
+    sparse gate and the sparse create refusal (journal 24.1, 24.3, ADR-0001); and the
+    `0004` refusal for classes that still force linear, without which the silent-zero
+    sparse hole returns (ADR-0002).
+
+    Gate, in this order: (1) an **equivalence run** - inventory with `0016` must reproduce
+    the `imginv5` column of `results/imginv-3variants.txt` (`tiled` and `ubwc` counters,
+    linear residue 1631 MiB), because the class logic is unchanged and anything else means
+    the refactor changed behaviour, not spelling; (2) the 94-row matrix **plus** the rows
+    `NL`, `XV`, `UBR`, `S`, `N` read separately - `0014` v2 is the reason "the counter is
+    green" is not a gate (ADR-0006); (3) only then compare patch size and rebase cost:
+    `0005`, `0009`, `0010` and `0014` all edit this branch of `tu_image_init()`, so a
+    unified function changes their context and each of their probes has to be re-run.
 
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2

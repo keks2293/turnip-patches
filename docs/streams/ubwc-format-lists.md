@@ -32,7 +32,11 @@ format differs from the base within one compatibility class. It is the last gap 
 journal 24.1's argument that the prop's broken shape is never created here: a no-list
 `MUTABLE_FORMAT` image is reinterpretable without a list (journal 24.4,
 `tests/vk-fmt-classes.json`), and the inventories only record creates. It reopens no
-verdict - the prop frees no patch and adds no compression. The 8-bit hole in
+verdict - the prop frees no patch and adds no compression. A second thing is open in this
+direction but is not a measurement: a replacement for `0014` shaped as one layout-decision
+function instead of a call-site substitution, `0016` (queue 11) - it must reproduce the
+`imginv5` counters before anything else is asked of it, and it does not reopen ADR-0006,
+which is about the *rule*, not about where the rule is written. The 8-bit hole in
 `fd6_ubwc_compat_mode()` is not part of this direction -
 it is closed by `streams/8bpp-ubwc.md`, and its cause sits earlier than the table.
 
