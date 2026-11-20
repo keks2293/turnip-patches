@@ -1,0 +1,479 @@
+# The strict class rule for a no-list MUTABLE image, all 23 Vulkan classes
+#
+# Question: upstream's `TODO: limit based on compatiblity class` (tu_image.cc) says
+#           the refusal of a MUTABLE image created WITHOUT a format list could be
+#           narrowed by the compatibility class instead of being absolute.  Which
+#           classes would a strict reading grant on a7xx_gen2 - the whole class, and
+#           the class minus the members the driver cannot lay out at all?  And what
+#           changes once the one pair of compat labels that the XMC probe measured is
+#           folded (journal 32, results/test-xmc-64bit-compat.log)?
+# Method:   scripts/fmt-list-gate-check.py --strict-class.  The predicates are a
+#           Python port of ubwc_possible() (tu_image.cc), fd6_ubwc_compat_mode()
+#           (freedreno_ubwc.h, with the 0006/0011/0012 rows) and of the refusal of a
+#           missing list in format_list_ubwc_possible() and
+#           tu6_mutable_format_list_ubwc_compatible().  A model, not a measurement:
+#           nothing ran on the GPU and no line here says what the chip does.  The
+#           last block is the one place a measurement enters, and it names which
+#           pair it measured (fold_64(), the mirror of the knob in experiments/exp-22).
+# Inputs:   tests/vk-fmt-classes.json (generated from vk.xml and vk_format.c, see its
+#           own provenance field); src/freedreno/fdl/fd6_format_table.c of the Mesa
+#           tree at base 6dfa32a - no patch of this stack touches that file, so a
+#           format it does not name is a gap upstream, not a gap of ours;
+#           GEN2_PROPS in the script, read from freedreno_devices.py for
+#           [a7xx_base, a7xx_gen2].
+# Read:     a class is GRANTED when every member the rule counts passes
+#           ubwc_possible() and agrees on one compat mode.  A "no table row" line
+#           names the members with no texture format in fd6_format_table.c: a view in
+#           one is broken whatever this rule answers, so the third and fourth blocks
+#           repeat the question with those members excluded - the difference between
+#           the rule as it reads and the rule as it could be written.
+# Volume:   this file says nothing about bytes.  The no-list volume of each class is
+#           in journal 28; a granted class with 0 MiB in the game is a correctness
+#           result, not a performance one.
+# Not here:  the vkd3d and zink lists this tool also prints.  Run
+#           scripts/fmt-list-gate-check.py without --strict-class for them; their
+#           narrative is journals 16 and 21.
+# Regenerate:
+#           python3 scripts/fmt-list-gate-check.py --strict-class
+#
+GPU properties: FD740 = [a7xx_base, a7xx_gen2] -> {'ubwc_unorm_snorm_int_compatible': True, 'ubwc_all_formats_compatible': False, 'has_8bpp_ubwc': False, 'supports_uav_ubwc': True}
+
+fd6_format_table.c gives a texture format to 245 pipe formats; 50 of the formats in vk-fmt-classes.json have none.
+
+------------------------------------------------------------------------------
+### The strict class rule for a no-list MUTABLE image - the shipped stack (0006 + 0011 + 0012), every member counted
+
+A class is granted only if every member with a pipe format passes
+ubwc_possible() and agrees on one compat mode.  Members with no pipe format are skipped: the view create fails for them anyway.
+  Members with no texture format in fd6_format_table.c are named in a note and still refuse the class.
+
+  refused  128-bit        e.g. R32G32B32A32_SFLOAT     6 members
+                        no compat row: R64G64_FLOAT, R64G64_SINT, R64G64_UINT
+                        the class wants R32G32B32A32_INT(3) + UNKNOWN_COMPAT(3)
+                        no table row: R64G64_FLOAT, R64G64_SINT, R64G64_UINT
+  refused  16-bit         e.g. A1R5G5B5_UNORM_PACK16  21 members
+                        no compat row: A1B5G5R5_UNORM, A1R5G5B5_UNORM, A4B4G4R4_UNORM, A4R4G4B4_UNORM, B5G5R5A1_UNORM, B5G6R5_UNORM, R16_SSCALED, R16_USCALED, R5G6B5_UNORM, R8G8_SSCALED, R8G8_USCALED
+                        the class wants R16_INT(5) + R8G8_INT(5) + UNKNOWN_COMPAT(11)
+                        no table row: R16_SSCALED, R16_USCALED, R8G8_SSCALED, R8G8_USCALED
+  refused  192-bit        e.g. R64G64B64_SFLOAT        3 members
+                        no compat row: R64G64B64_FLOAT, R64G64B64_SINT, R64G64B64_UINT
+                        no table row: R64G64B64_FLOAT, R64G64B64_SINT, R64G64B64_UINT
+  refused  24-bit         e.g. B8G8R8_SINT            14 members
+                        no compat row: B8G8R8_SINT, B8G8R8_SNORM, B8G8R8_SRGB, B8G8R8_SSCALED, B8G8R8_UINT, B8G8R8_UNORM, B8G8R8_USCALED, R8G8B8_SINT, R8G8B8_SNORM, R8G8B8_SRGB, R8G8B8_SSCALED, R8G8B8_UINT, R8G8B8_UNORM, R8G8B8_USCALED
+                        no table row: B8G8R8_SRGB, B8G8R8_SSCALED, B8G8R8_USCALED, R8G8B8_SRGB, R8G8B8_SSCALED, R8G8B8_USCALED
+  refused  256-bit        e.g. R64G64B64A64_SFLOAT     3 members
+                        no compat row: R64G64B64A64_FLOAT, R64G64B64A64_SINT, R64G64B64A64_UINT
+                        no table row: R64G64B64A64_FLOAT, R64G64B64A64_SINT, R64G64B64A64_UINT
+  refused  32-bit         e.g. A2B10G10R10_SINT_PACK32 45 members
+                        no compat row: B10G10R10A2_SINT, B10G10R10A2_SNORM, B10G10R10A2_SSCALED, B10G10R10A2_UINT, B10G10R10A2_UNORM, B10G10R10A2_USCALED, B8G8R8A8_SSCALED, B8G8R8A8_USCALED, R10G10B10A2_SINT, R10G10B10A2_SNORM, R10G10B10A2_SSCALED, R10G10B10A2_UINT, R10G10B10A2_UNORM, R10G10B10A2_USCALED, R16G16_SSCALED, R16G16_USCALED, R8G8B8A8_SSCALED, R8G8B8A8_USCALED, R9G9B9E5_FLOAT, RGBA8888_SINT, RGBA8888_SNORM, RGBA8888_SRGB, RGBA8888_SSCALED, RGBA8888_UINT, RGBA8888_UNORM, RGBA8888_USCALED
+                        the class wants A2B10G10R10_INT(1) + B8G8R8A8_INT(5) + R16G16_INT(5) + R32_INT(3) + R8G8B8A8_INT(5) + UNKNOWN_COMPAT(26)
+                        no table row: B10G10R10A2_SINT, B10G10R10A2_SNORM, B10G10R10A2_SSCALED, B10G10R10A2_USCALED, B8G8R8A8_SSCALED, B8G8R8A8_USCALED, R10G10B10A2_SINT, R10G10B10A2_SNORM, R10G10B10A2_SSCALED, R10G10B10A2_USCALED, R16G16_SSCALED, R16G16_USCALED, R8G8B8A8_SSCALED, R8G8B8A8_USCALED, RGBA8888_SINT, RGBA8888_SNORM, RGBA8888_SRGB, RGBA8888_SSCALED, RGBA8888_UINT, RGBA8888_UNORM, RGBA8888_USCALED
+  refused  48-bit         e.g. R16G16B16_SFLOAT        7 members
+                        no compat row: R16G16B16_FLOAT, R16G16B16_SINT, R16G16B16_SNORM, R16G16B16_SSCALED, R16G16B16_UINT, R16G16B16_UNORM, R16G16B16_USCALED
+                        no table row: R16G16B16_SSCALED, R16G16B16_USCALED
+  refused  64-bit         e.g. R16G16B16A16_SFLOAT    13 members
+                        R64_SINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                        R64_UINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                        no compat row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+                        no table row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  refused  8-bit          e.g. R8_SINT                 7 members
+                        R8_SINT: 8 bits per block: has_8bpp_ubwc=False
+                        R8_SNORM: 8 bits per block: has_8bpp_ubwc=False
+                        R8_SRGB: 8 bits per block: has_8bpp_ubwc=False
+                        no table row: R8_SSCALED, R8_USCALED
+  refused  96-bit         e.g. R32G32B32_SFLOAT        3 members
+                        no compat row: R32G32B32_FLOAT, R32G32B32_SINT, R32G32B32_UINT
+  refused  BC1_RGB        e.g. BC1_RGB_SRGB_BLOCK      2 members
+                        no compat row: DXT1_RGB, DXT1_SRGB
+  refused  BC1_RGBA       e.g. BC1_RGBA_SRGB_BLOCK     2 members
+                        no compat row: DXT1_RGBA, DXT1_SRGBA
+  refused  BC2            e.g. BC2_SRGB_BLOCK          2 members
+                        no compat row: DXT3_RGBA, DXT3_SRGBA
+  refused  BC3            e.g. BC3_SRGB_BLOCK          2 members
+                        no compat row: DXT5_RGBA, DXT5_SRGBA
+  refused  BC4            e.g. BC4_SNORM_BLOCK         2 members
+                        no compat row: RGTC1_SNORM, RGTC1_UNORM
+  refused  BC5            e.g. BC5_SNORM_BLOCK         2 members
+                        no compat row: RGTC2_SNORM, RGTC2_UNORM
+  refused  BC6H           e.g. BC6H_SFLOAT_BLOCK       2 members
+                        no compat row: BPTC_RGB_FLOAT, BPTC_RGB_UFLOAT
+  refused  BC7            e.g. BC7_SRGB_BLOCK          2 members
+                        no compat row: BPTC_RGBA_UNORM, BPTC_SRGBA
+  refused  EAC_R          e.g. EAC_R11_SNORM_BLOCK     2 members
+                        ETC2_R11_SNORM: compressed/planar: UBWC impossible
+                        ETC2_R11_UNORM: compressed/planar: UBWC impossible
+                        no compat row: ETC2_R11_SNORM, ETC2_R11_UNORM
+  refused  EAC_RG         e.g. EAC_R11G11_SNORM_BLOCK  2 members
+                        ETC2_RG11_SNORM: compressed/planar: UBWC impossible
+                        ETC2_RG11_UNORM: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RG11_SNORM, ETC2_RG11_UNORM
+  refused  ETC2_EAC_RGBA  e.g. ETC2_R8G8B8A8_SRGB_BLOCK  2 members
+                        ETC2_SRGBA8: compressed/planar: UBWC impossible
+                        ETC2_RGBA8: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RGBA8, ETC2_SRGBA8
+  refused  ETC2_RGB       e.g. ETC2_R8G8B8_SRGB_BLOCK  2 members
+                        ETC2_SRGB8: compressed/planar: UBWC impossible
+                        ETC2_RGB8: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RGB8, ETC2_SRGB8
+  refused  ETC2_RGBA      e.g. ETC2_R8G8B8A1_SRGB_BLOCK  2 members
+                        ETC2_SRGB8A1: compressed/planar: UBWC impossible
+                        ETC2_RGB8A1: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RGB8A1, ETC2_SRGB8A1
+
+  0 of 23 classes granted
+
+### The game's 64-bit formats under the same rule
+
+journal 28 counts 650.8 MiB of these four created MUTABLE without a list.
+
+  R16G16B16A16_SFLOAT    Mesa 27 base refused
+                                     R64_SINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     R64_UINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     no compat row: R16G16B16A16_FLOAT, R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R32G32_FLOAT, R64_FLOAT, R64_SINT, R64_UINT
+                                     no table row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  R16G16B16A16_SFLOAT    shipped stack refused
+                                     R64_SINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     R64_UINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     no compat row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+                                     no table row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+
+  R16G16B16A16_UNORM     Mesa 27 base refused
+                                     R64_SINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     R64_UINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     no compat row: R16G16B16A16_FLOAT, R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R32G32_FLOAT, R64_FLOAT, R64_SINT, R64_UINT
+                                     no table row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  R16G16B16A16_UNORM     shipped stack refused
+                                     R64_SINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     R64_UINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     no compat row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+                                     no table row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+
+  R16G16B16A16_SNORM     Mesa 27 base refused
+                                     R64_SINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     R64_UINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     no compat row: R16G16B16A16_FLOAT, R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R32G32_FLOAT, R64_FLOAT, R64_SINT, R64_UINT
+                                     no table row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  R16G16B16A16_SNORM     shipped stack refused
+                                     R64_SINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     R64_UINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     no compat row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+                                     no table row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+
+  R32G32_SFLOAT          Mesa 27 base refused
+                                     R64_SINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     R64_UINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     no compat row: R16G16B16A16_FLOAT, R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R32G32_FLOAT, R64_FLOAT, R64_SINT, R64_UINT
+                                     no table row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  R32G32_SFLOAT          shipped stack refused
+                                     R64_SINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     R64_UINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                                     no compat row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+                                     no table row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+
+------------------------------------------------------------------------------
+### The strict class rule for a no-list MUTABLE image - the Mesa 27 base, rows as upstream wrote them
+
+A class is granted only if every member with a pipe format passes
+ubwc_possible() and agrees on one compat mode.  Members with no pipe format are skipped: the view create fails for them anyway.
+  Members with no texture format in fd6_format_table.c are named in a note and still refuse the class.
+
+  refused  128-bit        e.g. R32G32B32A32_SFLOAT     6 members
+                        no compat row: R32G32B32A32_FLOAT, R64G64_FLOAT, R64G64_SINT, R64G64_UINT
+                        the class wants R32G32B32A32_INT(2) + UNKNOWN_COMPAT(4)
+                        no table row: R64G64_FLOAT, R64G64_SINT, R64G64_UINT
+  refused  16-bit         e.g. A1R5G5B5_UNORM_PACK16  21 members
+                        no compat row: A1B5G5R5_UNORM, A1R5G5B5_UNORM, A4B4G4R4_UNORM, A4R4G4B4_UNORM, B5G5R5A1_UNORM, B5G6R5_UNORM, R16_FLOAT, R16_SINT, R16_SNORM, R16_SSCALED, R16_UINT, R16_UNORM, R16_USCALED, R5G6B5_UNORM, R8G8_SSCALED, R8G8_USCALED
+                        the class wants R8G8_INT(5) + UNKNOWN_COMPAT(16)
+                        no table row: R16_SSCALED, R16_USCALED, R8G8_SSCALED, R8G8_USCALED
+  refused  192-bit        e.g. R64G64B64_SFLOAT        3 members
+                        no compat row: R64G64B64_FLOAT, R64G64B64_SINT, R64G64B64_UINT
+                        no table row: R64G64B64_FLOAT, R64G64B64_SINT, R64G64B64_UINT
+  refused  24-bit         e.g. B8G8R8_SINT            14 members
+                        no compat row: B8G8R8_SINT, B8G8R8_SNORM, B8G8R8_SRGB, B8G8R8_SSCALED, B8G8R8_UINT, B8G8R8_UNORM, B8G8R8_USCALED, R8G8B8_SINT, R8G8B8_SNORM, R8G8B8_SRGB, R8G8B8_SSCALED, R8G8B8_UINT, R8G8B8_UNORM, R8G8B8_USCALED
+                        no table row: B8G8R8_SRGB, B8G8R8_SSCALED, B8G8R8_USCALED, R8G8B8_SRGB, R8G8B8_SSCALED, R8G8B8_USCALED
+  refused  256-bit        e.g. R64G64B64A64_SFLOAT     3 members
+                        no compat row: R64G64B64A64_FLOAT, R64G64B64A64_SINT, R64G64B64A64_UINT
+                        no table row: R64G64B64A64_FLOAT, R64G64B64A64_SINT, R64G64B64A64_UINT
+  refused  32-bit         e.g. A2B10G10R10_SINT_PACK32 45 members
+                        no compat row: B10G10R10A2_SINT, B10G10R10A2_SNORM, B10G10R10A2_SSCALED, B10G10R10A2_UINT, B10G10R10A2_UNORM, B10G10R10A2_USCALED, B8G8R8A8_SINT, B8G8R8A8_SNORM, B8G8R8A8_SSCALED, B8G8R8A8_UINT, B8G8R8A8_USCALED, R10G10B10A2_SINT, R10G10B10A2_SNORM, R10G10B10A2_SSCALED, R10G10B10A2_UINT, R10G10B10A2_UNORM, R10G10B10A2_USCALED, R11G11B10_FLOAT, R16G16_FLOAT, R16G16_SSCALED, R16G16_USCALED, R32_FLOAT, R8G8B8A8_SSCALED, R8G8B8A8_USCALED, R9G9B9E5_FLOAT, RGBA8888_SINT, RGBA8888_SNORM, RGBA8888_SRGB, RGBA8888_SSCALED, RGBA8888_UINT, RGBA8888_UNORM, RGBA8888_USCALED
+                        the class wants B8G8R8A8_UNORM(2) + R16G16_INT(4) + R32_INT(2) + R8G8B8A8_INT(5) + UNKNOWN_COMPAT(32)
+                        no table row: B10G10R10A2_SINT, B10G10R10A2_SNORM, B10G10R10A2_SSCALED, B10G10R10A2_USCALED, B8G8R8A8_SSCALED, B8G8R8A8_USCALED, R10G10B10A2_SINT, R10G10B10A2_SNORM, R10G10B10A2_SSCALED, R10G10B10A2_USCALED, R16G16_SSCALED, R16G16_USCALED, R8G8B8A8_SSCALED, R8G8B8A8_USCALED, RGBA8888_SINT, RGBA8888_SNORM, RGBA8888_SRGB, RGBA8888_SSCALED, RGBA8888_UINT, RGBA8888_UNORM, RGBA8888_USCALED
+  refused  48-bit         e.g. R16G16B16_SFLOAT        7 members
+                        no compat row: R16G16B16_FLOAT, R16G16B16_SINT, R16G16B16_SNORM, R16G16B16_SSCALED, R16G16B16_UINT, R16G16B16_UNORM, R16G16B16_USCALED
+                        no table row: R16G16B16_SSCALED, R16G16B16_USCALED
+  refused  64-bit         e.g. R16G16B16A16_SFLOAT    13 members
+                        R64_SINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                        R64_UINT: upstream's ubwc_possible() refuses it for UBWC (tu_image.cc:424, the only 64-bit formats it names)
+                        no compat row: R16G16B16A16_FLOAT, R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R32G32_FLOAT, R64_FLOAT, R64_SINT, R64_UINT
+                        no table row: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  refused  8-bit          e.g. R8_SINT                 7 members
+                        R8_SINT: 8 bits per block: has_8bpp_ubwc=False
+                        R8_SNORM: 8 bits per block: has_8bpp_ubwc=False
+                        R8_SRGB: 8 bits per block: has_8bpp_ubwc=False
+                        no table row: R8_SSCALED, R8_USCALED
+  refused  96-bit         e.g. R32G32B32_SFLOAT        3 members
+                        no compat row: R32G32B32_FLOAT, R32G32B32_SINT, R32G32B32_UINT
+  refused  BC1_RGB        e.g. BC1_RGB_SRGB_BLOCK      2 members
+                        no compat row: DXT1_RGB, DXT1_SRGB
+  refused  BC1_RGBA       e.g. BC1_RGBA_SRGB_BLOCK     2 members
+                        no compat row: DXT1_RGBA, DXT1_SRGBA
+  refused  BC2            e.g. BC2_SRGB_BLOCK          2 members
+                        no compat row: DXT3_RGBA, DXT3_SRGBA
+  refused  BC3            e.g. BC3_SRGB_BLOCK          2 members
+                        no compat row: DXT5_RGBA, DXT5_SRGBA
+  refused  BC4            e.g. BC4_SNORM_BLOCK         2 members
+                        no compat row: RGTC1_SNORM, RGTC1_UNORM
+  refused  BC5            e.g. BC5_SNORM_BLOCK         2 members
+                        no compat row: RGTC2_SNORM, RGTC2_UNORM
+  refused  BC6H           e.g. BC6H_SFLOAT_BLOCK       2 members
+                        no compat row: BPTC_RGB_FLOAT, BPTC_RGB_UFLOAT
+  refused  BC7            e.g. BC7_SRGB_BLOCK          2 members
+                        no compat row: BPTC_RGBA_UNORM, BPTC_SRGBA
+  refused  EAC_R          e.g. EAC_R11_SNORM_BLOCK     2 members
+                        ETC2_R11_SNORM: compressed/planar: UBWC impossible
+                        ETC2_R11_UNORM: compressed/planar: UBWC impossible
+                        no compat row: ETC2_R11_SNORM, ETC2_R11_UNORM
+  refused  EAC_RG         e.g. EAC_R11G11_SNORM_BLOCK  2 members
+                        ETC2_RG11_SNORM: compressed/planar: UBWC impossible
+                        ETC2_RG11_UNORM: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RG11_SNORM, ETC2_RG11_UNORM
+  refused  ETC2_EAC_RGBA  e.g. ETC2_R8G8B8A8_SRGB_BLOCK  2 members
+                        ETC2_SRGBA8: compressed/planar: UBWC impossible
+                        ETC2_RGBA8: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RGBA8, ETC2_SRGBA8
+  refused  ETC2_RGB       e.g. ETC2_R8G8B8_SRGB_BLOCK  2 members
+                        ETC2_SRGB8: compressed/planar: UBWC impossible
+                        ETC2_RGB8: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RGB8, ETC2_SRGB8
+  refused  ETC2_RGBA      e.g. ETC2_R8G8B8A1_SRGB_BLOCK  2 members
+                        ETC2_SRGB8A1: compressed/planar: UBWC impossible
+                        ETC2_RGB8A1: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RGB8A1, ETC2_SRGB8A1
+
+  0 of 23 classes granted
+------------------------------------------------------------------------------
+### The strict class rule for a no-list MUTABLE image - the shipped stack, members the driver cannot lay out excluded
+
+A class is granted only if every member with a pipe format passes
+ubwc_possible() and agrees on one compat mode.  Members with no pipe format are skipped: the view create fails for them anyway.
+  Members with no texture format in fd6_format_table.c are skipped too: the driver cannot lay them out at all, so a view in
+  them is broken before this rule, with UBWC and without it.
+
+  GRANTED  128-bit        e.g. R32G32B32A32_SFLOAT    6 members
+                        skipped as unlayable: R64G64_FLOAT, R64G64_SINT, R64G64_UINT
+  refused  16-bit         e.g. A1R5G5B5_UNORM_PACK16  21 members
+                        no compat row: A1B5G5R5_UNORM, A1R5G5B5_UNORM, A4B4G4R4_UNORM, A4R4G4B4_UNORM, B5G5R5A1_UNORM, B5G6R5_UNORM, R5G6B5_UNORM
+                        the class wants R16_INT(5) + R8G8_INT(5) + UNKNOWN_COMPAT(7)
+                        skipped as unlayable: R16_SSCALED, R16_USCALED, R8G8_SSCALED, R8G8_USCALED
+  refused  192-bit        e.g. R64G64B64_SFLOAT        3 members
+                        no compat row: R64G64B64_FLOAT, R64G64B64_SINT, R64G64B64_UINT
+                        skipped as unlayable: R64G64B64_FLOAT, R64G64B64_SINT, R64G64B64_UINT
+  refused  24-bit         e.g. B8G8R8_SINT            14 members
+                        no compat row: B8G8R8_SINT, B8G8R8_SNORM, B8G8R8_UINT, B8G8R8_UNORM, R8G8B8_SINT, R8G8B8_SNORM, R8G8B8_UINT, R8G8B8_UNORM
+                        skipped as unlayable: B8G8R8_SRGB, B8G8R8_SSCALED, B8G8R8_USCALED, R8G8B8_SRGB, R8G8B8_SSCALED, R8G8B8_USCALED
+  refused  256-bit        e.g. R64G64B64A64_SFLOAT     3 members
+                        no compat row: R64G64B64A64_FLOAT, R64G64B64A64_SINT, R64G64B64A64_UINT
+                        skipped as unlayable: R64G64B64A64_FLOAT, R64G64B64A64_SINT, R64G64B64A64_UINT
+  refused  32-bit         e.g. A2B10G10R10_SINT_PACK32 45 members
+                        no compat row: B10G10R10A2_UINT, B10G10R10A2_UNORM, R10G10B10A2_UINT, R10G10B10A2_UNORM, R9G9B9E5_FLOAT
+                        the class wants A2B10G10R10_INT(1) + B8G8R8A8_INT(5) + R16G16_INT(5) + R32_INT(3) + R8G8B8A8_INT(5) + UNKNOWN_COMPAT(5)
+                        skipped as unlayable: B10G10R10A2_SINT, B10G10R10A2_SNORM, B10G10R10A2_SSCALED, B10G10R10A2_USCALED, B8G8R8A8_SSCALED, B8G8R8A8_USCALED, R10G10B10A2_SINT, R10G10B10A2_SNORM, R10G10B10A2_SSCALED, R10G10B10A2_USCALED, R16G16_SSCALED, R16G16_USCALED, R8G8B8A8_SSCALED, R8G8B8A8_USCALED, RGBA8888_SINT, RGBA8888_SNORM, RGBA8888_SRGB, RGBA8888_SSCALED, RGBA8888_UINT, RGBA8888_UNORM, RGBA8888_USCALED
+  refused  48-bit         e.g. R16G16B16_SFLOAT        7 members
+                        no compat row: R16G16B16_FLOAT, R16G16B16_SINT, R16G16B16_SNORM, R16G16B16_UINT, R16G16B16_UNORM
+                        skipped as unlayable: R16G16B16_SSCALED, R16G16B16_USCALED
+  refused  64-bit         e.g. R16G16B16A16_SFLOAT    13 members
+                        the class wants R16G16B16A16_INT(5) + R32G32_INT(3)
+                        skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  refused  8-bit          e.g. R8_SINT                 7 members
+                        R8_SINT: 8 bits per block: has_8bpp_ubwc=False
+                        R8_SNORM: 8 bits per block: has_8bpp_ubwc=False
+                        R8_SRGB: 8 bits per block: has_8bpp_ubwc=False
+                        skipped as unlayable: R8_SSCALED, R8_USCALED
+  refused  96-bit         e.g. R32G32B32_SFLOAT        3 members
+                        no compat row: R32G32B32_FLOAT, R32G32B32_SINT, R32G32B32_UINT
+  refused  BC1_RGB        e.g. BC1_RGB_SRGB_BLOCK      2 members
+                        no compat row: DXT1_RGB, DXT1_SRGB
+  refused  BC1_RGBA       e.g. BC1_RGBA_SRGB_BLOCK     2 members
+                        no compat row: DXT1_RGBA, DXT1_SRGBA
+  refused  BC2            e.g. BC2_SRGB_BLOCK          2 members
+                        no compat row: DXT3_RGBA, DXT3_SRGBA
+  refused  BC3            e.g. BC3_SRGB_BLOCK          2 members
+                        no compat row: DXT5_RGBA, DXT5_SRGBA
+  refused  BC4            e.g. BC4_SNORM_BLOCK         2 members
+                        no compat row: RGTC1_SNORM, RGTC1_UNORM
+  refused  BC5            e.g. BC5_SNORM_BLOCK         2 members
+                        no compat row: RGTC2_SNORM, RGTC2_UNORM
+  refused  BC6H           e.g. BC6H_SFLOAT_BLOCK       2 members
+                        no compat row: BPTC_RGB_FLOAT, BPTC_RGB_UFLOAT
+  refused  BC7            e.g. BC7_SRGB_BLOCK          2 members
+                        no compat row: BPTC_RGBA_UNORM, BPTC_SRGBA
+  refused  EAC_R          e.g. EAC_R11_SNORM_BLOCK     2 members
+                        ETC2_R11_SNORM: compressed/planar: UBWC impossible
+                        ETC2_R11_UNORM: compressed/planar: UBWC impossible
+                        no compat row: ETC2_R11_SNORM, ETC2_R11_UNORM
+  refused  EAC_RG         e.g. EAC_R11G11_SNORM_BLOCK  2 members
+                        ETC2_RG11_SNORM: compressed/planar: UBWC impossible
+                        ETC2_RG11_UNORM: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RG11_SNORM, ETC2_RG11_UNORM
+  refused  ETC2_EAC_RGBA  e.g. ETC2_R8G8B8A8_SRGB_BLOCK  2 members
+                        ETC2_SRGBA8: compressed/planar: UBWC impossible
+                        ETC2_RGBA8: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RGBA8, ETC2_SRGBA8
+  refused  ETC2_RGB       e.g. ETC2_R8G8B8_SRGB_BLOCK  2 members
+                        ETC2_SRGB8: compressed/planar: UBWC impossible
+                        ETC2_RGB8: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RGB8, ETC2_SRGB8
+  refused  ETC2_RGBA      e.g. ETC2_R8G8B8A1_SRGB_BLOCK  2 members
+                        ETC2_SRGB8A1: compressed/planar: UBWC impossible
+                        ETC2_RGB8A1: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RGB8A1, ETC2_SRGB8A1
+
+  1 of 23 classes granted
+
+### The game's 64-bit formats under the same rule
+
+journal 28 counts 650.8 MiB of these four created MUTABLE without a list.
+
+  R16G16B16A16_SFLOAT    Mesa 27 base refused
+                                     no compat row: R16G16B16A16_FLOAT, R32G32_FLOAT
+                                     the class wants R16G16B16A16_INT(4) + R32G32_INT(2) + UNKNOWN_COMPAT(2)
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  R16G16B16A16_SFLOAT    shipped stack refused
+                                     the class wants R16G16B16A16_INT(5) + R32G32_INT(3)
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+
+  R16G16B16A16_UNORM     Mesa 27 base refused
+                                     no compat row: R16G16B16A16_FLOAT, R32G32_FLOAT
+                                     the class wants R16G16B16A16_INT(4) + R32G32_INT(2) + UNKNOWN_COMPAT(2)
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  R16G16B16A16_UNORM     shipped stack refused
+                                     the class wants R16G16B16A16_INT(5) + R32G32_INT(3)
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+
+  R16G16B16A16_SNORM     Mesa 27 base refused
+                                     no compat row: R16G16B16A16_FLOAT, R32G32_FLOAT
+                                     the class wants R16G16B16A16_INT(4) + R32G32_INT(2) + UNKNOWN_COMPAT(2)
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  R16G16B16A16_SNORM     shipped stack refused
+                                     the class wants R16G16B16A16_INT(5) + R32G32_INT(3)
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+
+  R32G32_SFLOAT          Mesa 27 base refused
+                                     no compat row: R16G16B16A16_FLOAT, R32G32_FLOAT
+                                     the class wants R16G16B16A16_INT(4) + R32G32_INT(2) + UNKNOWN_COMPAT(2)
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  R32G32_SFLOAT          shipped stack refused
+                                     the class wants R16G16B16A16_INT(5) + R32G32_INT(3)
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+
+------------------------------------------------------------------------------
+### The strict class rule for a no-list MUTABLE image - the shipped stack, unlayable members excluded and the 64-bit pair folded as the XMC probe measured it
+
+A class is granted only if every member with a pipe format passes
+ubwc_possible() and agrees on one compat mode.  Members with no pipe format are skipped: the view create fails for them anyway.
+  Members with no texture format in fd6_format_table.c are skipped too: the driver cannot lay them out at all, so a view in
+  them is broken before this rule, with UBWC and without it.
+  The compat modes of FD6_UBWC_R16G16B16A16_INT and FD6_UBWC_R32G32_INT are folded into one, because the XMC probe  measured that pair on A740 (results/test-xmc-64bit-compat.log) and the fold is what the knob of experiments/exp-22 does.  No other  pair of labels is folded, so no other class can be widened here.
+
+  GRANTED  128-bit        e.g. R32G32B32A32_SFLOAT    6 members
+                        skipped as unlayable: R64G64_FLOAT, R64G64_SINT, R64G64_UINT
+  GRANTED  64-bit         e.g. R16G16B16A16_SFLOAT    13 members
+                        skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  refused  16-bit         e.g. A1R5G5B5_UNORM_PACK16  21 members
+                        no compat row: A1B5G5R5_UNORM, A1R5G5B5_UNORM, A4B4G4R4_UNORM, A4R4G4B4_UNORM, B5G5R5A1_UNORM, B5G6R5_UNORM, R5G6B5_UNORM
+                        the class wants R16_INT(5) + R8G8_INT(5) + UNKNOWN_COMPAT(7)
+                        skipped as unlayable: R16_SSCALED, R16_USCALED, R8G8_SSCALED, R8G8_USCALED
+  refused  192-bit        e.g. R64G64B64_SFLOAT        3 members
+                        no compat row: R64G64B64_FLOAT, R64G64B64_SINT, R64G64B64_UINT
+                        skipped as unlayable: R64G64B64_FLOAT, R64G64B64_SINT, R64G64B64_UINT
+  refused  24-bit         e.g. B8G8R8_SINT            14 members
+                        no compat row: B8G8R8_SINT, B8G8R8_SNORM, B8G8R8_UINT, B8G8R8_UNORM, R8G8B8_SINT, R8G8B8_SNORM, R8G8B8_UINT, R8G8B8_UNORM
+                        skipped as unlayable: B8G8R8_SRGB, B8G8R8_SSCALED, B8G8R8_USCALED, R8G8B8_SRGB, R8G8B8_SSCALED, R8G8B8_USCALED
+  refused  256-bit        e.g. R64G64B64A64_SFLOAT     3 members
+                        no compat row: R64G64B64A64_FLOAT, R64G64B64A64_SINT, R64G64B64A64_UINT
+                        skipped as unlayable: R64G64B64A64_FLOAT, R64G64B64A64_SINT, R64G64B64A64_UINT
+  refused  32-bit         e.g. A2B10G10R10_SINT_PACK32 45 members
+                        no compat row: B10G10R10A2_UINT, B10G10R10A2_UNORM, R10G10B10A2_UINT, R10G10B10A2_UNORM, R9G9B9E5_FLOAT
+                        the class wants A2B10G10R10_INT(1) + B8G8R8A8_INT(5) + R16G16_INT(5) + R32_INT(3) + R8G8B8A8_INT(5) + UNKNOWN_COMPAT(5)
+                        skipped as unlayable: B10G10R10A2_SINT, B10G10R10A2_SNORM, B10G10R10A2_SSCALED, B10G10R10A2_USCALED, B8G8R8A8_SSCALED, B8G8R8A8_USCALED, R10G10B10A2_SINT, R10G10B10A2_SNORM, R10G10B10A2_SSCALED, R10G10B10A2_USCALED, R16G16_SSCALED, R16G16_USCALED, R8G8B8A8_SSCALED, R8G8B8A8_USCALED, RGBA8888_SINT, RGBA8888_SNORM, RGBA8888_SRGB, RGBA8888_SSCALED, RGBA8888_UINT, RGBA8888_UNORM, RGBA8888_USCALED
+  refused  48-bit         e.g. R16G16B16_SFLOAT        7 members
+                        no compat row: R16G16B16_FLOAT, R16G16B16_SINT, R16G16B16_SNORM, R16G16B16_UINT, R16G16B16_UNORM
+                        skipped as unlayable: R16G16B16_SSCALED, R16G16B16_USCALED
+  refused  8-bit          e.g. R8_SINT                 7 members
+                        R8_SINT: 8 bits per block: has_8bpp_ubwc=False
+                        R8_SNORM: 8 bits per block: has_8bpp_ubwc=False
+                        R8_SRGB: 8 bits per block: has_8bpp_ubwc=False
+                        skipped as unlayable: R8_SSCALED, R8_USCALED
+  refused  96-bit         e.g. R32G32B32_SFLOAT        3 members
+                        no compat row: R32G32B32_FLOAT, R32G32B32_SINT, R32G32B32_UINT
+  refused  BC1_RGB        e.g. BC1_RGB_SRGB_BLOCK      2 members
+                        no compat row: DXT1_RGB, DXT1_SRGB
+  refused  BC1_RGBA       e.g. BC1_RGBA_SRGB_BLOCK     2 members
+                        no compat row: DXT1_RGBA, DXT1_SRGBA
+  refused  BC2            e.g. BC2_SRGB_BLOCK          2 members
+                        no compat row: DXT3_RGBA, DXT3_SRGBA
+  refused  BC3            e.g. BC3_SRGB_BLOCK          2 members
+                        no compat row: DXT5_RGBA, DXT5_SRGBA
+  refused  BC4            e.g. BC4_SNORM_BLOCK         2 members
+                        no compat row: RGTC1_SNORM, RGTC1_UNORM
+  refused  BC5            e.g. BC5_SNORM_BLOCK         2 members
+                        no compat row: RGTC2_SNORM, RGTC2_UNORM
+  refused  BC6H           e.g. BC6H_SFLOAT_BLOCK       2 members
+                        no compat row: BPTC_RGB_FLOAT, BPTC_RGB_UFLOAT
+  refused  BC7            e.g. BC7_SRGB_BLOCK          2 members
+                        no compat row: BPTC_RGBA_UNORM, BPTC_SRGBA
+  refused  EAC_R          e.g. EAC_R11_SNORM_BLOCK     2 members
+                        ETC2_R11_SNORM: compressed/planar: UBWC impossible
+                        ETC2_R11_UNORM: compressed/planar: UBWC impossible
+                        no compat row: ETC2_R11_SNORM, ETC2_R11_UNORM
+  refused  EAC_RG         e.g. EAC_R11G11_SNORM_BLOCK  2 members
+                        ETC2_RG11_SNORM: compressed/planar: UBWC impossible
+                        ETC2_RG11_UNORM: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RG11_SNORM, ETC2_RG11_UNORM
+  refused  ETC2_EAC_RGBA  e.g. ETC2_R8G8B8A8_SRGB_BLOCK  2 members
+                        ETC2_SRGBA8: compressed/planar: UBWC impossible
+                        ETC2_RGBA8: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RGBA8, ETC2_SRGBA8
+  refused  ETC2_RGB       e.g. ETC2_R8G8B8_SRGB_BLOCK  2 members
+                        ETC2_SRGB8: compressed/planar: UBWC impossible
+                        ETC2_RGB8: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RGB8, ETC2_SRGB8
+  refused  ETC2_RGBA      e.g. ETC2_R8G8B8A1_SRGB_BLOCK  2 members
+                        ETC2_SRGB8A1: compressed/planar: UBWC impossible
+                        ETC2_RGB8A1: compressed/planar: UBWC impossible
+                        no compat row: ETC2_RGB8A1, ETC2_SRGB8A1
+
+  2 of 23 classes granted
+
+### The game's 64-bit formats under the same rule
+
+journal 28 counts 650.8 MiB of these four created MUTABLE without a list.
+
+  R16G16B16A16_SFLOAT    Mesa 27 base refused
+                                     no compat row: R16G16B16A16_FLOAT, R32G32_FLOAT
+                                     the class wants R32G32_INT(6) + UNKNOWN_COMPAT(2)
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  R16G16B16A16_SFLOAT    shipped stack GRANTED
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+
+  R16G16B16A16_UNORM     Mesa 27 base refused
+                                     no compat row: R16G16B16A16_FLOAT, R32G32_FLOAT
+                                     the class wants R32G32_INT(6) + UNKNOWN_COMPAT(2)
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  R16G16B16A16_UNORM     shipped stack GRANTED
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+
+  R16G16B16A16_SNORM     Mesa 27 base refused
+                                     no compat row: R16G16B16A16_FLOAT, R32G32_FLOAT
+                                     the class wants R32G32_INT(6) + UNKNOWN_COMPAT(2)
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  R16G16B16A16_SNORM     shipped stack GRANTED
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+
+  R32G32_SFLOAT          Mesa 27 base refused
+                                     no compat row: R16G16B16A16_FLOAT, R32G32_FLOAT
+                                     the class wants R32G32_INT(6) + UNKNOWN_COMPAT(2)
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+  R32G32_SFLOAT          shipped stack GRANTED
+                                     skipped as unlayable: R16G16B16A16_SSCALED, R16G16B16A16_USCALED, R64_FLOAT, R64_SINT, R64_UINT
+

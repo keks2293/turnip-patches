@@ -179,6 +179,7 @@
  * all compatibility lists that vkd3d is able to build (those with
  * formats >= 2 - that is the only case where it sets MUTABLE_FORMAT_BIT). */
 #include "vkd3d-fmt-classes.h"
+#include "rp6-vkd3d-sparse-xmc_spv.h"
 #include "tp_readback_spv.h"
 #include "tp_write_spv.h"
 
@@ -1671,6 +1672,509 @@ out:
         vkFreeMemory(dev, mem, NULL);
     free(fill);
     free(got);
+}
+
+/* XMC. Do the two UBWC compat types of the 64-bit class describe ONE cell of the
+ * compressor on this chip, or two?
+ *
+ * The question.  Once the members the driver cannot lay out at all are excluded,
+ * the only reason the strict class rule still refuses the 64-bit class is
+ * fd6_ubwc_compat_mode(): five members of the class answer
+ * FD6_UBWC_R16G16B16A16_INT and three answer FD6_UBWC_R32G32_INT.  Nothing else in
+ * the driver separates them - that enum is read in exactly two places, both of
+ * them the mutable-list gate and the format query it mirrors (grep -rn
+ * fd6_ubwc_compat_mode src/freedreno), never in a layout or a descriptor - so it is
+ * a claim about the compressor: data compressed for one of the two is not readable
+ * through a view that belongs to the other.  A label derived from the blob's tables
+ * is testable; it is not a register read.
+ *
+ * Why the shape has to be a list, and why a knob.  A MUTABLE image without a list
+ * never gets UBWC at all (journal 31 measured that refusal on the bare Mesa 27 base
+ * as well as on the shipped stack), and a list naming both families is refused by
+ * the very rule under test, so no legal create shows the compression today.  The
+ * image is therefore created with a list that names both families - which is what
+ * makes both views legal (a view of a mutable image with a list has to be in it) -
+ * and the experiment knob TU_UBWC_64B_MIX=1 answers the compat question with "one
+ * cell", which turns UBWC on for that same create and keeps it tiled, because
+ * tu6_mutable_format_list_forces_linear() starts with the same call.  One driver
+ * binary, two runs: the knob-off run is the control of the knob-on run, and both
+ * are compared with the shapes that do not need the knob at all.
+ *
+ * What is read.  One 512x512 image, 8 bytes per texel, filled by a buffer->image
+ * copy.  The pattern puts the values the upstream comment calls special ("snorm
+ * and unorm are UBWC incompatible for special values such as all 0's or all 1's
+ * prior to a740", tu_image.cc) next to index-tagged words, so that a decode error
+ * and a layout error both show up, and neither can hide in a uniform fill.  Then
+ * two reads, both through a usampler2D so that no [0,1] decode sits between the
+ * memory and the answer, and both legal because both families are in the list:
+ *
+ *   x4   view R16G16B16A16_UINT -> the four 16-bit halves of the texel
+ *   g32  view R32G32_UINT       -> the two 32-bit words of the texel
+ *
+ * Each reader must hand back the bytes that were copied in, split its own way.
+ * The read in the family of the base format is the control for the rig: if it is
+ * not EXACT, the verdict about the other family means nothing (the rule the U
+ * matrix follows).
+ *
+ * What the answers mean.  Both EXACT with the knob on -> the two labels are one
+ * cell and the 64-bit class is the first class a strict rule could grant.  Cross
+ * read MISMATCH while the control is EXACT -> the label describes hardware, the
+ * refusal is not conservatism, and the direction closes with a measurement on the
+ * 650.8 MiB it was about.  Neither answer licenses UBWC by base format: a
+ * R64_UINT view stays legal on an image with STORAGE usage whatever this says
+ * (tu_formats.cc grants it under has_64b_image_atomics), and that is journal 31.
+ *
+ * Why the shape called DETECT exists.  "0 wrong" is only a result if the rig can
+ * count wrong at all, and the first XMC run proved that accidentally: a fill with
+ * the row length given in words instead of texels came back 196352/262144 wrong.
+ * DETECT does that mistake on purpose and must therefore NOT come back EXACT.  It
+ * is the same probe, the same reader and the same comparison, so it measures the
+ * detection power of the rig rather than anything about the image.
+ */
+/* The names XMC prints, short enough that one row stays one line. */
+static const char *xmc_fmt_name(VkFormat f)
+{
+    switch (f) {
+    case VK_FORMAT_R16G16B16A16_UINT:   return "R16G16B16A16_UINT";
+    case VK_FORMAT_R16G16B16A16_SINT:   return "R16G16B16A16_SINT";
+    case VK_FORMAT_R16G16B16A16_UNORM:  return "R16G16B16A16_UNORM";
+    case VK_FORMAT_R16G16B16A16_SFLOAT: return "R16G16B16A16_SFLOAT";
+    case VK_FORMAT_R32G32_UINT:         return "R32G32_UINT";
+    case VK_FORMAT_R32G32_SINT:         return "R32G32_SINT";
+    case VK_FORMAT_R32G32_SFLOAT:       return "R32G32_SFLOAT";
+    default:                            return "other-format";
+    }
+}
+
+static const uint32_t xmc_special[8] = {
+    0x00000000u, 0xFFFFFFFFu, 0x00000001u, 0x80008000u,
+    0xFFFF0000u, 0x0001FFFFu, 0x3F803F80u, 0x00008000u,
+};
+
+/* The k-th 32-bit word of the image: half of the texels are the special values of
+ * the table (so a decode error has something to break), the other half carry the
+ * index (so a layout error cannot pass). */
+static uint32_t xmc_word(unsigned k)
+{
+    if ((k & 15u) < 8u)
+        return xmc_special[k & 7u];
+    return 0xA5A50000u ^ (k * 2654435761u);
+}
+
+/* One reader: fill is already in the image, this dispatches the compute read
+ * through view_fmt and compares.  words_per_texel is 4 for the x4 shader and 2 for
+ * the g32 one, which is also what decides what the answer has to be. */
+static void xmc_read(VkDevice dev, VkQueue q, VkCommandPool pool, VkImage img,
+                     const uint32_t *pat, const char *tag, const char *rtag,
+                     VkFormat view_fmt, const uint32_t *spv, uint32_t spv_len,
+                     unsigned words_per_texel)
+{
+    VkImageView v = VK_NULL_HANDLE;
+    VkSampler sam = VK_NULL_HANDLE;
+    VkDescriptorSetLayout dsl = VK_NULL_HANDLE;
+    VkPipelineLayout pl = VK_NULL_HANDLE;
+    VkPipeline pipe = VK_NULL_HANDLE;
+    VkDescriptorPool dp = VK_NULL_HANDLE;
+    VkDescriptorSet ds = VK_NULL_HANDLE;
+    VkBuffer rb = VK_NULL_HANDLE;
+    VkDeviceMemory rbm = VK_NULL_HANDLE;
+    const size_t out_words = (size_t)W * H * words_per_texel;
+    uint32_t *got = calloc(out_words, 4);
+    if (!got) {
+        printf("XMC[%-6s/%-3s] OOM\n", tag, rtag);
+        return;
+    }
+
+    /* the words the reader has to hand back, in its own split of the texel */
+    for (unsigned i = 0; i < W * H; i++) {
+        if (words_per_texel == 2) {
+            got[2 * i + 0] = pat[2 * i + 0];   /* reused as the expected array */
+            got[2 * i + 1] = pat[2 * i + 1];
+        } else {
+            got[4 * i + 0] = pat[2 * i + 0] & 0xffffu;
+            got[4 * i + 1] = pat[2 * i + 0] >> 16;
+            got[4 * i + 2] = pat[2 * i + 1] & 0xffffu;
+            got[4 * i + 3] = pat[2 * i + 1] >> 16;
+        }
+    }
+    /* expected lives in got until the readback overwrites it: keep it apart */
+    uint32_t *want = got;
+    got = calloc(out_words, 4);
+    if (!got) {
+        printf("XMC[%-6s/%-3s] OOM\n", tag, rtag);
+        free(want);
+        return;
+    }
+
+    VkDescriptorSetLayoutBinding dsb[2] = {
+        { 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
+        { 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, NULL },
+    };
+    VkDescriptorSetLayoutCreateInfo dslci = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+                                              NULL, 0, 2, dsb };
+    if (vkCreateDescriptorSetLayout(dev, &dslci, NULL, &dsl) != VK_SUCCESS)
+        goto out;
+    VkPipelineLayoutCreateInfo plci = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, NULL, 0, 1,
+                                        &dsl, 0, NULL };
+    if (vkCreatePipelineLayout(dev, &plci, NULL, &pl) != VK_SUCCESS)
+        goto out;
+    pipe = make_compute_pipe(dev, pl, spv, spv_len);
+    if (!pipe) {
+        printf("XMC[%-6s/%-3s] pipeline create failed\n", tag, rtag);
+        goto out;
+    }
+
+    VkSamplerCreateInfo sci = { .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+                                .magFilter = VK_FILTER_NEAREST, .minFilter = VK_FILTER_NEAREST,
+                                .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+                                .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                                .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                                .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE };
+    if (vkCreateSampler(dev, &sci, NULL, &sam) != VK_SUCCESS)
+        goto out;
+    VkImageViewCreateInfo ivci = { .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                                   .image = img, .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                                   .format = view_fmt,
+                                   .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+    VkResult rv = vkCreateImageView(dev, &ivci, NULL, &v);
+    if (rv != VK_SUCCESS) {
+        printf("XMC[%-6s/%-3s] view create: %s -> no verdict, the view was refused\n",
+               tag, rtag, vkerr(rv));
+        goto out;
+    }
+
+    VkBufferCreateInfo rbci = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                                .size = (VkDeviceSize)out_words * 4,
+                                .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+                                .sharingMode = VK_SHARING_MODE_EXCLUSIVE };
+    if (vkCreateBuffer(dev, &rbci, NULL, &rb) != VK_SUCCESS)
+        goto out;
+    VkMemoryRequirements rbr;
+    vkGetBufferMemoryRequirements(dev, rb, &rbr);
+    if (alloc_mem(dev, rbr.size, 0, &rbm) != VK_SUCCESS)
+        goto out;
+    if (vkBindBufferMemory(dev, rb, rbm, 0) != VK_SUCCESS)
+        goto out;
+
+    VkDescriptorPoolSize dpsz[2] = { { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1 },
+                                     { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 } };
+    VkDescriptorPoolCreateInfo dpci = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, NULL, 0, 1,
+                                        2, dpsz };
+    if (vkCreateDescriptorPool(dev, &dpci, NULL, &dp) != VK_SUCCESS)
+        goto out;
+    VkDescriptorSetAllocateInfo dai = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, NULL, dp, 1,
+                                        &dsl };
+    if (vkAllocateDescriptorSets(dev, &dai, &ds) != VK_SUCCESS)
+        goto out;
+    VkDescriptorImageInfo dii = { sam, v, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+    VkDescriptorBufferInfo bii = { rb, 0, VK_WHOLE_SIZE };
+    VkWriteDescriptorSet wd[2] = {
+        { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = ds, .dstBinding = 0,
+          .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+          .pImageInfo = &dii },
+        { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, .dstSet = ds, .dstBinding = 1,
+          .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+          .pBufferInfo = &bii },
+    };
+    vkUpdateDescriptorSets(dev, 2, wd, 0, NULL);
+
+    {
+        VkCommandBuffer cb;
+        VkCommandBufferAllocateInfo cai = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, NULL,
+                                            pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
+        if (vkAllocateCommandBuffers(dev, &cai, &cb) != VK_SUCCESS)
+            goto out;
+        VkCommandBufferBeginInfo bbi = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, NULL,
+                                         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL };
+        vkBeginCommandBuffer(cb, &bbi);
+        VkImageMemoryBarrier imb = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = img,
+            .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+        };
+        vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, &imb);
+        vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, pipe);
+        vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_COMPUTE, VK_NULL_HANDLE, 0, 1, &ds, 0,
+                                NULL);
+        vkCmdDispatch(cb, W / 32, H / 32, 1);
+        vkEndCommandBuffer(cb);
+        VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, NULL, 0, NULL, NULL, 1, &cb, 0, NULL };
+        VkResult rs = vkQueueSubmit(q, 1, &si, NULL);
+        if (rs == VK_SUCCESS)
+            rs = vkQueueWaitIdle(q);
+        vkFreeCommandBuffers(dev, pool, 1, &cb);
+        if (rs != VK_SUCCESS) {
+            printf("XMC[%-6s/%-3s] compute did not complete: %s\n", tag, rtag, vkerr(rs));
+            goto out;
+        }
+        void *map = NULL;
+        if (vkMapMemory(dev, rbm, 0, (VkDeviceSize)out_words * 4, 0, &map) != VK_SUCCESS)
+            goto out;
+        memcpy(got, map, out_words * 4);
+        vkUnmapMemory(dev, rbm);
+    }
+
+    {
+        /* Three explanations are counted, the way XV counts them: the raw words,
+         * the words with their components reversed (the WZYX swap the format table
+         * gives both of these formats), and zeros (nothing there). */
+        unsigned long long bad = 0, bad_rev = 0, zeroed = 0, first = ~0ull;
+        for (unsigned i = 0; i < W * H; i++) {
+            int ok = 1, ok_rev = 1, all_zero = 1;
+            for (unsigned c = 0; c < words_per_texel; c++) {
+                uint32_t g = got[i * words_per_texel + c];
+                uint32_t w = want[i * words_per_texel + c];
+                uint32_t r = want[i * words_per_texel + (words_per_texel - 1 - c)];
+                if (g != w) ok = 0;
+                if (g != r) ok_rev = 0;
+                if (g) all_zero = 0;
+            }
+            if (!ok) {
+                bad++;
+                if (first == ~0ull)
+                    first = i;
+            }
+            if (!ok_rev)
+                bad_rev++;
+            if (all_zero)
+                zeroed++;
+        }
+        printf("XMC[%-6s/%-3s] %s view: %llu/%u wrong, %llu would be the reversed word, "
+               "%llu all zero -> %s\n",
+               tag, rtag, words_per_texel == 2 ? "R32G32_UINT " : "R16G16B16A16_UINT",
+               bad, W * H, bad_rev, zeroed, bad ? "MISMATCH" : "EXACT");
+        if (bad) {
+            unsigned y = (unsigned)(first / W), x = (unsigned)(first % W);
+            printf("XMC[%-6s/%-3s]   first wrong texel (y=%u, x=%u): want", tag, rtag, y, x);
+            for (unsigned c = 0; c < words_per_texel; c++)
+                printf(" %08x", want[first * words_per_texel + c]);
+            printf(", got");
+            for (unsigned c = 0; c < words_per_texel; c++)
+                printf(" %08x", got[first * words_per_texel + c]);
+            printf("\n");
+        }
+    }
+
+out:
+    free(got);
+    free(want);
+    if (v != VK_NULL_HANDLE)
+        vkDestroyImageView(dev, v, NULL);
+    if (sam != VK_NULL_HANDLE)
+        vkDestroySampler(dev, sam, NULL);
+    if (dp != VK_NULL_HANDLE)
+        vkDestroyDescriptorPool(dev, dp, NULL);
+    if (pipe != VK_NULL_HANDLE)
+        vkDestroyPipeline(dev, pipe, NULL);
+    if (pl != VK_NULL_HANDLE)
+        vkDestroyPipelineLayout(dev, pl, NULL);
+    if (dsl != VK_NULL_HANDLE)
+        vkDestroyDescriptorSetLayout(dev, dsl, NULL);
+    if (rb != VK_NULL_HANDLE)
+        vkDestroyBuffer(dev, rb, NULL);
+    if (rbm != VK_NULL_HANDLE)
+        vkFreeMemory(dev, rbm, NULL);
+}
+
+static void probe_xmc(VkDevice dev, VkQueue q, VkCommandPool pool, const char *tag,
+                      VkFormat base, const VkFormat *list, unsigned n, int sabotage)
+{
+    VkImage img = VK_NULL_HANDLE, lin = VK_NULL_HANDLE, si = VK_NULL_HANDLE;
+    VkDeviceMemory mem = VK_NULL_HANDLE;
+    VkImageFormatListCreateInfo flc = { .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO,
+                                        .viewFormatCount = n, .pViewFormats = list };
+    VkImageCreateInfo ici = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                              .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+                              .imageType = VK_IMAGE_TYPE_2D,
+                              .format = base,
+                              .extent = { W, H, 1 },
+                              .mipLevels = 1, .arrayLayers = 1,
+                              .samples = VK_SAMPLE_COUNT_1_BIT,
+                              .tiling = VK_IMAGE_TILING_OPTIMAL,
+                              .usage = VK_IMAGE_USAGE_SAMPLED_BIT |
+                                       VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                                       VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+                              .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                              .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED };
+    /* STORAGE is deliberately not in the usage: it is what would let the app name a
+     * R64_UINT view, and that question is journal 31's, not this one. */
+    ici.pNext = n ? &flc : NULL;
+
+    VkResult rc = vkCreateImage(dev, &ici, NULL, &img);
+    if (rc != VK_SUCCESS) {
+        printf("XMC[%-6s] create: %s -> no verdict, the create was refused\n", tag, vkerr(rc));
+        if (img != VK_NULL_HANDLE)
+            vkDestroyImage(dev, img, NULL);
+        return;
+    }
+
+    /* The shape readout, the same three detectors UBR uses: a linear twin for the
+     * floor, and a sparse twin, because only a tiled image can be sparse. */
+    VkMemoryRequirements mr;
+    vkGetImageMemoryRequirements(dev, img, &mr);
+    VkImageCreateInfo lci = ici;
+    lci.flags = 0;
+    lci.pNext = NULL;
+    lci.tiling = VK_IMAGE_TILING_LINEAR;
+    VkDeviceSize lsz = 0;
+    if (vkCreateImage(dev, &lci, NULL, &lin) == VK_SUCCESS) {
+        VkMemoryRequirements lr;
+        vkGetImageMemoryRequirements(dev, lin, &lr);
+        lsz = lr.size;
+    }
+    VkImageCreateInfo sci2 = ici;
+    sci2.flags |= VK_IMAGE_CREATE_SPARSE_BINDING_BIT | VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
+    VkResult rsp = vkCreateImage(dev, &sci2, NULL, &si);
+    if (si != VK_NULL_HANDLE)
+        vkDestroyImage(dev, si, NULL);
+
+    const VkDeviceSize raw = (VkDeviceSize)W * H * 8;
+    const char *layout = mr.size > lsz            ? "tiled (size)"
+                       : rsp == VK_SUCCESS       ? "tiled (only a tiled image can be sparse)"
+                       : mr.size == lsz          ? "linear or a tiled image of the same size"
+                                                 : "undecidable here";
+    printf("XMC[%-6s] base %-17s list %u%s: opt=0x%llx lin=0x%llx raw=0x%llx tail=0x%llx "
+           "sparse=%s -> %s\n",
+           tag, xmc_fmt_name(base), n, sabotage ? " (fill row length wrong on purpose)" : "",
+           (unsigned long long)mr.size, (unsigned long long)lsz,
+           (unsigned long long)raw,
+           (unsigned long long)(mr.size > raw ? mr.size - raw : 0),
+           rsp == VK_SUCCESS ? "yes" : "no", layout);
+    /* The tail is an allocation, not a claim that the chip compressed anything
+     * (journal 22.2): it says the driver reserved a metadata plane.  The content
+     * below is what decides. */
+
+    uint32_t *pat = calloc((size_t)W * H, 8);
+    if (!pat) {
+        printf("XMC[%-6s] OOM\n", tag);
+        goto out;
+    }
+    for (unsigned i = 0; i < W * H; i++) {
+        pat[2 * i + 0] = xmc_word(2 * i);
+        pat[2 * i + 1] = xmc_word(2 * i + 1);
+    }
+
+    if (alloc_mem(dev, mr.size, 0, &mem) != VK_SUCCESS)
+        goto out;
+    if (vkBindImageMemory(dev, img, mem, 0) != VK_SUCCESS)
+        goto out;
+
+    /* fill by buffer->image copy: a shader store would ask for STORAGE usage and
+     * change the very thing that is measured. */
+    {
+        VkBuffer fb = VK_NULL_HANDLE;
+        VkDeviceMemory fbm = VK_NULL_HANDLE;
+        VkBufferCreateInfo fci = { .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                                   .size = (VkDeviceSize)W * H * 8,
+                                   .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                   .sharingMode = VK_SHARING_MODE_EXCLUSIVE };
+        if (vkCreateBuffer(dev, &fci, NULL, &fb) != VK_SUCCESS)
+            goto out;
+        VkMemoryRequirements fr;
+        vkGetBufferMemoryRequirements(dev, fb, &fr);
+        if (alloc_mem(dev, fr.size, 0, &fbm) != VK_SUCCESS) {
+            vkDestroyBuffer(dev, fb, NULL);
+            goto out;
+        }
+        if (vkBindBufferMemory(dev, fb, fbm, 0) != VK_SUCCESS) {
+            vkDestroyBuffer(dev, fb, NULL);
+            vkFreeMemory(dev, fbm, NULL);
+            goto out;
+        }
+        void *fw = NULL;
+        if (vkMapMemory(dev, fbm, 0, fr.size, 0, &fw) != VK_SUCCESS) {
+            vkDestroyBuffer(dev, fb, NULL);
+            vkFreeMemory(dev, fbm, NULL);
+            goto out;
+        }
+        memcpy(fw, pat, (size_t)W * H * 8);
+        vkUnmapMemory(dev, fbm);
+
+        VkCommandBuffer cb;
+        VkCommandBufferAllocateInfo cai = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, NULL,
+                                            pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
+        if (vkAllocateCommandBuffers(dev, &cai, &cb) != VK_SUCCESS) {
+            vkDestroyBuffer(dev, fb, NULL);
+            vkFreeMemory(dev, fbm, NULL);
+            goto out;
+        }
+        VkCommandBufferBeginInfo bbi = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, NULL,
+                                         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL };
+        vkBeginCommandBuffer(cb, &bbi);
+        VkImageMemoryBarrier imb = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = img,
+            .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+        };
+        vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                             0, 0, NULL, 0, NULL, 1, &imb);
+        /* bufferRowLength and bufferImageHeight are padding in TEXELS, not bytes:
+         * 0 means "tightly packed, one row after another", which is how pat is
+         * laid out.  A row length of W*2 (the mistake this line replaces, and what
+         * the sabotage shape does on purpose) makes the copy read every row from
+         * twice the offset, and half the image then comes back as whatever followed
+         * the source buffer - the "half the texels are zero" signature of the first
+         * XMC run. */
+        VkBufferImageCopy bic = { 0, sabotage ? (uint32_t)(W * 2) : 0, 0,
+                                  { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
+                                  { 0, 0, 0 }, { W, H, 1 } };
+        vkCmdCopyBufferToImage(cb, fb, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &bic);
+        vkEndCommandBuffer(cb);
+        VkSubmitInfo si2 = { VK_STRUCTURE_TYPE_SUBMIT_INFO, NULL, 0, NULL, NULL, 1, &cb, 0, NULL };
+        VkResult rs = vkQueueSubmit(q, 1, &si2, NULL);
+        if (rs == VK_SUCCESS)
+            rs = vkQueueWaitIdle(q);
+        vkFreeCommandBuffers(dev, pool, 1, &cb);
+        vkDestroyBuffer(dev, fb, NULL);
+        vkFreeMemory(dev, fbm, NULL);
+        if (rs != VK_SUCCESS) {
+            printf("XMC[%-6s] the fill did not complete: %s -> no verdict\n", tag, vkerr(rs));
+            goto out;
+        }
+    }
+
+    /* Two readers.  A view of a mutable image created WITH a list has to be in
+     * that list, so a single-family shape cannot be read the other way at all:
+     * saying so is part of the answer, guessing is not. */
+    for (unsigned r = 0; r < 2; r++) {
+        const VkFormat vf = r ? VK_FORMAT_R32G32_UINT : VK_FORMAT_R16G16B16A16_UINT;
+        int in_list = !n;
+        for (unsigned i = 0; i < n && !in_list; i++)
+            in_list = list[i] == vf;
+        if (!in_list) {
+            printf("XMC[%-6s/%-3s] %s is not in the list -> the view would be illegal, "
+                   "no verdict\n",
+                   tag, r ? "g32" : "x4", xmc_fmt_name(vf));
+            continue;
+        }
+        if (r)
+            xmc_read(dev, q, pool, img, pat, tag, "g32", vf, xmc_u32g32_spv,
+                     (uint32_t)sizeof(xmc_u32g32_spv), 2);
+        else
+            xmc_read(dev, q, pool, img, pat, tag, "x4", vf, xmc_u32x4_spv,
+                     (uint32_t)sizeof(xmc_u32x4_spv), 4);
+    }
+
+out:
+    free(pat);
+    if (img != VK_NULL_HANDLE)
+        vkDestroyImage(dev, img, NULL);
+    if (lin != VK_NULL_HANDLE)
+        vkDestroyImage(dev, lin, NULL);
+    if (mem != VK_NULL_HANDLE)
+        vkFreeMemory(dev, mem, NULL);
 }
 
 /* UBR. UBWC for the 2-byte class, by create shape.  No GPU work is needed:
@@ -5530,6 +6034,37 @@ skip_b:
              * pair of bytes, the rule is wrong and not merely unhelpful. */
             probe_cross_view(dev, q, pool, "GUARD_R8G8_as_R16", VK_FORMAT_R8G8_UINT,
                              VK_FORMAT_R16_UINT, -1, 500, 500, "linear");
+
+            /* XMC. The one question that stands between a strict class rule and the
+             * 64-bit class: are FD6_UBWC_R16G16B16A16_INT and FD6_UBWC_R32G32_INT
+             * one cell of the compressor on this chip, or two?  MIX42/MIX24 need
+             * TU_UBWC_64B_MIX in the driver to be asked WITH the compression
+             * (experiments/exp-22-*); on a driver without the knob they still run
+             * and describe the same create with UBWC off, which is the control the
+             * knob-on run is read against.  SGL4/SGL2 need no knob and are the
+             * controls for the rig itself: a single-member list keeps UBWC today,
+             * so they say whether a compressed 64-bit image survives this fill and
+             * this reader at all.  NOL is the same content without compression,
+             * read both ways, which is legal because there is no list to be in. */
+            printf("\n=== XMC. the two 64-bit UBWC compat types, one cell or two ===\n");
+            {
+                static const VkFormat mix_42[] = { VK_FORMAT_R16G16B16A16_UINT,
+                                                   VK_FORMAT_R32G32_UINT };
+                static const VkFormat mix_24[] = { VK_FORMAT_R32G32_UINT,
+                                                   VK_FORMAT_R16G16B16A16_UINT };
+                static const VkFormat only_4[] = { VK_FORMAT_R16G16B16A16_UINT };
+                static const VkFormat only_2[] = { VK_FORMAT_R32G32_UINT };
+                probe_xmc(dev, q, pool, "MIX42", VK_FORMAT_R16G16B16A16_UINT, mix_42, 2, 0);
+                probe_xmc(dev, q, pool, "MIX24", VK_FORMAT_R32G32_UINT, mix_24, 2, 0);
+                probe_xmc(dev, q, pool, "SGL4", VK_FORMAT_R16G16B16A16_UINT, only_4, 1, 0);
+                probe_xmc(dev, q, pool, "SGL2", VK_FORMAT_R32G32_UINT, only_2, 1, 0);
+                probe_xmc(dev, q, pool, "NOL", VK_FORMAT_R16G16B16A16_UINT, NULL, 0, 0);
+                /* The rig's own detection check: the fill is deliberately broken, so
+                 * the answer has to be MISMATCH.  An EXACT on this row would mean the
+                 * comparison cannot see wrong data, and every EXACT above with it. */
+                printf("XMC[DETECT] expected NOT exact: the fill itself is broken here\n");
+                probe_xmc(dev, q, pool, "DETECT", VK_FORMAT_R16G16B16A16_UINT, NULL, 0, 1);
+            }
 
             /* UBR. Whether the 2-byte class can gain anything at all: R8G8 has
              * UBWC rows in the blob table, so the question is which create

@@ -736,6 +736,68 @@
    ],
    "verdict_quote": ". Both facts journal 28 asked for are answered, and they answer in favour of",
    "verdict_source": "journal 31"
+  },
+  {
+   "id": "32",
+   "title": "The two 64-bit UBWC compat labels behave as one cell on A740, and that label is all the strict class rule is missing (21.11)",
+   "question": "The two 64-bit UBWC compat labels behave as one cell on A740, and that label is all the strict class rule is missing (21.11)",
+   "file": "journal/32-the-two-64-bit-ubwc-compat-labels-are-one-cell.md",
+   "date": "21.11",
+   "status": "open",
+   "decision": "",
+   "verdict_first_line": ". On this A740, in the paths the probe exercises, the two labels are one cell of",
+   "artifacts": [
+    "scripts/fmt-list-gate-check.py",
+    "results/model-strict-class-nolist.txt",
+    "tests/rp6-vkd3d-sparse-test.c",
+    "experiments/exp-22-ubwc-64b-mix-knob.patch",
+    "tests/rp6-vkd3d-sparse-xmc_u32x4.glsl",
+    "tests/rp6-vkd3d-sparse-xmc_u32g32.glsl",
+    "tests/rp6-vkd3d-sparse-xmc_spv.h",
+    "scripts/gen-xmc-spv.sh",
+    "scripts/build-test.sh",
+    "scripts/env.sh",
+    "scripts/run-test.sh",
+    "build/p14-shipped/freedreno_icd_p14.json"
+   ],
+   "lines": 185,
+   "headings": [
+    "## 32.1 The strict class rule, modelled: 22 of 23 classes refuse for reasons the rule cannot fix",
+    "## 32.2 The probe: one image, two views, one knob",
+    "## 32.3 The knob moves two lines out of 621, and both of them read EXACT",
+    "## What this does not show"
+   ],
+   "verdict_quote": ". On this A740, in the paths the probe exercises, the two labels are one cell of",
+   "verdict_source": "journal 32"
+  },
+  {
+   "id": "33",
+   "title": "The exp-21 stack behaves like the released one on every probe the rig has; the matrix half of its gate cannot be run on this build (21.11)",
+   "question": "The exp-21 stack behaves like the released one on every probe the rig has; the matrix half of its gate cannot be run on this build (21.11)",
+   "file": "journal/33-the-exp-21-stack-behaves-like-the-released-one.md",
+   "date": "21.11",
+   "status": "open",
+   "decision": "",
+   "verdict_first_line": ". On the shapes this rig creates, `exp-21` replaces `0014` without changing",
+   "artifacts": [
+    "build/p14-shipped/libvulkan_freedreno.so",
+    "build/out-exp21/libvulkan_freedreno.so",
+    "scripts/env.sh",
+    "scripts/run-test.sh",
+    "build/p14-shipped/freedreno_icd_p14.json",
+    "results/raw/ceil-nolist-p14-full.log",
+    "build/out-exp21/freedreno_icd.json",
+    "results/raw/test-exp21-matrix-full.log",
+    "results/test-exp21-equiv-p14.log",
+    "scripts/run-b2i-matrix.sh"
+   ],
+   "lines": 100,
+   "headings": [
+    "## 33.1 21.11 - the queue's \"94-row matrix\" gate item is inapplicable to this build, and the wording it corrects",
+    "## What this does not show"
+   ],
+   "verdict_quote": ". On the shapes this rig creates, exp-21 replaces 0014 without changing",
+   "verdict_source": "journal 33"
   }
  ]
 }

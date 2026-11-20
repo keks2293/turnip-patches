@@ -1,0 +1,58 @@
+# exp-21 against the shipped stack: every probe and every readback row of the default run
+#
+# Question: does exp-21 (the candidate replacement for 0014: one decision function for
+#           the no-list case) behave like the 0014 that is shipped?
+# Method:   one and the same test binary against two drivers; the FULL logs compared, not
+#           a grep of them. The diff covers every line the default run prints.
+#
+# Tool:     tests/rp6-vkd3d-sparse-test, sha256 63848afdba52bfa0... (identical in both runs)
+# Driver A: build/p14-shipped/libvulkan_freedreno.so, sha256 c17d02bcaae9a960...  (0001..0014,
+#           the released stack)
+# Driver B: build/out-exp21/libvulkan_freedreno.so,  sha256 d49d094a8d6e...       (0001..0013
+#           + exp-14 + exp-21; 0014 deliberately NOT applied, exp-21 carries its rule)
+# Device:   Adreno A740 (chip_id 0x43050a01), KMD msm
+# Runs:     A on 20.11 (results/raw/ceil-nolist-p14-full.log), B on 21.11
+#           (results/raw/test-exp21-matrix-full.log); both exit 0
+# Command:  source scripts/env.sh && scripts/run-test.sh <icd> <log>
+#
+lines in A: 598   lines in B: 598
+diff of the two logs, minus their '=== driver:' line: 0 lines
+
+Lines containing each verdict word (a word count over the whole log, not a row count:
+several sections print the word, and rows are compared as text by the diff above):
+word           driver-A driver-B
+EXACT               116      116
+MISMATCH              6        6
+FAIL                  6        6
+SKIPPED               1        1
+SUCCESS             141      141
+
+Sections of run B, with their line counts; every one of them is byte-equal in run A:
+  driver: /var/home/armada/opencode/build/out-exp21/freedr    9
+  B. alias/cast: same memory as R32_UINT ===B: create no-l    1
+  C. MUTABLE sparse probe (RGBA8 + R32_UINT fmt list) ===g    5
+  D. view-cast probe (RGBA8 <-> R32_UINT, one image) ===     20
+  E. MUTABLE sparse, swap list {RGBA8, BGRA8} ===vkCreateI    1
+  F. MUTABLE sparse, NO format list (vkd3d pattern) ===vkC    1
+  N. planar NV12 + SPARSE_RESIDENCY, MUTABLE on/off ===N1    11
+  V. all 72 vkd3d compatibility lists vs SPARSE+MUTABLE ==  146
+  W. NV12 + MUTABLE: plane 0 layout and round trip ===  W:    9
+  G/H/K. trigger controls (tiled vs sparse vs mutable) ===   66
+  trigger matrix (D-d2: transformed) ===                    133
+  Y. 8bpp UBWC: запись r2d vs чтение d2r vs texelFetch ===   21
+  Z. NV12 Y-плоскость: cpp=1 UBWC без has_8bpp_ubwc ===       7
+  AA. R8: imageStore (3D) fill, TP and i2b readback ===      29
+  NL. MUTABLE without a format list ===                      25
+  XV. cross-member view on a MUTABLE image with no list ==   15
+  UBR. UBWC of the 2-byte class, by create shape ===          8
+  GEOM. readback geometry (A2D SRC 2D) ===                   41
+  CPU-FILL. fill side check (raw image memory, no r2d read    3
+  CEIL. UBWC ceiling: gate or format ===                     27
+
+NOT covered by this equality:
+  * the 94-row byte-roundtrip matrix of scripts/run-b2i-matrix.sh: it needs the exp-15 rig
+    in the driver, and neither driver here has it (grep -ac TU_B2I_SYNC = 0 on both), so the
+    rig's own verdict table cannot be reproduced on this build;
+  * the game: the TU_IMG_INV inventory columns of results/imginv-3variants.txt are still the
+    half of the gate that only a RE4 run closes (exp-14 IS in driver B: grep -ac TU_IMG_INV = 1);
+  * anything the test does not create. It is the test's list of shapes, not the game's.

@@ -1,0 +1,168 @@
+# The two 64-bit UBWC compat types on A740: one cell of the compressor, measured
+
+# Question: fd6_ubwc_compat_mode() answers FD6_UBWC_R16G16B16A16_INT for five members
+#           of the 64-bit compatibility class and FD6_UBWC_R32G32_INT for three.  Is
+#           that difference a property of the compressor on this chip, or a label
+#           nobody ever tested?  It is the only reason a strict reading of upstream's
+#           `TODO: limit based on compatiblity class` still refuses the class once the
+#           members the driver cannot lay out are excluded
+#           (results/model-strict-class-nolist.txt), and the class is 650.8 MiB of the
+#           game's no-list bytes (journal 28).
+# Method:   probe XMC in tests/rp6-vkd3d-sparse-test.c.  A 512x512 image, 8 bytes a
+#           texel, filled by vkCmdCopyBufferToImage with a pattern whose every eighth
+#           word is one of the values upstream calls special (0, all ones, 1,
+#           0x80008000, ...), read back twice by compute texelFetch through a
+#           usampler2D: once as R16G16B16A16_UINT (four 16-bit halves) and once as
+#           R32G32_UINT (two 32-bit words).  Both views are legal because both
+#           families are named in the image's format list.
+#           UBWC cannot be given to such a create today - the list mixes the two
+#           labels, which is exactly the rule under test - so the driver carries the
+#           experiment knob TU_UBWC_64B_MIX of experiments/exp-22-ubwc-64b-mix-knob.patch,
+#           which folds the one label into the other and nothing else.  One binary, two
+#           runs; the knob-off run is the control of the knob-on run, and the released
+#           driver is the control for both.
+# Tool:     tests/rp6-vkd3d-sparse-test, sha256 5f44a7f7e6ae... in all three runs
+# Drivers:  A build/p14-shipped/libvulkan_freedreno.so, sha256 c17d02bcaae9a960...  (the
+#             released stack, no knob in it)
+#           B build/out-exp22/libvulkan_freedreno.so, sha256 0e934fc6b3e0... (0001..0013
+#             + exp-14 + exp-21 + exp-22, run with the knob off)
+#           C the same .so as B, run with TU_UBWC_64B_MIX=1
+#           (0014 is deliberately not applied: results/test-exp21-equiv-p14.log shows
+#           that stack behaving like the released one)
+# Device:   Adreno A740 (chip_id 0x43050a01), KMD msm
+# Runs:     21.11, all three exit 0
+# Command:  source scripts/env.sh && RP6_TEST_BIN=/tmp/opencode/testbuild-xmc/rp6-vkd3d-sparse-test \
+#               scripts/run-test.sh <icd> <log>       (and TU_UBWC_64B_MIX=1 for C)
+# Raw:      results/raw/xmc-p14-noknob.log, results/raw/xmc-exp22-knoboff.log,
+#           results/raw/xmc-exp22-knobon.log (gitignored)
+#
+=== 1. what the knob changed in the WHOLE log, not only in XMC ===
+run A (released) against run B (same stack, knob off): 0 lines differ, of 621
+run B against run C (the knob switched on):     2 log lines differ (the `diff` that
+             prints them is 8 output lines: two hunks, each with its `---` separator)
+the two lines run C differs by, in full:
+    < XMC[MIX42 ] base R16G16B16A16_UINT list 2: opt=0x200000 lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image can be sparse)
+    > XMC[MIX42 ] base R16G16B16A16_UINT list 2: opt=0x202000 lin=0x200000 raw=0x200000 tail=0x2000 sparse=yes -> tiled (size)
+    < XMC[MIX24 ] base R32G32_UINT       list 2: opt=0x200000 lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image can be sparse)
+    > XMC[MIX24 ] base R32G32_UINT       list 2: opt=0x202000 lin=0x200000 raw=0x200000 tail=0x2000 sparse=yes -> tiled (size)
+  Everything else in the log - probes B/C/D/E/F/N/V/W/G/H/K, the trigger matrix,
+  NL, XV, UBR, GEOM, CPU-FILL, CEIL and every readback row - is identical with the
+  knob on.  Widening the 64-bit pair moves nothing else in the driver's behaviour.
+
+=== 2. the XMC section of each run ===
+--- A, the released driver (no knob in it) ---
+=== XMC. the two 64-bit UBWC compat types, one cell or two ===
+XMC[MIX42 ] base R16G16B16A16_UINT list 2: opt=0x200000 lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image can be sparse)
+XMC[MIX42 /x4 ] R16G16B16A16_UINT view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[MIX42 /g32] R32G32_UINT  view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[MIX24 ] base R32G32_UINT       list 2: opt=0x200000 lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image can be sparse)
+XMC[MIX24 /x4 ] R16G16B16A16_UINT view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[MIX24 /g32] R32G32_UINT  view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[SGL4  ] base R16G16B16A16_UINT list 1: opt=0x202000 lin=0x200000 raw=0x200000 tail=0x2000 sparse=yes -> tiled (size)
+XMC[SGL4  /x4 ] R16G16B16A16_UINT view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[SGL4  /g32] R32G32_UINT is not in the list -> the view would be illegal, no verdict
+XMC[SGL2  ] base R32G32_UINT       list 1: opt=0x202000 lin=0x200000 raw=0x200000 tail=0x2000 sparse=yes -> tiled (size)
+XMC[SGL2  /x4 ] R16G16B16A16_UINT is not in the list -> the view would be illegal, no verdict
+XMC[SGL2  /g32] R32G32_UINT  view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[NOL   ] base R16G16B16A16_UINT list 0: opt=0x200000 lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image can be sparse)
+XMC[NOL   /x4 ] R16G16B16A16_UINT view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[NOL   /g32] R32G32_UINT  view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[DETECT] expected NOT exact: the fill itself is broken here
+XMC[DETECT] base R16G16B16A16_UINT list 0 (fill row length wrong on purpose): opt=0x200000 lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image can be sparse)
+XMC[DETECT/x4 ] R16G16B16A16_UINT view: 196352/262144 wrong, 262144 would be the reversed word, 131072 all zero -> MISMATCH
+XMC[DETECT/x4 ]   first wrong texel (y=1, x=4): want 00009188 00006a07 00000b39 0000c87f, got 00005588 0000082c 0000cf39 0000ee65
+XMC[DETECT/g32] R32G32_UINT  view: 196352/262144 wrong, 262144 would be the reversed word, 131072 all zero -> MISMATCH
+XMC[DETECT/g32]   first wrong texel (y=1, x=4): want 6a079188 c87f0b39, got 082c5588 ee65cf39
+
+
+--- B, the exp-22 driver, knob OFF ---
+=== XMC. the two 64-bit UBWC compat types, one cell or two ===
+XMC[MIX42 ] base R16G16B16A16_UINT list 2: opt=0x200000 lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image can be sparse)
+XMC[MIX42 /x4 ] R16G16B16A16_UINT view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[MIX42 /g32] R32G32_UINT  view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[MIX24 ] base R32G32_UINT       list 2: opt=0x200000 lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image can be sparse)
+XMC[MIX24 /x4 ] R16G16B16A16_UINT view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[MIX24 /g32] R32G32_UINT  view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[SGL4  ] base R16G16B16A16_UINT list 1: opt=0x202000 lin=0x200000 raw=0x200000 tail=0x2000 sparse=yes -> tiled (size)
+XMC[SGL4  /x4 ] R16G16B16A16_UINT view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[SGL4  /g32] R32G32_UINT is not in the list -> the view would be illegal, no verdict
+XMC[SGL2  ] base R32G32_UINT       list 1: opt=0x202000 lin=0x200000 raw=0x200000 tail=0x2000 sparse=yes -> tiled (size)
+XMC[SGL2  /x4 ] R16G16B16A16_UINT is not in the list -> the view would be illegal, no verdict
+XMC[SGL2  /g32] R32G32_UINT  view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[NOL   ] base R16G16B16A16_UINT list 0: opt=0x200000 lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image can be sparse)
+XMC[NOL   /x4 ] R16G16B16A16_UINT view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[NOL   /g32] R32G32_UINT  view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[DETECT] expected NOT exact: the fill itself is broken here
+XMC[DETECT] base R16G16B16A16_UINT list 0 (fill row length wrong on purpose): opt=0x200000 lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image can be sparse)
+XMC[DETECT/x4 ] R16G16B16A16_UINT view: 196352/262144 wrong, 262144 would be the reversed word, 131072 all zero -> MISMATCH
+XMC[DETECT/x4 ]   first wrong texel (y=1, x=4): want 00009188 00006a07 00000b39 0000c87f, got 00005588 0000082c 0000cf39 0000ee65
+XMC[DETECT/g32] R32G32_UINT  view: 196352/262144 wrong, 262144 would be the reversed word, 131072 all zero -> MISMATCH
+XMC[DETECT/g32]   first wrong texel (y=1, x=4): want 6a079188 c87f0b39, got 082c5588 ee65cf39
+
+
+--- C, the exp-22 driver, TU_UBWC_64B_MIX=1 ---
+=== XMC. the two 64-bit UBWC compat types, one cell or two ===
+XMC[MIX42 ] base R16G16B16A16_UINT list 2: opt=0x202000 lin=0x200000 raw=0x200000 tail=0x2000 sparse=yes -> tiled (size)
+XMC[MIX42 /x4 ] R16G16B16A16_UINT view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[MIX42 /g32] R32G32_UINT  view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[MIX24 ] base R32G32_UINT       list 2: opt=0x202000 lin=0x200000 raw=0x200000 tail=0x2000 sparse=yes -> tiled (size)
+XMC[MIX24 /x4 ] R16G16B16A16_UINT view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[MIX24 /g32] R32G32_UINT  view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[SGL4  ] base R16G16B16A16_UINT list 1: opt=0x202000 lin=0x200000 raw=0x200000 tail=0x2000 sparse=yes -> tiled (size)
+XMC[SGL4  /x4 ] R16G16B16A16_UINT view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[SGL4  /g32] R32G32_UINT is not in the list -> the view would be illegal, no verdict
+XMC[SGL2  ] base R32G32_UINT       list 1: opt=0x202000 lin=0x200000 raw=0x200000 tail=0x2000 sparse=yes -> tiled (size)
+XMC[SGL2  /x4 ] R16G16B16A16_UINT is not in the list -> the view would be illegal, no verdict
+XMC[SGL2  /g32] R32G32_UINT  view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[NOL   ] base R16G16B16A16_UINT list 0: opt=0x200000 lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image can be sparse)
+XMC[NOL   /x4 ] R16G16B16A16_UINT view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[NOL   /g32] R32G32_UINT  view: 0/262144 wrong, 262144 would be the reversed word, 0 all zero -> EXACT
+XMC[DETECT] expected NOT exact: the fill itself is broken here
+XMC[DETECT] base R16G16B16A16_UINT list 0 (fill row length wrong on purpose): opt=0x200000 lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image can be sparse)
+XMC[DETECT/x4 ] R16G16B16A16_UINT view: 196352/262144 wrong, 262144 would be the reversed word, 131072 all zero -> MISMATCH
+XMC[DETECT/x4 ]   first wrong texel (y=1, x=4): want 00009188 00006a07 00000b39 0000c87f, got 00005588 0000082c 0000cf39 0000ee65
+XMC[DETECT/g32] R32G32_UINT  view: 196352/262144 wrong, 262144 would be the reversed word, 131072 all zero -> MISMATCH
+XMC[DETECT/g32]   first wrong texel (y=1, x=4): want 6a079188 c87f0b39, got 082c5588 ee65cf39
+
+
+=== 3. what the runs say, line by line ===
+  SGL4, SGL2      a single-member list keeps UBWC today (tail=0x2000 against a
+                  0x200000 image), and the same-family read is EXACT: the fill by
+                  copy and the integer sampler round-trip through a compressed
+                  64-bit image.  That had not been measured before, and without it
+                  the verdict below would mean nothing.
+  NOL             the same content, no list, no UBWC, read both ways: EXACT.  The
+                  views themselves are honest.
+  DETECT          the fill given a row length in words instead of texels, on
+                  purpose: 196352/262144 wrong, identical in all three runs.  The
+                  rig sees wrong data, so "0 wrong" above and below is a statement.
+  MIX42, MIX24    the pair in question.  With the knob off they are tiled without
+                  UBWC and read EXACT both ways, as expected of uncompressed memory.
+                  With the knob on the creates carry the metadata tail (0x202000) and
+                  STILL read EXACT both ways - a compressed image created as 4x16
+                  reads exactly through a 2x32 view, and the other way round, at
+                  0/262144 wrong texels each.
+
+=== 4. verdict ===
+  On this A740 the two labels are one cell of the compressor, in the paths the probe
+  exercises: a buffer->image copy in, and a compute texelFetch out.  Nothing in the
+  whole test corpus regresses when the pair is treated as compatible, and nothing
+  else in the driver changes behaviour - the knob moved two lines out of 621.
+
+=== 5. what this does not show ===
+  * It is not a claim that the chip compressed these images.  +0x2000 in memreq is an
+    allocation of a metadata plane (journal 22.2).  What is measured is that the
+    create took the UBWC decision and that the content still round-trips; whether the
+    hardware wrote compressed bytes is a different detector (a fast-clear that leaves
+    the bytes alone would be the direct one).
+  * It says nothing about the 32-bit class, where the measured break is a channel
+    order (journal 24: XV[BGRA8_as_RGBA8] MISMATCH, memory is swapped), nor about the
+    8-bit class, which reads as zeros under UBWC (ADR-0007).  The pair measured here
+    is one pair of labels of one class.
+  * It does not license a rule keyed on the base format.  A R64_UINT view stays legal
+    on an image created with STORAGE usage whatever this says (tu_formats.cc grants
+    the feature under has_64b_image_atomics, journal 31), and a no-list image is
+    viewable as every member of its class, so the class rule still has to answer for
+    those members separately.
+  * One geometry (512x512), one usage set without STORAGE, one reader engine.  Not
+    mipmaps, not arrays, not multisample, not a r2d or d2r read, not the game.

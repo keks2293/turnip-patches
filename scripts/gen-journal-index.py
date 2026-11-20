@@ -35,6 +35,7 @@ STATUS = {
     "21.10": "shipped", "21.11": "shipped", "21.12": "shipped",
     "22": "closed", "23": "closed", "24": "closed", "25": "reference", "26": "closed",
     "27": "closed", "28": "open", "29": "reference", "30": "closed", "31": "open",
+    "32": "open", "33": "open",
 }
 # where the verdict lives when the entry is not the owning document
 DECISIONS = {

@@ -334,14 +334,16 @@ with R32G32B32A32.
 
 ---
 
-## Queue (20.11)
+## Queue (20.11, updated 21.11)
 
 Ordered by what unblocks what. A closed branch is not repeated here - it has an ADR in
 [`decisions/`](decisions/); this file owns only the next actions.
 
-0. **Done 20.11, so it may become stale again**: `../mesa27-src` carries `0001` and `0002`
-   as commits (`ac08003`, `9845cfb` on base `6dfa32a`) and `0003..0013` plus the `exp-14`
-   inventory hook as working-tree changes - 8 files, +529/-77. `0014` is deliberately not
+0. **Done 20.11, updated 21.11, so it may become stale again**: `../mesa27-src` carries
+   `0001` and `0002` as commits (`ac08003`, `9845cfb` on base `6dfa32a`) and `0003..0013`
+   plus the `exp-14` inventory hook plus `exp-21` as working-tree changes - 8 files,
+   +663/-80, measured on 21.11 after `exp-22` was reverted with `git apply -R`. The
+   +529/-77 of the 20.11 note is that tree without `exp-21`. `0014` is deliberately not
    applied: its replacement is item 11. Leaving it out of a working tree changes nothing
    that is shipped; the release and `patches/0014-*.patch` stand, and a replacement has to
    earn them by measurement.
@@ -361,7 +363,8 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    `TU_FORCE_PROPS` (`0007`), `has_generic_clear` (`0008`), `tu6_format_list_has_swaps`
    (`0010`), `R16G16B16A16_UNORM` and `case PIPE_FORMAT_R32G32_FLOAT` in
    `freedreno_ubwc.h` (`0011`, `0012`), the `CLEAN` sites in `tu_clear_blit.cc` (`0013`),
-   `TU_IMG_INV` (`exp-14`) - and `tu6_mutable_compat_class` absent (`0014` off). A marker
+   `TU_IMG_INV` (`exp-14`), `mutable_compat_class` present (`exp-21`) - and
+   `tu6_mutable_compat_class` absent (`0014` off). A marker
    says the code is present; it does not say it compiles or behaves: that is the rebuild
    below.
    Not run: a rebuild of this tree to reproduce the `imginv4` column of
@@ -408,6 +411,42 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    compatible classes and stay where it is for the rest), and the layout consequence must be
    read with probe `NL`, because `CEIL` compares sizes and cannot tell tiled from linear.
    **NOT BUILT, NOT MEASURED.**
+
+   **State 21.11 - the hardware question in this item is answered, the rule is not written.**
+   Two things moved (journal 32):
+
+   * the rule was **modelled** before being written:
+     `python3 scripts/fmt-list-gate-check.py --strict-class` ports `ubwc_possible()`,
+     `fd6_ubwc_compat_mode()` (with the `0006`/`0011`/`0012` rows) and the no-list refusal to
+     Python and answers for all 23 Vulkan classes. Result: 0 of 23 granted as the rule reads,
+     1 of 23 (128-bit) once the members `fd6_format_table.c` gives no texture format to are
+     excluded, **2 of 23** (128-bit and 64-bit) once one further pair of compat labels is
+     folded. Artifact `results/model-strict-class-nolist.txt`. A model, nothing in it ran on
+     the GPU;
+   * that one pair was **measured**: `fd6_ubwc_compat_mode()` answers
+     `FD6_UBWC_R16G16B16A16_INT` for five members of the 64-bit class and
+     `FD6_UBWC_R32G32_INT` for three, which is the only line of the model still refusing that
+     class - and probe `XMC` (`probe_xmc()`, with the `TU_UBWC_64B_MIX` knob of
+     `experiments/exp-22-ubwc-64b-mix-knob.patch`, not for ship) shows the two behaving as
+     **one cell** on this A740: with the knob on, the mixed `{R16G16B16A16_UINT,
+     R32G32_UINT}` create carries the `0x2000` metadata tail and reads `0/262144` wrong
+     texels through a view of its own family and through a view of the other one, with the
+     same-family, the uncompressed and the deliberate-breakage controls all behaving. The
+     knob changes two lines of a 621-line log out of the whole driver. Artifact
+     `results/test-xmc-64bit-compat.log`.
+
+   What that does and does not buy: the 64-bit class is the first class with both a model
+   answer and a measurement behind it, and `exp-18 (b)` is no longer argued from a table.
+   It does not make the rule safe: the measurement covers one geometry, no `STORAGE` usage
+   and one reader engine, and the members the rig deliberately avoided (`R64_UINT`,
+   `R64_SINT`, reachable through `STORAGE`, refused by `ubwc_possible()` for their own
+   reasons) are still why the class cannot simply be granted - open question 14. The item
+   stays **NOT BUILT, NOT MEASURED** for the patch itself. And the rig that asked the
+   question: `experiments/exp-22-ubwc-64b-mix-knob.patch` (`TU_UBWC_64B_MIX`) was built
+   21.11 as `build/out-exp22/libvulkan_freedreno.so`, `0e934fc6b3e0…`, used, and
+   **reverted from the tree** the same day - it is a measurement hook, its header says NOT
+   FOR SHIP, and nothing is queued on it beyond being there so journal 32 can be repeated.
+   `fold_64()` in `scripts/fmt-list-gate-check.py` is its mirror in the model.
 2. **exp-19 - who is wrong about R8, the writer or the reader**. Probe AB (the same
    `R8_UNORM` + UBWC image, filled by `vkCmdCopyBufferToImage`) read by `i2b` in a fresh
    process, both at the base grid and at `{32,8}`. Cheaper than one build. If AB ever
@@ -419,6 +458,9 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    probe matrix on it - the first use of that build - and it is the control that shows the
    no-list UBWC refusal is upstream's. What is still not done is the game: the inventory run
    that gives the three-variant scale of journal 27 its true zero point.
+   One run of the same rig, on the same evening, answers the last open half of item 11: an
+   inventory against `build/out-exp21` is the column that must match `imginv5` before
+   `exp-21` is graduated to `0016` (`exp-14` is in that build, `grep -ac TU_IMG_INV` = `1`).
 4. **Ship stack + prop + inventory**: the fourth column that the caveat in journal 27
    needs (the pair A/B differs by the whole stack, not only by the prop). About four
    minutes of build.
@@ -469,10 +511,16 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
 11. **`exp-21` - one layout-decision function, the candidate that replaces `0014`**
     (`experiments/exp-21-mutable-one-decision.patch`, tail
     `experiments/exp-21b-predicates-static.patch`; graduation number `0016`, because
-    `0015` is spoken for by ADR-0009 and numbers are not reused). Status: written 20.11,
-    applies clean to `0001..0013` and reverts clean, **NOT BUILT, NOT MEASURED**. It is an
-    alternative to `patches/0014-*.patch`, not a stack on top of it: both define the
-    compatibility-class enumerator.
+    `0015` is spoken for by ADR-0009 and numbers are not reused). Status 21.11: written
+    20.11, applies clean to `0001..0013` and reverts clean, **built** 21.11 as
+    `build/out-exp21/libvulkan_freedreno.so` (`d49d094a8d6e…`) and **measured
+    equivalent** to the released stack on every probe the rig had when the two logs were
+    taken (test binary `63848afdba52bfa0…`, i.e. before the `XMC` section of journal 32 was
+    added) - journal 33, `results/test-exp21-equiv-p14.log`: 598 lines against 598, **0
+    differing lines** against `c17d02bcaae9a960…`, including the six `MISMATCH` and six
+    `FAIL` rows, which are the known breakage of ADR-0001 and ADR-0007. What is left of its
+    gate is the game column, item 3. It is an alternative to `patches/0014-*.patch`, not a
+    stack on top of it: both define the compatibility-class enumerator.
     The operator's direction: keep the gain, do not enter the broken things, and make the
     shape a path rather than a patch-shaped exception.
 
@@ -525,13 +573,23 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     `0004` refusal for classes that still force linear, without which the silent-zero
     sparse hole returns (ADR-0002).
 
-    Gate, in this order: (1) an **equivalence run** - inventory with `exp-21` must reproduce
-    the `imginv5` column of `results/imginv-3variants.txt` (`tiled` and `ubwc` counters,
-    linear residue 1631 MiB), because the class logic is unchanged and anything else means
-    the refactor changed behaviour, not spelling; (2) the 94-row matrix **plus** the rows
-    `NL`, `XV`, `UBR`, `S`, `N` read separately - `0014` v2 is the reason "the counter is
-    green" is not a gate (ADR-0006); (3) only then decide `exp-21b` and the graduation, and
-    re-run the probes of `0005`/`0009`/`0010` after their context moves.
+    Gate, in this order:
+
+    1. an **equivalence run** - **met 21.11** in the strongest form available here: the same
+       test binary against the two drivers with the **full logs** compared, 0 differing
+       lines (journal 33). The form this item asked for first, reproducing the `imginv5`
+       column of `results/imginv-3variants.txt` (the `tiled`/`ubwc` counters and the 1631 MiB
+       linear residue), is the *game* half of the same requirement and is still open - item 3;
+    2. ~~the 94-row matrix~~ - **corrected 21.11**. The sentence this one replaces asked for
+       the matrix as part of this gate; the matrix is produced by `scripts/run-b2i-matrix.sh`
+       on a driver carrying the `exp-15` rig, and neither `build/out-exp21` nor the released
+       build has it (`grep -ac TU_B2I_SYNC` = `0` on both). So the item is not pending, it
+       does not apply to a build of this tree: the matrix gates *tiling* changes, and
+       `exp-21` moves no layout for any create that has a list. The rig rows that do apply
+       are the ones the equivalence already covers - `NL`, `XV`, `UBR`, `S`, `N` - and
+       `0014` v2 is why "the counter is green" is not a gate (ADR-0006);
+    3. only then decide `exp-21b` and the graduation, and re-run the probes of
+       `0005`/`0009`/`0010` after their context moves.
 
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
@@ -558,6 +616,8 @@ instead of against a build.
 | 11 | does vkd3d view a mutable RE4 image through another format of the same class | NOT MEASURED, exp-20 (queue 10): the inventories record creates, not views |
 | 12 | is a `VkImageFormatListCreateInfo` with `viewFormatCount == 0` the same as passing no list | NOT MEASURED, and `exp-21` deliberately keeps `0014`'s answer (an empty list is forwarded, and the predicates answer it as the worst case). The spec's wording makes them equal, but the inventories cannot tell the two apart - both are `listn=0` - so this is not a question a replay answers |
 | 13 | why does the system driver give UBWC to a `MUTABLE` image with no list, where both Mesa 27 builds refuse it | ONE ROW, journal 31: `B8G8R8A8_UNORM`, `nolist=0x102000` against `0x100000`. Not in the two refusal functions (byte-identical to refs `mesa-26.2.6` and `main`), so it is either elsewhere in 26.2 or in the distribution's own patches (`mesa-vulkan-drivers-26.2.6-1.fc44.armada`, not in this repository). Chasing it would need the downstream source; it changes no verdict, and `exp-18` does not depend on it |
+| 14 | does a `R64_UINT`/`R64_SINT` view of a UBWC image work, once `STORAGE` makes it legal | NOT MEASURED, and it is the gap `exp-18 (b)` cannot write around: journal 32 measured the two 64-bit compat labels as one cell but deliberately created its images **without** `STORAGE`, while `ubwc_possible()` refuses the `R64_*` formats for their own reasons and `tu_formats.cc` grants the 64-bit image-atomic feature under `has_64b_image_atomics`. A no-list image with `STORAGE` in its usage is viewable as `R64_UINT` whatever the class rule grants. Needs a probe shape (same image, `STORAGE` usage, `R64_UINT` view, atomics in and out), not a build |
+| 15 | is the compressor actually writing compressed bytes, or only a metadata plane | NOT MEASURED by any rig here. Every UBWC claim in this repository rests on the `+0x2000` allocation signature, which journal 22.2 says is an allocation and not a compression claim. The direct detector is a fast-clear that leaves the bytes untouched in a UBWC image and does not in a linear one; it is not written, and journal 32's verdict is stated so as not to need it |
 
 ## Pitfalls (reminder)
 

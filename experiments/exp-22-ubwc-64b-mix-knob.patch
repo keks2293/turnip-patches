@@ -1,0 +1,115 @@
+exp-22: ask the compressor, not the table, about the two 64-bit UBWC compat types
+
+Experiment rig.  NOT FOR SHIP: it is a measurement hook with an environment
+switch, it has no business in a released driver, and the tree is reverted with
+`git apply -R` and explicit file names after the run (AGENTS.md: never
+git checkout/restore in ../mesa27-src).
+
+The question.  The 64-bit compatibility class answers two different labels in
+fd6_ubwc_compat_mode(): FD6_UBWC_R16G16B16A16_INT for its five 4x16 members and
+FD6_UBWC_R32G32_INT for its three 2x32 members.  That enum is read in exactly two
+places - tu6_mutable_format_list_ubwc_compatible() and the format query that
+mirrors it - never in a layout, a descriptor or a command, so it is not a hardware
+state: it is upstream's summary of what the blob was observed to do.  It is also
+the only reason a strict reading of `TODO: limit based on compatiblity class`
+(tu_image.cc) still refuses the class after the members the driver cannot lay out
+are excluded, and the class is the 650.8 MiB of the game's no-list bytes that
+journal 28 counts as the reserve.
+
+Nothing has measured the claim.  It was written down for the pairs the blob happened
+to mix, and 4x16-next-to-2x32 may simply never have been one of them.
+
+The knob.  TU_UBWC_64B_MIX=1 folds R16G16B16A16_INT into R32G32_INT and nothing
+else, so it cannot widen a pair nobody asked about: every other combination of
+labels keeps refusing each other.  With it, a list of {R16G16B16A16_UINT,
+R32G32_UINT} counts as compatible, which gives that create UBWC and keeps it tiled
+(the linear decision begins with the same call), and both families may be viewed
+legally because both are named in the list.
+
+How it is run.  One driver binary, two runs of the same test:
+
+    source scripts/env.sh
+    scripts/run-test.sh ../build/out-exp22/freedreno_icd.json results/raw/xmc-off.log
+    TU_UBWC_64B_MIX=1 scripts/run-test.sh ../build/out-exp22/freedreno_icd.json \
+        results/raw/xmc-on.log
+
+and the XMC section is compared (tests/rp6-vkd3d-sparse-test.c, probe_xmc).  The
+knob-off run is the control for the knob-on run, and both carry their own controls:
+SGL4/SGL2 keep UBWC without the knob and say whether a compressed 64-bit image
+survives the fill and the reader at all, NOL is the same content uncompressed read
+both ways.
+
+Reading the answer.  On the knob-on run, MIX42/MIX24 must show the metadata tail
+(tail=0x2000, the same signature UBR and CEIL use) or they say nothing about
+compression - a reserved plane is not a compression claim either way (journal 22.2).
+Then, with the same-family read EXACT:
+
+  both readers EXACT  -> the two labels are one cell on this chip.  The strict class
+                         rule gains the 64-bit class, and exp-18 (b) has a form that
+                         is both narrow and backed by a measurement.
+  cross read MISMATCH -> the label describes hardware.  The no-list refusal is not
+                         conservatism, and the direction closes with a measurement
+                         instead of a prediction.
+
+Neither result says anything about a base-format rule: a R64_UINT view stays legal
+on an image created with STORAGE usage whatever this shows (tu_formats.cc grants the
+feature under has_64b_image_atomics), and that is journal 31's question.
+
+Applies on top of exp-21 (the tree carries 0001..0013 + exp-14 + exp-21; 0014 is
+deliberately not applied, results/test-exp21-equiv-p14.log shows why that is the
+right base).
+--- a/src/freedreno/vulkan/tu_formats.cc
++++ b/src/freedreno/vulkan/tu_formats.cc
+@@ -71,6 +71,37 @@
+    return fd6_ubwc_compat_mode(info, vk_format_to_pipe_format(format));
+ }
+ 
++/* exp-22 (turnip-patches-en experiments): the question probe XMC asks, asked of
++ * the hardware instead of of the table.  NOT FOR SHIP, remove after the run.
++ *
++ * The 64-bit compatibility class answers two different labels here:
++ * FD6_UBWC_R16G16B16A16_INT for its five 4x16 members and FD6_UBWC_R32G32_INT for
++ * its three 2x32 members.  Nothing in the driver reads that enum except this gate
++ * and the format query that mirrors it, so the two labels are a claim about the
++ * compressor: that an image compressed as one is not readable through a view that
++ * belongs to the other.  The claim comes from the blob's tables, and a table can be
++ * incomplete for a pair that was simply never mixed.
++ *
++ * TU_UBWC_64B_MIX=1 folds the one label into the other and nothing else: every
++ * other pair keeps refusing each other, so the knob cannot widen a class that has
++ * not been asked about.  With it, a list of {R16G16B16A16_UINT, R32G32_UINT} is
++ * considered compatible, which gives it UBWC and keeps it tiled (the linear
++ * decision starts from this same call), and both families can be viewed legally
++ * because both are named.  Probe XMC then reads the same image through a view of
++ * its own label and through a view of the other one; if only the second comes back
++ * wrong, the label is real.
++ */
++static enum fd6_ubwc_compat_type
++tu6_ubwc_compat_mode_exp22(const struct fd_dev_info *info, VkFormat format)
++{
++   enum fd6_ubwc_compat_type type = tu6_ubwc_compat_mode(info, format);
++
++   if (!getenv("TU_UBWC_64B_MIX"))
++      return type;
++
++   return type == FD6_UBWC_R16G16B16A16_INT ? FD6_UBWC_R32G32_INT : type;
++}
++
+ bool
+ tu6_mutable_format_list_ubwc_compatible(const struct fd_dev_info *info,
+                                         const VkImageFormatListCreateInfo *fmt_list)
+@@ -85,12 +116,12 @@
+       return true;
+ 
+    enum fd6_ubwc_compat_type type =
+-      tu6_ubwc_compat_mode(info, fmt_list->pViewFormats[0]);
++      tu6_ubwc_compat_mode_exp22(info, fmt_list->pViewFormats[0]);
+    if (type == FD6_UBWC_UNKNOWN_COMPAT)
+       return false;
+ 
+    for (uint32_t i = 1; i < fmt_list->viewFormatCount; i++) {
+-      if (tu6_ubwc_compat_mode(info, fmt_list->pViewFormats[i]) != type)
++      if (tu6_ubwc_compat_mode_exp22(info, fmt_list->pViewFormats[i]) != type)
+          return false;
+    }
+ 

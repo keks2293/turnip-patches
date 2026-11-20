@@ -34,7 +34,7 @@ here), the verdict is an ADR in `docs/decisions/`, the measurement is a journal 
 
 ## Experiments (`experiments/`, never for commit)
 
-`exp-1`..`exp-21b` (there is no `exp-12`; `exp-18`, `exp-19` and `exp-20` are queued
+`exp-1`..`exp-22` (there is no `exp-12`; `exp-18`, `exp-19` and `exp-20` are queued
 and have no file - the queue owns those numbers), full discussion in
 `experiments/README.md` and in the journal entry named below.
 
@@ -56,19 +56,21 @@ and have no file - the queue owns those numbers), full discussion in
 | 15 | 16 `TU_B2I_SYNC` modes | mode 7 -> 0013 | 21.11 |
 | 16 | stock Mesa 27 + one line `ubwc_all_formats_compatible` in `a7xx_gen2` | the prop alone breaks `MUTABLE+SPARSE` creates: 73 EXACT against 76 on stock | 26 |
 | 17 | is `{16,4}` in `fdl6_get_ubwc_blockwidth()` the cause of the 8bpp corruption | no: {16,4}/{32,4}/{64,4} corrupt identically, {16,8}/{32,8}/{8,8} fault the GPU; a diagnostic override, never part of a shipped stack | 22.4 |
-| 21 | can `0014`'s rule be written once: one function decides the mutable layout, the create calls it, the class reaches the layout predicates only | candidate that replaces `0014` (graduation number `0016`); applies clean on `0001..0013`, **NOT BUILT, NOT MEASURED** - the gate is an equivalence run against `imginv5`, not a new number | 21.12 |
+| 21 | can `0014`'s rule be written once: one function decides the mutable layout, the create calls it, the class reaches the layout predicates only | candidate that replaces `0014` (graduation number `0016`); applies clean on `0001..0013`; **built** 21.11 (`build/out-exp21`, `d49d094a8d6e…`) and **measured indistinguishable** from the released stack on every probe of that run - `results/test-exp21-equiv-p14.log`; the game inventory column is what is left of its gate | 21.12, 33 |
 | 21b | with the create path no longer comparing predicates, do the three predicates (`0004`'s two and `0005`'s) go back to `static` | tail of 21, kept as its own gate because it lands on the definitions `0005`/`0010` wrote; **NOT BUILT** | 21.12 |
+| 22 | do `FD6_UBWC_R16G16B16A16_INT` and `FD6_UBWC_R32G32_INT` describe one cell of the compressor on this chip (`TU_UBWC_64B_MIX`, folds that one pair and nothing else) | one cell in the paths probed: with the knob on, the mixed `{R16G16B16A16_UINT, R32G32_UINT}` create carries the metadata tail and reads `0/262144` wrong through a view of either family; the knob moves two lines of a 621-line log. Reverted from the tree after the run | 32 |
 
 ## Tools
 
 | file | role |
 |---|---|
-| `tests/rp6-vkd3d-sparse-test.c` | the main test: probes `U`/`T`/`S`/`V`/`N`/`CEIL`/`NL`/`X`/`XV`/`Y` plus the 94-row matrix. `CEIL` measures four images per row, the fourth being a `MUTABLE` image with no format list (journal 31) |
+| `tests/rp6-vkd3d-sparse-test.c` | the main test: probes `U`/`T`/`S`/`V`/`N`/`CEIL`/`NL`/`X`/`XV`/`XMC`/`Y` plus the 94-row matrix. `CEIL` measures four images per row, the fourth being a `MUTABLE` image with no format list (journal 31). `XMC` is the only probe that fills and reads: a 64-bit image, one view per UBWC compat family, plus a `DETECT` shape whose fill is broken on purpose so that "0 wrong" stays a statement (journal 32.2) |
+| `tests/rp6-vkd3d-sparse-xmc_{u32x4,u32g32}.glsl` -> `tests/rp6-vkd3d-sparse-xmc_spv.h` (`scripts/gen-xmc-spv.sh`) | the two integer readers of probe `XMC`: the same texel fetched as four 16-bit channels and as two 32-bit words, `usampler2D` so that no `[0,1]` decode sits between memory and answer. `glslangValidator` needs `-S comp` for a `.glsl` file |
 | `tests/tp8bpp.c` + `tests/tp_write.comp` (`scripts/gen-tp-write-spv.sh`) | standalone 8bpp+UBWC probe: `Z` (NV12 Y), `AA` (`imageStore` writer), `AB` (2D copier), each with a LINEAR control and a dump of the whole allocation. Build: `podman run --rm -v …/tests:/work:Z -v …/build:/out:Z localhost/mesa-build-fedora44-wsi-glslang-vulkan bash -c 'cd /work && gcc -O2 -Wall -o /out/tp8bpp tp8bpp.c -lvulkan'`; size via `-DW=… -DH=…`. Read the header: the tool prints the number of WRONG elements |
 | `tests/repro-first-fill.c` | minimal repro of the "~2 % on the first fill" effect |
 | `tests/vk-fmt-classes.json`, `scripts/gen-vk-fmt-classes.py` | the Vulkan texel compatibility classes, generated from `vk.xml` (provenance inside the file): which view formats are legal for a base format, with and without a list - the table that decides both `0014`'s rule and journal 24.4 |
 | `scripts/gen-journal-index.py` | regenerates `docs/analysis.md` and `docs/journal/manifest.json` from the journal entries |
-| `scripts/fmt-list-gate-check.py` | model of the gate (`--vkd3d`, `--no-list`, `--exp-9`, `--blockers`) |
+| `scripts/fmt-list-gate-check.py` | model of the gate (`--vkd3d`, `--no-list`, `--exp-9`, `--blockers`). `--strict-class` is the exp-18 model: the three UBWC predicates ported to Python, asked of all 23 Vulkan classes, with `fold_64()` mirroring the `exp-22` knob so the measured pair and nothing else can widen a class. A model, never a measurement (its header says so) |
 | `scripts/imginv-stats.py`, `scripts/imginv-classes.py` | inventory counters (mutable from `flags & 0x8`, not from the `mutable=` field) |
 | `scripts/ubwc-dump-analyze.py` | allocation dump analysis: metadata-plane shape, written chunks, how many metadata bytes were written (`--meta`, `--pitch`) |
 | `scripts/sweep-8bpp-grid.sh` | runs `tp8bpp` over metadata grids through `TU_8BPP_UBWC` (works only on the exp-17 build) |
@@ -95,6 +97,9 @@ and have no file - the queue owns those numbers), full discussion in
 | `results/test-CEIL-*.log` | UBWC ceilings, measured with three images (journal 21.6.2) |
 | `results/test-CEIL-nolist-{p14,mesa27base,mesa26system}.log` | the same probe with a fourth image - a `MUTABLE` image with no format list - on the ship stack, the bare Mesa 27 base and the system driver: the 64-bit class has a ceiling, and nothing reaches it without a list on either Mesa 27 build (journal 31) |
 | `results/test-V-*.log` | tiling of a BGRA8 UAV |
+| `results/model-strict-class-nolist.txt` | what a strict class rule for a no-list `MUTABLE` image would grant on a7xx_gen2, class by class, in four blocks: as it reads, on the Mesa 27 base, with the members the format table cannot lay out excluded, and with the measured 64-bit pair folded. Generated by `scripts/fmt-list-gate-check.py --strict-class`; a model, no GPU involved (journal 32.1) |
+| `results/test-xmc-64bit-compat.log` | the two 64-bit UBWC compat labels on A740: three runs of one binary (released driver, the `exp-22` tree with the knob off, the same `.so` with `TU_UBWC_64B_MIX=1`), the whole-log diff, the `XMC` sections verbatim, the `SGL`/`NOL`/`DETECT` controls. Both families read `0/262144` wrong through a view of the other (journal 32.3) |
+| `results/test-exp21-equiv-p14.log` | `exp-21` against the released stack: one test binary, two drivers, **full** logs compared, 0 differing lines of 598, verdict-word counts, the sections listed, and the header naming what the equality does not cover (journal 33) |
 | `results/test-uq-quirk-{off,on}.log`, `results/test-uq-after-removal.log` | the `ubwc_coherency_quirk` on gen2: not reproducible, and the probe's removal verified |
 | `results/test-p14-{base,ubwc-allformats}.log` | A/B of the prop on the ship driver through `TU_FORCE_PROPS` |
 | `results/test-gen2flag-table.log`, `results/test-gen2flag-minstack.log` | the prop in the gen2 table (same behaviour as the env override); the reduced stack (two new FAILs, so no patch is freed) |
@@ -149,3 +154,6 @@ not a source.
 | R16 UBWC memreq | `0x80000 -> 0x82000` | `results/test-CEIL-*.log` |
 | UBWC share of the RE4 texture pool | 48.6 % (ship + 0014) / 48.8 % (stock + prop) | `results/imginv-3variants.txt`, journal 27 |
 | UBWC reserve if the class rule reached the UBWC predicates | 4595.7 MiB, 56.8 % | journal 28 |
+| classes a strict class rule grants, on a7xx_gen2 | 0 of 23 as it reads; 1 of 23 (128-bit) excluding members with no `fd6_format_table.c` row; 2 of 23 with the measured 64-bit fold | `results/model-strict-class-nolist.txt`, journal 32.1 |
+| cross-label read of a 64-bit UBWC image (4x16 create, 2x32 view and the reverse) | 0 wrong texels of 262144, both directions | `results/test-xmc-64bit-compat.log`, journal 32.3 |
+| `exp-21` against the shipped stack, full default run | 0 differing lines of 598 | `results/test-exp21-equiv-p14.log`, journal 33 |

@@ -64,16 +64,25 @@ GEN2_PROPS = {"ubwc_unorm_snorm_int_compatible": True, "ubwc_all_formats_compati
 SHAPES_IN_BLOB = {(2, 8), (4, 8), (2, 16), (4, 16), (1, 32), (2, 32), (4, 32)}
 
 # Formats for which UBWC is impossible regardless of the gate (tu6_ubwc_possible).
+# The refusals of ubwc_possible() that hold for every image: block-compressed and
+# multi-planar formats, plus the three named formats it calls out.  R64G64 is NOT
+# in this list: ubwc_possible() says nothing about it, it has no row in
+# fd6_format_table.c, which is a different fact and printed as one.
 NO_UBWC_ALWAYS = ("BC", "ASTC", "ETC2", "EAC", "PVRTC", "G8_B8R8_2PLANE",
                   "G8_B8R8A8_2PLANE", "G16_B16R16_2PLANE_420", "G12B12G12B12_2PLANE_420",
                   "G10X6", "G16_B16R16_2PLANE_422", "G12B12G12B12_2PLANE_422",
-                  "G24X8", "G24Y8", "R64_UINT", "R64_SINT", "R64G64", "E5B9G9R9_UFLOAT_PACK32",
-                  "S8_UINT")
+                  "G24X8", "G24Y8", "E5B9G9R9_UFLOAT_PACK32", "S8_UINT")
+
+# The last two returns false of ubwc_possible() (tu_image.cc:424), verbatim:
+#     if (format == VK_FORMAT_R64_UINT || format == VK_FORMAT_R64_SINT)
+#         return false;
+# Nothing else 64-bit is refused there.
+NO_UBWC_BY_FORMAT = ("R64_UINT", "R64_SINT")
 
 
 def is_compressed(f):
     """Block compression or planar video: UBWC is impossible for them per
-    tu6_ubwc_possible() regardless of what the gate decided."""
+    ubwc_possible() regardless of what the gate decided."""
     return norm(f).startswith(NO_UBWC_ALWAYS)
 
 
@@ -92,8 +101,11 @@ def why_unknown(f, props):
     if g in ("Z32_FLOAT", "Z24_UNORM_S8_UINT", "D24_UNORM_S8_UINT", "D32_SFLOAT",
              "X8_D24_UNORM_PACK32", "D16_UNORM"):
         return "depth: separate clear semantics"
-    if f in ("R64_UINT", "R64_SINT") or g.startswith("R64G64"):
-        return "R64: UBWC forbidden"
+    if f in NO_UBWC_BY_FORMAT:
+        return "tu_image.cc:424 refuses this format for UBWC"
+    if g.startswith("R64G64") or g.startswith("R64_"):
+        return ("no case in fd6_ubwc_compat_mode(), and no row in "
+                "fd6_format_table.c either")
     if g.startswith("R16_UINT") or g.startswith("R16_SINT") or g.startswith("R16_SNORM") \
             or g == "R16_UNORM":
         return "single-channel 16 bit: no row in blob"
@@ -757,6 +769,180 @@ def report_no_list(data, ctx, inv, title, **kw):
     return gained
 
 
+def ubwc_possible_member(vk, props):
+    """ubwc_possible() (tu_image.cc) for one format, the refusals that do not
+    depend on the create.
+
+    Only the per-format half is modelled: sparse residency, 3D-with-mips, storage
+    without supports_uav_ubwc, HOST_TRANSFER and the depth cases are properties of
+    the image, not of a view format, and a class rule is asked about view formats.
+    Returns (ok, reason).
+    """
+    if is_compressed(vk):
+        return False, why_unknown(vk, props)
+    if vk == "S8_UINT":
+        return False, "S8_UINT: separate stencil has no UBWC-enable bit"
+    if vk.endswith("_SNORM") and not props["ubwc_unorm_snorm_int_compatible"]:
+        return False, "SNORM: unorm/snorm not compatible before a740"
+    info_bits = re.fullmatch(r"R8(?:_[A-Z0-9]+)?", norm(vk))
+    if info_bits and not props["has_8bpp_ubwc"]:
+        return False, "8 bits per block: has_8bpp_ubwc=False"
+    if norm(vk) in NO_UBWC_BY_FORMAT:
+        return False, ("upstream's ubwc_possible() refuses it for UBWC "
+                       "(tu_image.cc:424, the only 64-bit formats it names)")
+    return True, ""
+
+
+def laid_out_formats(path):
+    """Pipe formats that fd6_format_table.c gives a texture format to.
+
+    One FMT(pipe, vtxfmt, texfmt, rbfmt, swapfmt) row per format, spelled by the
+    macros at the top of the file: only `V__(` has texfmt == NONE.  A format with no
+    such row has no GPU texture format on this generation, so the driver cannot
+    build a tiled image or a sampled view in it - with UBWC or without it.
+    """
+    out = set()
+    for line in open(path):
+        m = re.match(r"\s*(FMT|TC|VTC|_TC|_T_|VT_)\(([^)]*)\)", line)
+        if m:
+            out.add(m.group(2).split(",")[0].strip())
+    return out
+
+
+def fold_64(mode):
+    """The one fold the XMC probe measured (results/test-xmc-64bit-compat.log):
+    FD6_UBWC_R16G16B16A16_INT and FD6_UBWC_R32G32_INT behaved as one cell of the
+    compressor on A740.  Mirrors the knob of experiments/exp-22-*, which folds the
+    one label into the other and nothing else, so a class whose members disagree in
+    any other way is still refused here.  A model of one measured pair, not a rule.
+    """
+    return "R32G32_INT" if mode == "R16G16B16A16_INT" else mode
+
+
+def strict_class_ubwc(data, base_vk, props, patch_0006=False, patch_0010=False,
+                      patch_0011=False, unlayable=(), exclude_unlayable=False,
+                      fold64=False):
+    """What exp-18 (b) would answer for a MUTABLE image created with NO format list.
+
+    An image without a list may be viewed as any member of its class, so the
+    permission can only be as wide as the class: every member turnip can build a
+    view for (pipe != NONE) must pass ubwc_possible() AND want the same compress.
+    This is the upstream `TODO: limit based on compatiblity class`, read strictly -
+    a member that has no UBWC at all refuses the class, it is not skipped.  Members
+    with no pipe format are skipped because the view create cannot succeed for them.
+
+    unlayable - the pipe formats fd6_format_table.c gives no texture format to
+    (laid_out_formats()).  A member in it is reported either way, because without a
+    row the driver has no GPU format for it and a view in that format is broken with
+    UBWC AND without it:
+
+      exclude_unlayable=False  it still refuses the class, and the report prints it
+                               as a note - this is the rule as it reads today;
+      exclude_unlayable=True   it is left out of the decision, like a member with no
+                               pipe format - the gap is upstream's and pre-existing,
+                               so it is not a risk this rule would add.
+
+    Which members that is is a fact about the table, printed by the report, never
+    assumed.  fold64 applies fold_64() to the compat modes, which is the question
+    the XMC probe answered rather than a rule this script endorses.
+    Returns (granted, [reasons], [members with no table row]).
+    """
+    members = class_names(spec_class_of(data, base_vk), data)
+    base = data["formats"][base_vk]["pipe"]
+    if base is None:
+        return False, ["base has no pipe format"], []
+    if base not in members:
+        members = [base] + members
+    dropped = sorted(m for m in members if m in unlayable)
+    if exclude_unlayable:
+        members = [m for m in members if m not in unlayable] or members
+
+    reasons = []
+    for m in members:
+        ok, why = ubwc_possible_member(m, props)
+        if not ok:
+            reasons.append(f"{m}: {why}")
+    modes = {}
+    for m in members:
+        mode = fd6_ubwc_compat_mode(m, props, patch_0006, patch_0010, patch_0011)
+        modes.setdefault(fold_64(mode) if fold64 else mode, []).append(m)
+    if UNKNOWN in modes:
+        reasons.append(f"no compat row: {', '.join(sorted(modes[UNKNOWN]))}")
+    if len(modes) > 1:
+        reasons.append("the class wants "
+                       + " + ".join(f"{m}({len(v)})" for m, v in sorted(modes.items())))
+    return not reasons, reasons, dropped
+
+
+def report_strict_class(data, props, label="the shipped stack (0006 + 0011 + 0012)",
+                        patches=(True, True, True), unlayable=(),
+                        exclude_unlayable=False, fold64=False):
+    """Which Vulkan classes a strict class rule would grant UBWC to, all of them."""
+    excl = "  Members with no pipe format are skipped: the view create fails for " \
+           "them anyway."
+    if exclude_unlayable:
+        excl += ("\n  Members with no texture format in fd6_format_table.c are"
+                 " skipped too: the driver cannot lay them out at all, so a view in")
+        excl += "\n  them is broken before this rule, with UBWC and without it."
+    elif unlayable:
+        excl += ("\n  Members with no texture format in fd6_format_table.c are named"
+                 " in a note and still refuse the class.")
+    if fold64:
+        excl += ("\n  The compat modes of FD6_UBWC_R16G16B16A16_INT and"
+                 " FD6_UBWC_R32G32_INT are folded into one, because the XMC probe")
+        excl += ("  measured that pair on A740 (results/test-xmc-64bit-compat.log) and"
+                 " the fold is what the knob of experiments/exp-22 does.  No other")
+        excl += "  pair of labels is folded, so no other class can be widened here."
+    print(f"### The strict class rule for a no-list MUTABLE image - {label}\n")
+    print("A class is granted only if every member with a pipe format passes\n"
+          "ubwc_possible() and agrees on one compat mode." + excl + "\n")
+    granted, refused = [], []
+    for cls in sorted(data["classes"]):
+        # one base per class is enough: the rule asks about the class, not the base
+        bases = [vk for vk, i in data["formats"].items()
+                 if i["class"] == cls and i["pipe"] is not None
+                 and i["kind"] not in ("depth-stencil", "multi-planar")]
+        if not bases:
+            continue
+        ok, reasons, dropped = strict_class_ubwc(data, bases[0], props, *patches,
+                                                 unlayable=unlayable,
+                                                 exclude_unlayable=exclude_unlayable,
+                                                 fold64=fold64)
+        (granted if ok else refused).append((cls, bases[0], reasons, len(bases), dropped))
+    note = "skipped as unlayable" if exclude_unlayable else "no table row"
+    for cls, base, _, n, dropped in granted:
+        print(f"  GRANTED  {cls:<14} e.g. {base:<22} {n} members"
+              + (f"\n{'':>24}{note}: {', '.join(dropped)}" if dropped else ""))
+    for cls, base, reasons, n, dropped in refused:
+        print(f"  refused  {cls:<14} e.g. {base:<22} {n:>2} members"
+              + "".join(f"\n{'':>24}{r}" for r in reasons[:3])
+              + (f"\n{'':>24}{note}: {', '.join(dropped)}" if dropped else ""))
+    print(f"\n  {len(granted)} of {len(granted) + len(refused)} classes granted")
+    return granted, refused
+
+
+GAME_64 = ["R16G16B16A16_SFLOAT", "R16G16B16A16_UNORM", "R16G16B16A16_SNORM",
+           "R32G32_SFLOAT"]
+
+
+def report_game_classes(data, props, unlayable=(), exclude_unlayable=False,
+                        fold64=False):
+    """The four formats journal 28 counts as the game's no-list 64-bit volume."""
+    print("\n### The game's 64-bit formats under the same rule\n")
+    print("journal 28 counts 650.8 MiB of these four created MUTABLE without a list.\n")
+    note = "skipped as unlayable" if exclude_unlayable else "no table row"
+    for vk in GAME_64:
+        for label, args in (("Mesa 27 base", (False, False, False)),
+                            ("shipped stack", (True, True, True))):
+            ok, reasons, dropped = strict_class_ubwc(data, vk, props, *args,
+                                                     unlayable=unlayable,
+                                                     exclude_unlayable=exclude_unlayable,
+                                                     fold64=fold64)
+            print(f"  {vk:<22} {label:12} {'GRANTED' if ok else 'refused'}"
+                  + "".join(f"\n{'':>37}{r}" for r in reasons[:3])
+                  + (f"\n{'':>37}{note}: {', '.join(dropped)}" if dropped else ""))
+        print()
+
 
 def load_vkd3d_classes(path):
     src = open(path).read()
@@ -955,6 +1141,10 @@ def main():
     ap.add_argument("--stack", action="store_true",
                     help="layout of the working stack and analysis of the remaining "
                          "tiled, no-UBWC classes")
+    ap.add_argument("--strict-class", action="store_true",
+                    help="exp-18 (b): which Vulkan classes a strict "
+                         "`limit based on compatiblity class` rule would grant UBWC to "
+                         "for a MUTABLE image created without a format list")
     args = ap.parse_args()
 
     if not os.path.exists(args.table) and os.path.exists(MESA_TABLE):
@@ -970,7 +1160,9 @@ def main():
               f"exp-10={'on' if args.exp_10 else 'off'}")
     print()
 
-    if os.path.exists(args.classes):
+    # --strict-class answers one question about the no-list rule and owns one
+    # artifact; the vkd3d and zink tables are the same tool's other report.
+    if os.path.exists(args.classes) and not args.strict_class:
         classes = load_vkd3d_classes(args.classes)
         report_vkd3d(swap, classes, GEN2_PROPS, args.exp_9, args.exp_10)
         if args.exp_0011:
@@ -1002,6 +1194,44 @@ def main():
                            compressed_bail=not args.nl_relaxed,
                            drop_compressed=args.nl_relaxed,
                            exp_9=args.nl_exp9, r8g8_r16_ok=args.nl_r8g8)
+    if args.strict_class:
+        if not os.path.exists(args.vk_classes):
+            sys.exit(f"no {args.vk_classes}: generate it with scripts/gen-vk-fmt-classes.py")
+        data = load_vk_classes(args.vk_classes)
+        # what the format table gives no texture format to: the honest "excluded" set
+        laid = laid_out_formats(args.table)
+        unlayable = {info["pipe"] for info in data["formats"].values()
+                     if info["pipe"] is not None and info["pipe"] not in laid}
+        print(f"fd6_format_table.c gives a texture format to {len(laid)} pipe "
+              f"formats; {len(unlayable)} of the formats in vk-fmt-classes.json have "
+              f"none.\n")
+        print("-" * 78)
+        report_strict_class(data, GEN2_PROPS,
+                            "the shipped stack (0006 + 0011 + 0012), every member "
+                            "counted", unlayable=unlayable)
+        report_game_classes(data, GEN2_PROPS, unlayable=unlayable)
+        print("-" * 78)
+        report_strict_class(data, GEN2_PROPS,
+                            "the Mesa 27 base, rows as upstream wrote them",
+                            patches=(False, False, False), unlayable=unlayable)
+        print("-" * 78)
+        report_strict_class(data, GEN2_PROPS,
+                            "the shipped stack, members the driver cannot lay out "
+                            "excluded", unlayable=unlayable, exclude_unlayable=True)
+        report_game_classes(data, GEN2_PROPS, unlayable=unlayable,
+                            exclude_unlayable=True)
+        print("-" * 78)
+        report_strict_class(data, GEN2_PROPS,
+                            "the shipped stack, unlayable members excluded and the "
+                            "64-bit pair folded as the XMC probe measured it",
+                            unlayable=unlayable, exclude_unlayable=True, fold64=True)
+        report_game_classes(data, GEN2_PROPS, unlayable=unlayable,
+                            exclude_unlayable=True, fold64=True)
+        # the strict-class report is a claim of its own and results/model-strict-class-
+        # nolist.txt cites it by that shape: stop here instead of appending the
+        # vkd3d/zink tables, which belong to journals 16 and 21.  Without this the
+        # curated file carried three unrelated reports.
+        return
     if args.stack:
         report_stack(swap, classes, GEN2_PROPS, patch_0011=args.exp_0011)
     report_zink(swap, GEN2_PROPS)
