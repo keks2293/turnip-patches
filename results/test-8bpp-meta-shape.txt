@@ -1,0 +1,79 @@
+# Плоскости raw-выделения R8_UNORM и NV12 с UBWC (findings §4.10, четвёртый проход).
+#
+# Вход: дампы всего выделения из tests/tp8bpp.c (`.so` шип-стека
+# 4c3cdb2100823b2f… и 5395a4f3f2c6fcce… с exp-17 и TU_8BPP_UBWC=keep дали
+# одинаковые числа), шаблон содержимого v = (x*31 + y*17 + 7) & 0xff.
+# Разрез «метаданные в начале, данные после» — как их раскладывает
+# fd6_get_plane_layouts() (явно: «Place the UBWC slices before the uncompressed
+# slices, because the kernel expects UBWC to be at the start of the buffer»).
+# Первый вариант проб (Z/AA в rp6-vkd3d-sparse-test и первая версия tp8bpp.c)
+# резал выделение по размеру linear-образа от начала, то есть путал плоскости
+# местами; числа ниже получены после правки.
+#
+# Регенерация (дампы во временном каталоге, в git их нет):
+#   VK_DRIVER_FILES=build/out/freedreno_icd.json FD_DEV_FEATURES=has_8bpp_ubwc=1 \
+#     build/tp8bpp /tmp/opencode/final
+#   python3 scripts/ubwc-dump-analyze.py /tmp/opencode/final_AA_tiled.bin
+#   python3 scripts/ubwc-dump-analyze.py /tmp/opencode/final_AB_tiled.bin
+#   python3 scripts/ubwc-dump-analyze.py /tmp/opencode/final_Z_tiled.bin --meta 0x2000
+#
+$ python3 scripts/ubwc-dump-analyze.py /tmp/opencode/final_AA_tiled.bin
+/tmp/opencode/final_AA_tiled.bin: 270336 B = meta 8192 + data 262144
+  meta nonzero 1024/8192 (12.5 %)
+  meta nonzero at 1024 offsets: rows 0..51 of 128, cols 0..63 of 64, values [(31, 1024)]
+  written as 4 chunk(s): ['0x0+0x100', '0x400+0x100', '0x800+0x100', '0xc00+0x100']
+  stride between chunk starts: ['0x400', '0x400', '0x400']
+    grid {32,8}: 1024 cells would be written for a 512x512 image   <- equals the measured count
+    grid {16,8}: 2048 cells would be written for a 512x512 image
+    grid {16,4}: 4096 cells would be written for a 512x512 image
+    grid {8,4}: 8192 cells would be written for a 512x512 image
+    grid {64,4}: 1024 cells would be written for a 512x512 image   <- equals the measured count
+  data nonzero 261120/262144 (99.6 %), matches the linear pattern 1056 (0.40 %)
+  contiguous 32-byte x-runs of the pattern found in the data plane: 0/8192
+  VERDICT: the dump cannot say whether the content was written - the plane is not
+  stored in a byte order this tool knows
+
+$ python3 scripts/ubwc-dump-analyze.py /tmp/opencode/final_AB_tiled.bin
+/tmp/opencode/final_AB_tiled.bin: 270336 B = meta 8192 + data 262144
+  meta nonzero 0/8192 (0.0 %)
+  data nonzero 261120/262144 (99.6 %), matches the linear pattern 1056 (0.40 %)
+  contiguous 32-byte x-runs of the pattern found in the data plane: 0/8192
+  # плоскость данных при этом побайтово совпадает с дампом AA (0 различающихся
+  # байт из 262144): либо 2D-копир не пишет ни meta, ни данные (плоскость
+  # осталась от предыдущего образа из этого же пула BO), либо оба писателя
+  # пишут одно и то же, а метаданные пишет только 3D-путь
+
+$ python3 scripts/ubwc-dump-analyze.py /tmp/opencode/final_Z_tiled.bin --meta 0x2000
+/tmp/opencode/final_Z_tiled.bin: 401408 B = meta 8192 + data 262144
+  meta nonzero 3569/8192 (43.6 %)
+  meta nonzero at 3569 offsets: rows 0..126 of 128, cols 0..63 of 64, values [(27, 992), (4, 156), (125, 152), (247, 108)]
+  written as 225 chunk(s): ['0x0+0x100', '0x400+0x100', '0x800+0x100', '0xc00+0x100', '0x1000+0x4', '0x1006+0x10'] ...
+  stride between chunk starts: ['0x400', '0x400', '0x400', '0x400']
+    grid {32,8}: 1024 cells would be written for a 512x512 image
+  data nonzero 159919/262144 (61.0 %), matches the linear pattern 1019 (0.39 %)
+  contiguous 32-byte x-runs of the pattern found in the data plane: 0/8192
+
+# Что из этого следует (и что нет).
+# 1. Объём записанной меты у R8 не зависит ни от резерва драйвера, ни от сетки из
+#    окружения: 1024 байта при метаплоскости 8 КБ и при 16 КБ (exp-17,
+#    results/test-8bpp-grid-sweep.log), 256 байт на образе 256x256. Везде 1 байт
+#    на 256 текселей — ровно столько ячеек даёт сетка {32,8}, по которой живёт
+#    Y-плоскость NV12, тогда как драйвер под plain-8bpp резервирует и обходит
+#    плоскость по {16,4} (вчетверо больше ячеек).
+# 2. Первые 4 КБ мета-резерва у рабочего NV12 выглядят так же: четыре куска по
+#    256 байт с шагом 1 КБ. Отличие в том, что у NV12 выше занято ещё ~2.5 КБ и
+#    значения разные (27, 4, 125, 247…), а у R8 — ровно 1024 байта со значением
+#    0x1f и больше ничего.
+# 3. Это свидетельство про объём, а не про адрес: часть резерва меты —
+#    выравнивающий зазор, где может лежать мусор от предыдущего владельца BO,
+#    поэтому «читатель натыкается на нетронутые байты и трактует их как
+#    сжатый в clear colour блок» остаётся гипотезой, а не выводом из дампа.
+# 4. Форма записанных кусков (четыре куска по 256 байт с шагом 1 КБ) не
+#    описывается ни одной из разбираемых сеток; чем именно железо выбирает
+#    геометрию для FMT6_8_UNORM, дамп не говорит. Перебор сетки из окружения
+#    (exp-17) это не проверяет: с blockheight >= 8 GPU падает, а с
+#    blockheight <= 4 меняется только размер резерва, портится ровно то же.
+# 5. Побайтово совпадающие плоскости данных у AA и AB означают только равенство
+#    содержимого (оба писателя заливают один и тот же узор). Вывод про то, что
+#    2D-копир не пишет мету, держится на нулевой мете и нулевом чтении пробы AB
+#    с LINEAR-контролем, а не на дампе.

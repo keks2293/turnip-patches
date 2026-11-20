@@ -180,6 +180,7 @@
  * formats >= 2 - that is the only case where it sets MUTABLE_FORMAT_BIT). */
 #include "vkd3d-fmt-classes.h"
 #include "tp_readback_spv.h"
+#include "tp_write_spv.h"
 
 static const uint32_t cast_rgba_spv[] = {
     0x07230203, 0x00010000, 0x000d000b, 0x00000044, 0x00000000, 0x00020011, 0x00000001, 0x0006000b,
@@ -2383,6 +2384,477 @@ out:
         vkDestroyImage(dev, img, NULL);
     if (img_lin)
         vkDestroyImage(dev, img_lin, NULL);
+}
+
+/* Z. Is cpp=1 UBWC alive on this chip at all?
+ *
+ * The NV12 Y plane is the only 8bpp UBWC the driver enables without
+ * has_8bpp_ubwc: ubwc_possible() rejects 8bpp only when plane_count == 1
+ * (tu_image.cc:366-369), and the mutable NV12 branch that forces linear does not
+ * fire for a non-mutable image. So a plain NV12 image is a direct test of the
+ * hardware + driver path that R8 (probe Y) fails on: if plane 0 survives a
+ * b2i -> i2b round trip here, then the chip does compress 8bpp and the R8 zeros
+ * are a parameter problem (grid/alignment/tile mode/fast-clear), not a missing
+ * feature. If it also loses the content, the failure is in the shared cpp=1
+ * path and both 8bpp cases stay off.
+ *
+ * Fill and readback are in separate submits (the lesson of 5.11/exp-15: one
+ * submit can hide a CCU-clean bug), and the TILING_LINEAR image is the control
+ * for the copy path itself - without it "zeros" could be a broken test.
+ *
+ * memreq is only a heuristic for "UBWC is on": the linear plane total is
+ * w*h + (w/2)*(h/2)*2, and metadata can only add to it. The comparison is
+ * printed, the verdict does not depend on it. */
+static void probe_nv12_y8_ubwc(VkDevice dev, VkQueue q, VkCommandPool pool, const char *tag,
+                               VkImageTiling tiling)
+{
+    const uint32_t w = 512, h = 512;
+    const VkDeviceSize p0 = (VkDeviceSize)w * h;
+    const VkDeviceSize lin_total = p0 + (VkDeviceSize)(w / 2) * (h / 2) * 2;
+
+    VkImageCreateInfo iic = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = VK_FORMAT_G8_B8R8_2PLANE_420_UNORM,
+        .extent = { w, h, 1 },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = tiling,
+        .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        /* no VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT: the NV12 branch would force
+         * linear, and this is exactly the path where cpp=1 keeps UBWC */
+    };
+    VkImage img = VK_NULL_HANDLE;
+    VkResult rc = vkCreateImage(dev, &iic, NULL, &img);
+    if (rc != VK_SUCCESS) {
+        printf("Z[%s] NV12 create failed: %s\n", tag, vkerr(rc));
+        return;
+    }
+
+    VkMemoryRequirements mr;
+    vkGetImageMemoryRequirements(dev, img, &mr);
+    printf("Z[%s] NV12 512x512 memreq=0x%llx, linear planes=0x%llx%s\n", tag,
+           (unsigned long long)mr.size, (unsigned long long)lin_total,
+           mr.size > lin_total ? " -> metadata present (UBWC likely on)" : " -> no metadata");
+
+    VkDeviceMemory im = VK_NULL_HANDLE;
+    if (alloc_mem(dev, mr.size, 0, &im) != VK_SUCCESS ||
+        vkBindImageMemory(dev, img, im, 0) != VK_SUCCESS) {
+        printf("Z[%s] image memory bind failed\n", tag);
+        vkDestroyImage(dev, img, NULL);
+        return;
+    }
+
+    VkBufferCreateInfo bci = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, NULL, 0, 2 * p0,
+                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                               VK_SHARING_MODE_EXCLUSIVE, 0, NULL };
+    VkBuffer buf = VK_NULL_HANDLE;
+    if (vkCreateBuffer(dev, &bci, NULL, &buf) != VK_SUCCESS) {
+        printf("Z[%s] staging buffer create failed\n", tag);
+        vkDestroyImage(dev, img, NULL);
+        vkFreeMemory(dev, im, NULL);
+        return;
+    }
+    VkMemoryRequirements br;
+    vkGetBufferMemoryRequirements(dev, buf, &br);
+    VkDeviceMemory bm = VK_NULL_HANDLE;
+    if (alloc_mem(dev, br.size, 0, &bm) != VK_SUCCESS ||
+        vkBindBufferMemory(dev, buf, bm, 0) != VK_SUCCESS) {
+        printf("Z[%s] staging memory bind failed\n", tag);
+        vkDestroyBuffer(dev, buf, NULL);
+        vkDestroyImage(dev, img, NULL);
+        vkFreeMemory(dev, im, NULL);
+        return;
+    }
+    unsigned char *host = NULL;
+    chk(vkMapMemory(dev, bm, 0, br.size, 0, (void **)&host), "Z: map staging");
+    /* the pattern is not a constant: a wrong-location read cannot pass by luck */
+    for (uint32_t y = 0; y < h; y++)
+        for (uint32_t x = 0; x < w; x++)
+            host[(size_t)y * w + x] = (unsigned char)((x ^ y) & 0xff);
+    for (VkDeviceSize i = 0; i < p0; i++)
+        host[p0 + i] = 0xCC;
+    vkUnmapMemory(dev, bm);
+
+    VkBufferImageCopy cp = { 0, 0, 0, { VK_IMAGE_ASPECT_PLANE_0_BIT, 0, 0, 1 }, { 0, 0, 0 },
+                             { w, h, 1 } };
+    VkImageMemoryBarrier b_to_dst = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, NULL, 0,
+                                      VK_ACCESS_TRANSFER_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+                                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 0, img,
+                                      { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 2 } };
+    VkImageMemoryBarrier b_to_src = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, NULL,
+                                      VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+                                      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                      VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0, 0, img,
+                                      { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 2 } };
+
+    for (int pass = 0; pass < 2; pass++) {
+        VkCommandBuffer cb = VK_NULL_HANDLE;
+        VkCommandBufferAllocateInfo cai = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, NULL,
+                                            pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
+        vkAllocateCommandBuffers(dev, &cai, &cb);
+        VkCommandBufferBeginInfo bbi = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, NULL,
+                                         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL };
+        vkBeginCommandBuffer(cb, &bbi);
+        VkBufferImageCopy rd = { p0, 0, 0, { VK_IMAGE_ASPECT_PLANE_0_BIT, 0, 0, 1 }, { 0, 0, 0 },
+                                 { w, h, 1 } };
+        if (pass == 0) {
+            vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &b_to_dst);
+            vkCmdCopyBufferToImage(cb, buf, img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &cp);
+            vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &b_to_src);
+        } else {
+            vkCmdCopyImageToBuffer(cb, img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buf, 1, &rd);
+        }
+        vkEndCommandBuffer(cb);
+        VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, NULL, 0, NULL, NULL, 1, &cb, 0, NULL };
+        chk(vkQueueSubmit(q, 1, &si, NULL), "Z: submit");
+        chk(vkQueueWaitIdle(q), "Z: wait");
+        vkFreeCommandBuffers(dev, pool, 1, &cb);
+    }
+
+    chk(vkMapMemory(dev, bm, 0, br.size, 0, (void **)&host), "Z: remap staging");
+    uint32_t bad = 0, zeros = 0, first = 0;
+    for (uint32_t y = 0; y < h; y++)
+        for (uint32_t x = 0; x < w; x++) {
+            size_t i = (size_t)y * w + x;
+            unsigned char want = (unsigned char)((x ^ y) & 0xff);
+            if (host[p0 + i] != want) {
+                if (!bad)
+                    first = (uint32_t)i;
+                bad++;
+            }
+            if (host[p0 + i] == 0)
+                zeros++;
+        }
+    printf("Z[%s] i2b: %u/%u bytes MISMATCH%s zeros=%u first_bad=(x%u,y%u) got=0x%02x want=0x%02x\n",
+           tag, bad, (unsigned)p0, bad ? "" : " (EXACT)", zeros, first % w, first / w,
+           host[p0 + first], (unsigned char)(((first % w) ^ (first / w)) & 0xff));
+    printf("Z[%s] VERDICT: %s\n", tag,
+           bad ? "content lost -> cpp=1 UBWC does not work on this chip in this configuration"
+               : "EXACT -> cpp=1 UBWC works here; the R8 zeros are a parameter problem");
+    vkUnmapMemory(dev, bm);
+
+    vkDestroyBuffer(dev, buf, NULL);
+    vkFreeMemory(dev, bm, NULL);
+    vkFreeMemory(dev, im, NULL);
+    vkDestroyImage(dev, img, NULL);
+}
+
+/* AA. Which side breaks 8bpp UBWC on R8: the copy engine or the R8+UBWC pair?
+ *
+ * Probe Z: the NV12 Y plane - the same cpp=1 UBWC - round-trips EXACT, and
+ * that path is forced through the 3D engine (tu_clear_blit.cc: Y8 -> r3d_ops).
+ * R8 goes through the 2D engine (r2d_ops) and both of its readers see zeros.
+ * This probe writes the R8 image with tp_write.comp (imageStore, i.e. the
+ * 3D/TP path, no copy engine) and then reads it twice: through the TP
+ * (tp_readback_words) and through vkCmdCopyImageToBuffer.
+ *
+ *   TP EXACT, i2b zeros -> the R8 UBWC image is fine and only the 2D copy
+ *                         engine is broken (the fix is the engine selection
+ *                         that Y8 already has);
+ *   TP zeros            -> the write through the 3D path does not land either,
+ *                         so the R8 format/geometry is the problem.
+ *
+ * The linear image is the control: same shader, same reads, no UBWC. Without
+ * it zeros could be the probe's own bug.
+ */
+static void probe_8bpp_shader_fill(VkDevice dev, VkQueue q, VkCommandPool pool,
+                                   const char *tag, VkImageTiling tiling)
+{
+    const uint32_t w = W, h = H;
+    const VkDeviceSize bytes = (VkDeviceSize)w * h;
+    VkImage img = VK_NULL_HANDLE;
+    VkDeviceMemory mem = VK_NULL_HANDLE;
+    VkImageView iv = VK_NULL_HANDLE;
+    VkDescriptorSetLayout dsl = VK_NULL_HANDLE;
+    VkPipelineLayout pl = VK_NULL_HANDLE;
+    VkPipeline pipe = VK_NULL_HANDLE;
+    VkDescriptorPool dp = VK_NULL_HANDLE;
+    VkDescriptorSet ds = VK_NULL_HANDLE;
+    VkBuffer fb = VK_NULL_HANDLE;
+    VkDeviceMemory fbm = VK_NULL_HANDLE;
+    uint32_t *tp = NULL;
+
+    VkImageCreateInfo ici = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+                              .imageType = VK_IMAGE_TYPE_2D,
+                              .format = VK_FORMAT_R8_UNORM,
+                              .extent = { w, h, 1 },
+                              .mipLevels = 1,
+                              .arrayLayers = 1,
+                              .samples = VK_SAMPLE_COUNT_1_BIT,
+                              .tiling = tiling,
+                              .usage = VK_IMAGE_USAGE_SAMPLED_BIT |
+                                       VK_IMAGE_USAGE_TRANSFER_SRC_BIT |
+                                       VK_IMAGE_USAGE_STORAGE_BIT,
+                              .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                              .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED };
+    if (vkCreateImage(dev, &ici, NULL, &img) != VK_SUCCESS) {
+        printf("AA[%s] vkCreateImage failed\n", tag);
+        return;
+    }
+    VkMemoryRequirements mr;
+    vkGetImageMemoryRequirements(dev, img, &mr);
+    printf("AA[%s] R8_UNORM %s memreq=0x%llx, linear=0x%llx -> %s\n", tag,
+           tiling == VK_IMAGE_TILING_LINEAR ? "linear" : "tiled",
+           (unsigned long long)mr.size, (unsigned long long)bytes,
+           mr.size > bytes ? "UBWC metadata present" : "no metadata");
+
+    if (alloc_mem(dev, mr.size, 0, &mem) != VK_SUCCESS ||
+        vkBindImageMemory(dev, img, mem, 0) != VK_SUCCESS) {
+        printf("AA[%s] image memory failed\n", tag);
+        goto out;
+    }
+
+    VkImageViewCreateInfo ivci = { .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                                   .image = img,
+                                   .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                                   .format = VK_FORMAT_R8_UNORM,
+                                   .subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 } };
+    if (vkCreateImageView(dev, &ivci, NULL, &iv) != VK_SUCCESS) {
+        printf("AA[%s] view failed\n", tag);
+        goto out;
+    }
+
+    VkDescriptorSetLayoutBinding dsb = { 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1,
+                                         VK_SHADER_STAGE_COMPUTE_BIT, NULL };
+    VkDescriptorSetLayoutCreateInfo dslci = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+                                              NULL, 0, 1, &dsb };
+    if (vkCreateDescriptorSetLayout(dev, &dslci, NULL, &dsl) != VK_SUCCESS)
+        goto out;
+    VkPipelineLayoutCreateInfo plci = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, NULL, 0, 1,
+                                        &dsl, 0, NULL };
+    if (vkCreatePipelineLayout(dev, &plci, NULL, &pl) != VK_SUCCESS)
+        goto out;
+    pipe = make_compute_pipe(dev, pl, tp_write_spv, (uint32_t)sizeof(tp_write_spv));
+    if (pipe == VK_NULL_HANDLE) {
+        printf("AA[%s] tp_write pipeline failed\n", tag);
+        goto out;
+    }
+
+    VkDescriptorPoolSize dpsz = { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 };
+    VkDescriptorPoolCreateInfo dpci = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, NULL, 0, 1,
+                                        1, &dpsz };
+    if (vkCreateDescriptorPool(dev, &dpci, NULL, &dp) != VK_SUCCESS)
+        goto out;
+    VkDescriptorSetAllocateInfo dai = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, NULL, dp, 1,
+                                        &dsl };
+    if (vkAllocateDescriptorSets(dev, &dai, &ds) != VK_SUCCESS)
+        goto out;
+    VkDescriptorImageInfo dii = { VK_NULL_HANDLE, iv, VK_IMAGE_LAYOUT_GENERAL };
+    VkWriteDescriptorSet wd = { .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                .dstSet = ds, .dstBinding = 0, .descriptorCount = 1,
+                                .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+                                .pImageInfo = &dii };
+    vkUpdateDescriptorSets(dev, 1, &wd, 0, NULL);
+
+    /* the i2b destination */
+    VkBufferCreateInfo bci = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO, NULL, 0, bytes,
+                               VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                               VK_SHARING_MODE_EXCLUSIVE, 0, NULL };
+    if (vkCreateBuffer(dev, &bci, NULL, &fb) != VK_SUCCESS)
+        goto out;
+    VkMemoryRequirements br;
+    vkGetBufferMemoryRequirements(dev, fb, &br);
+    if (alloc_mem(dev, br.size, 0, &fbm) != VK_SUCCESS ||
+        vkBindBufferMemory(dev, fb, fbm, 0) != VK_SUCCESS)
+        goto out;
+
+    /* write in its own submit: one submit can hide a CCU-clean bug (5.11) */
+    {
+        VkCommandBuffer cb;
+        VkCommandBufferAllocateInfo cai = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, NULL,
+                                            pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
+        if (vkAllocateCommandBuffers(dev, &cai, &cb) != VK_SUCCESS)
+            goto out;
+        VkCommandBufferBeginInfo bbi = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, NULL,
+                                         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL };
+        vkBeginCommandBuffer(cb, &bbi);
+        VkImageSubresourceRange full = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+        VkImageMemoryBarrier to_general = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                                            .dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+                                            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                                            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+                                            .image = img, .subresourceRange = full };
+        vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, NULL, 0, NULL, 1,
+                             &to_general);
+        vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, pipe);
+        vkCmdBindDescriptorSets(cb, VK_PIPELINE_BIND_POINT_COMPUTE, pl, 0, 1, &ds, 0, NULL);
+        vkCmdDispatch(cb, w / 32, h / 32, 1);
+        VkImageMemoryBarrier to_read = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                                         .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
+                                         .dstAccessMask = VK_ACCESS_SHADER_READ_BIT |
+                                                          VK_ACCESS_TRANSFER_READ_BIT,
+                                         .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
+                                         .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                         .image = img, .subresourceRange = full };
+        vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
+                                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                             0, 0, NULL, 0, NULL, 1, &to_read);
+        vkEndCommandBuffer(cb);
+        VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, NULL, 0, NULL, NULL, 1, &cb, 0, NULL };
+        chk(vkQueueSubmit(q, 1, &si, NULL), "AA: submit write");
+        chk(vkQueueWaitIdle(q), "AA: wait write");
+        vkFreeCommandBuffers(dev, pool, 1, &cb);
+    }
+
+    /* read 1: the texture path (3D), values */
+    if (!tp_readback_words(dev, q, pool, img, VK_FORMAT_R8_UNORM, &tp)) {
+        printf("AA[%s] tp_readback_words failed\n", tag);
+        goto out;
+    }
+    {
+        uint32_t bad = 0, zeros = 0, first = 0;
+        for (uint32_t y = 0; y < h; y++)
+            for (uint32_t x = 0; x < w; x++) {
+                uint32_t v = (x * 31 + y * 17 + 7) & 0xff;
+                uint32_t want = v | 0xff000000u;
+                uint32_t got = tp[(size_t)y * w + x];
+                if (got != want) {
+                    if (!bad)
+                        first = y * w + x;
+                    bad++;
+                }
+                if ((got & 0xff) == 0)
+                    zeros++;
+            }
+        printf("AA[%s] texelFetch: %u/%u words MISMATCH%s zeros(r)=%u first=(x%u,y%u) "
+               "got=0x%08x want=0x%08x\n",
+               tag, bad, (unsigned)bytes, bad ? "" : " (EXACT)", zeros, first % w, first / w,
+               tp[first], (((first % w) * 31 + (first / w) * 17 + 7) & 0xff) | 0xff000000u);
+        printf("AA[%s] TP VERDICT: %s\n", tag,
+               bad ? "content lost through imageStore+texelFetch too -> not just the copy engine"
+                   : "EXACT -> the R8 UBWC image is good; the 2D copy engine is the broken part");
+        /* where is it good: an 8x8 grid of 64x64 cells */
+        printf("AA[%s] map 8x8 (good %%):\n", tag);
+        for (unsigned by = 0; by < 8; by++) {
+            printf("  ");
+            for (unsigned bx = 0; bx < 8; bx++) {
+                unsigned good = 0, tot = 0;
+                for (uint32_t y = by * 64; y < (by + 1) * 64; y++)
+                    for (uint32_t x = bx * 64; x < (bx + 1) * 64; x++) {
+                        uint32_t v = (x * 31 + y * 17 + 7) & 0xff;
+                        good += tp[(size_t)y * w + x] == (v | 0xff000000u);
+                        tot++;
+                    }
+                printf("%3u ", good * 100 / tot);
+            }
+            printf("\n");
+        }
+    }
+
+    /* raw memory: is the pixel data stored linearly (the write ignored the
+     * UBWC format) or compressed? Plus the metadata plane's fill state. */
+    {
+        void *raw = NULL;
+        if (vkMapMemory(dev, mem, 0, mr.size, 0, &raw) == VK_SUCCESS) {
+            const unsigned char *p = raw;
+            size_t data_sz = bytes < mr.size ? (size_t)bytes : mr.size;
+            size_t lin_match = 0, mnz = 0, mbytes = mr.size - data_sz;
+            for (size_t i = 0; i < data_sz; i++) {
+                unsigned want = (unsigned char)((((i % w) * 31 + (i / w) * 17 + 7)) & 0xff);
+                lin_match += p[i] == want;
+            }
+            for (size_t i = 0; i < mbytes; i++)
+                mnz += p[data_sz + i] != 0;
+            printf("AA[%s] raw: data[0..%zu) matches the LINEAR pattern %zu/%zu (%.1f%%), "
+                   "meta nonzero=%zu/%zu\n", tag, data_sz, lin_match, data_sz,
+                   100.0 * lin_match / data_sz, mnz, mbytes);
+            const char *dump = getenv("AA_DUMP");
+            if (dump) {
+                char fn[512];
+                snprintf(fn, sizeof(fn), "%s_%s.bin", dump, tag);
+                FILE *f = fopen(fn, "wb");
+                if (f) {
+                    fwrite(p, 1, mr.size, f);
+                    fclose(f);
+                    printf("AA[%s] dump: %s\n", tag, fn);
+                }
+            }
+            vkUnmapMemory(dev, mem);
+        }
+    }
+
+    /* read 2: the copy engine (2D for R8), bytes */
+    {
+        VkCommandBuffer cb;
+        VkCommandBufferAllocateInfo cai = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, NULL,
+                                            pool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1 };
+        if (vkAllocateCommandBuffers(dev, &cai, &cb) != VK_SUCCESS)
+            goto out;
+        VkCommandBufferBeginInfo bbi = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, NULL,
+                                         VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, NULL };
+        vkBeginCommandBuffer(cb, &bbi);
+        VkImageSubresourceRange full = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+        VkImageMemoryBarrier to_src = { .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                                        .srcAccessMask = VK_ACCESS_SHADER_READ_BIT,
+                                        .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+                                        .oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                        .image = img, .subresourceRange = full };
+        vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                             VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, &to_src);
+        VkBufferImageCopy cp = { 0, 0, 0, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 }, { 0, 0, 0 },
+                                 { w, h, 1 } };
+        vkCmdCopyImageToBuffer(cb, img, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, fb, 1, &cp);
+        vkEndCommandBuffer(cb);
+        VkSubmitInfo si = { VK_STRUCTURE_TYPE_SUBMIT_INFO, NULL, 0, NULL, NULL, 1, &cb, 0, NULL };
+        chk(vkQueueSubmit(q, 1, &si, NULL), "AA: submit i2b");
+        chk(vkQueueWaitIdle(q), "AA: wait i2b");
+        vkFreeCommandBuffers(dev, pool, 1, &cb);
+    }
+    {
+        unsigned char *got = NULL;
+        if (vkMapMemory(dev, fbm, 0, br.size, 0, (void **)&got) != VK_SUCCESS)
+            goto out;
+        uint32_t bad = 0, zeros = 0, first = 0;
+        for (uint32_t y = 0; y < h; y++)
+            for (uint32_t x = 0; x < w; x++) {
+                unsigned want = (unsigned char)((x * 31 + y * 17 + 7) & 0xff);
+                size_t i = (size_t)y * w + x;
+                if (got[i] != want) {
+                    if (!bad)
+                        first = (uint32_t)i;
+                    bad++;
+                }
+                if (got[i] == 0)
+                    zeros++;
+            }
+        printf("AA[%s] i2b: %u/%u bytes MISMATCH%s zeros=%u first=(x%u,y%u) got=0x%02x "
+               "want=0x%02x\n",
+               tag, bad, (unsigned)bytes, bad ? "" : " (EXACT)", zeros, first % w, first / w,
+               got[first], (unsigned char)(((first % w) * 31 + (first / w) * 17 + 7) & 0xff));
+        vkUnmapMemory(dev, fbm);
+    }
+
+out:
+    free(tp);
+    if (fb)
+        vkDestroyBuffer(dev, fb, NULL);
+    if (fbm)
+        vkFreeMemory(dev, fbm, NULL);
+    if (ds)
+        vkFreeDescriptorSets(dev, dp, 1, &ds);
+    if (dp)
+        vkDestroyDescriptorPool(dev, dp, NULL);
+    if (pipe)
+        vkDestroyPipeline(dev, pipe, NULL);
+    if (pl)
+        vkDestroyPipelineLayout(dev, pl, NULL);
+    if (dsl)
+        vkDestroyDescriptorSetLayout(dev, dsl, NULL);
+    if (iv)
+        vkDestroyImageView(dev, iv, NULL);
+    if (mem)
+        vkFreeMemory(dev, mem, NULL);
+    if (img)
+        vkDestroyImage(dev, img, NULL);
 }
 
 /* CPU-FILL: read the raw bytes of the image memory from the CPU after the
@@ -4965,6 +5437,17 @@ skip_b:
                 for (unsigned i = 0; i < ARRAY_SIZE(y); i++)
                     probe_8bpp_content(dev, q, pool, y[i].tag, y[i].f, y[i].bpt, y[i].value, y[i].w,
                                        y[i].h);
+
+                /* Z. 8bpp UBWC that the driver enables today: NV12's Y plane.
+                 * Same question as Y, but on the path no property gates. */
+                printf("\n=== Z. NV12 Y-плоскость: cpp=1 UBWC без has_8bpp_ubwc ===\n");
+                probe_nv12_y8_ubwc(dev, q, pool, "tiled", VK_IMAGE_TILING_OPTIMAL);
+                probe_nv12_y8_ubwc(dev, q, pool, "linear", VK_IMAGE_TILING_LINEAR);
+
+                /* AA. R8 written by imageStore (3D path) instead of r2d. */
+                printf("\n=== AA. R8: imageStore (3D) fill, TP and i2b readback ===\n");
+                probe_8bpp_shader_fill(dev, q, pool, "tiled", VK_IMAGE_TILING_OPTIMAL);
+                probe_8bpp_shader_fill(dev, q, pool, "linear", VK_IMAGE_TILING_LINEAR);
             }
 
             /* NL. MUTABLE images created with no format list at all - 50.9% of

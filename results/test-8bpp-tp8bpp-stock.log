@@ -1,0 +1,74 @@
+# Прогон того же инструмента на шип-сборке без экспериментальных патчей
+# (.so 4c3cdb2100823b2f…, sha256 совпадает с установленной), образцы 512x512.
+# Это базовые числа, к которым сравниваются все остальные прогоны 8bpp.
+# Разбор — analysis.md §22, сводка — findings §4.10.
+#
+#   VK_DRIVER_FILES=build/out/freedreno_icd.json FD_DEV_FEATURES=has_8bpp_ubwc=1 \
+#     build/tp8bpp /tmp/opencode/ship8bpp
+# Про инструмент (важно для чтения чисел ниже).
+#
+# tests/tp8bpp.c печатает для проверок texelFetch и i2b число НЕВЕРНЫХ элементов
+# в формате "<bad>/<total> ... MISMATCH" (0 = EXACT). «Читается» в таблицах —
+# это (total - bad) / total, то есть доля ВЕРНЫХ.
+#
+# Какому пути чтения верить. i2b (vkCmdCopyImageToBuffer): его контроль — тот же
+# образ без UBWC (AA[linear]) — EXACT на 512x512, 256x256, 64x64 и 512x32.
+# texelFetch-путь того же инструмента на ширинах, отличных от 512, не контролируется:
+# у 256x256 и 64x64 он даёт MISMATCH даже у линейного контроля (первый неверный
+# (x0,y1)), где i2b EXACT. На высотах <= 16 падают оба пути, и в tiled, и в
+# linear. Причина этого дефекта не найдена (проверено, что dispatch и размер
+# буфера следуют за -DW/-DH), поэтому он записан как дефект инструмента, а не как
+# свойство UBWC или железа. Карту «good %» печатает texelFetch-буфер, значит она
+# доверена только при ширине 512.
+
+device: Turnip Adreno (TM) 740 (chip_id 0x43050a01)
+
+=== Z. NV12 Y plane (cpp=1 UBWC, not gated by has_8bpp_ubwc) ===
+Z[tiled] NV12 512x512 memreq=0x62000, linear planes=0x60000 -> metadata present (UBWC likely on)
+Z[tiled] i2b: 0/262144 bytes MISMATCH (EXACT) zeros=1024 first=(x0,y0) got=0x07 want=0x07
+Z[tiled] VERDICT: EXACT -> cpp=1 UBWC works here
+Z[linear] NV12 512x512 memreq=0x60000, linear planes=0x60000 -> no metadata
+Z[linear] i2b: 0/262144 bytes MISMATCH (EXACT) zeros=1024 first=(x0,y0) got=0x07 want=0x07
+Z[linear] VERDICT: EXACT -> cpp=1 UBWC works here
+
+=== AA. R8 filled by imageStore (3D), read by TP and i2b ===
+AA[tiled] R8_UNORM tiled fill=3D memreq=0x42000 linear=0x40000 -> UBWC metadata present
+AA[tiled] texelFetch: 195840/262144 words MISMATCH zeros(r)=196864 first=(x256,y0) got=0xff000000 want=0xff000007
+AA[tiled] map 8x8 (good %):
+  100 100 100 100   0   0   0   0 
+  100 100 100 100   0   0   0   0 
+  100 100 100 100   0   0   0   0 
+  100 100 100 100   0   0   0   0 
+    0   0   0   0   0   0   0   0 
+    0   0   0   0   0   0   0   0 
+    0   0   0   0   0   0   0   0 
+    0   0   0   0   0   0   0   0 
+AA[tiled] raw: meta=8192 B nonzero=1024, data=262144 B matches the LINEAR pattern 1056 (0.4%), zeros=1024 (0.4%)
+AA[tiled] dump: /tmp/opencode/ship8bpp_AA_tiled.bin
+AA[tiled] i2b: 195840/262144 bytes MISMATCH zeros=196864 first=(x256,y0) got=0x00 want=0x07
+AA[linear] R8_UNORM linear fill=3D memreq=0x40000 linear=0x40000 -> no metadata
+AA[linear] texelFetch: 0/262144 words MISMATCH (EXACT) zeros(r)=1024 first=(x0,y0) got=0xff000007 want=0xff000007
+AA[linear] raw: meta=0 B nonzero=0, data=262144 B matches the LINEAR pattern 262144 (100.0%), zeros=1024 (0.4%)
+AA[linear] dump: /tmp/opencode/ship8bpp_AA_linear.bin
+AA[linear] i2b: 0/262144 bytes MISMATCH (EXACT) zeros=1024 first=(x0,y0) got=0x07 want=0x07
+
+=== AB. R8 filled by vkCmdCopyBufferToImage (2D) ===
+AB[tiled] R8_UNORM tiled fill=2D memreq=0x42000 linear=0x40000 -> UBWC metadata present
+AB[tiled] texelFetch: 261120/262144 words MISMATCH zeros(r)=262144 first=(x0,y0) got=0xff000000 want=0xff000007
+AB[tiled] map 8x8 (good %):
+    0   0   0   0   0   0   0   0 
+    0   0   0   0   0   0   0   0 
+    0   0   0   0   0   0   0   0 
+    0   0   0   0   0   0   0   0 
+    0   0   0   0   0   0   0   0 
+    0   0   0   0   0   0   0   0 
+    0   0   0   0   0   0   0   0 
+    0   0   0   0   0   0   0   0 
+AB[tiled] raw: meta=8192 B nonzero=0, data=262144 B matches the LINEAR pattern 1056 (0.4%), zeros=1024 (0.4%)
+AB[tiled] dump: /tmp/opencode/ship8bpp_AB_tiled.bin
+AB[tiled] i2b: 261120/262144 bytes MISMATCH zeros=262144 first=(x0,y0) got=0x00 want=0x07
+AB[linear] R8_UNORM linear fill=2D memreq=0x40000 linear=0x40000 -> no metadata
+AB[linear] texelFetch: 0/262144 words MISMATCH (EXACT) zeros(r)=1024 first=(x0,y0) got=0xff000007 want=0xff000007
+AB[linear] raw: meta=0 B nonzero=0, data=262144 B matches the LINEAR pattern 262144 (100.0%), zeros=1024 (0.4%)
+AB[linear] dump: /tmp/opencode/ship8bpp_AB_linear.bin
+AB[linear] i2b: 0/262144 bytes MISMATCH (EXACT) zeros=1024 first=(x0,y0) got=0x07 want=0x07

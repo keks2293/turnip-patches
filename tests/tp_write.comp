@@ -1,0 +1,23 @@
+/* TP-write: fill a 512x512 r8 image through imageStore, i.e. through the
+ * 3D/TP path and not through the 2D copy engine.
+ *
+ * Probe Y fills R8 with vkCmdCopyBufferToImage and both readers come back
+ * zero; the NV12 Y plane (same 8bpp UBWC, but its copies are forced through
+ * the 3D engine, tu_clear_blit.cc: src_format == PIPE_FORMAT_Y8_UNORM ->
+ * r3d_ops) round-trips EXACT. This shader separates the two: if an image
+ * written this way reads back correctly, the R8 UBWC pair works and only the
+ * copy engine is broken.
+ *
+ * The pattern is x*31 + y*17 + 7 (mod 256), reproduced on the C side, so a
+ * wrong-location read cannot pass by luck. Built into tp_write_spv.h:
+ * scripts/gen-tp-write-spv.sh.
+ */
+#version 450
+layout(local_size_x = 32, local_size_y = 32) in;
+layout(set = 0, binding = 0, r8) uniform image2D dst;
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    uint v = uint(p.x * 31 + p.y * 17 + 7) & 0xffu;
+    imageStore(dst, p, vec4(float(v) / 255.0, 0.0, 0.0, 1.0));
+}

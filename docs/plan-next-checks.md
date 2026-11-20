@@ -219,31 +219,82 @@ a section in `analysis.md`; a header edit in `patches/0008-*.patch`.
 - Gate: `tu_image.cc:386` `!has_8bpp_ubwc && blocksizebits==8 &&
   plane_count==1 -> return false` (R8 without UBWC).
 - Early measurement (analysis §21.7): `FD_DEV_FEATURES=has_8bpp_ubwc=1` ->
-  CEIL[R8] `nonmut=0x42000 > lin` ("the hardware can do 8bpp UBWC"), but the roundtrip
-  readback is **all zeros** (65536/65536 MISMATCH) -> "HW corruption" -> keep False.
+  CEIL[R8] `nonmut=0x42000 > lin` (the *driver* allocates a metadata plane), but
+  the roundtrip readback is **all zeros** (65536/65536 MISMATCH). That number is
+  not a statement about the chip: the metadata size comes from
+  `fd6_ubwc_alloc_size()`.
+- **Probe Z (20.11, answered, with a caveat).** NV12 Y plane = `FMT6_NV12_Y`,
+  `cpp == 1`, UBWC grid `{32,8}`, **not** gated by the property (`ubwc_possible()`
+  gates 8bpp only when `plane_count == 1`). It round-trips **EXACT** through r3d,
+  both tiling flavors, 64x64 to 512x512 and heights 4..512, on the ship `.so`
+  (`results/test-8bpp-tp8bpp-{stock,sizes}.log`). So the chip compresses a
+  `cpp == 1` UBWC plane today. It does *not* follow that `R8_UNORM` would:
+  `registers/adreno/a6xx_enums.xml:114-116` - "FMT6_NV12_Y is not compatible with
+  FMT6_8_UNORM". Z proves capability for the video format, not for plain 8bpp.
+- **What plain `R8_UNORM` does (20.11, `i2b`, the reader whose linear control is
+  EXACT at every size): exactly 25.29 % of the texels read back, at 512x512,
+  256x256, 64x64 and 512x32 - the top-left quarter, `x < W/2` and `y < H/2`, the
+  rest reads `0x00`, first wrong texel always `x = W/2`.** The fraction does not
+  depend on the image size (`results/test-8bpp-tp8bpp-sizes.log`). A copy-filled
+  image (no 3D writer) reads 0.39 %, i.e. nothing, and its metadata plane stays
+  zero (`results/test-8bpp-meta-shape.txt`).
+- **Metadata geometry is not the lever.** Grid sweep (`exp-17`, `TU_8BPP_UBWC`)
+  and a metadata *pitch* sweep (block width 4/2/1 -> pitch 128/256/512 B, plane
+  64..256 KiB) leave both the written volume (1024 B at 512x512, all `0x1f`, four
+  256-byte chunks, stride = 16 rows of the current pitch) and the readable 25.29 %
+  untouched (`results/test-8bpp-meta-pitch-height.log`,
+  `results/test-8bpp-grid-sweep.log`). The 3D writer spends **1 byte per 256
+  texels** whatever the driver reserved (8/16 KiB) - the cell count of `{32,8}`,
+  while Mesa reserves and walks `{16,4}`.
+- Grids with `blockheight >= 8` validate and allocate (`memreq 0x41000`, only 4 KiB
+  of metadata), then the **first submit that touches the image faults the GPU**;
+  everything after `VK_ERROR_DEVICE_LOST` in those logs - including the AB rows -
+  is void. Note the confound before re-reading the sweep: `fdl6_ubwc_tile_dimensions()`
+  also switches the *data* tile to 64x16 when `blockheight == 16`, so those rows
+  never tested metadata geometry alone; `{16,8}`/`{32,8}`/`{8,8}` are
+  the clean rows and they fault.
+- **Upstream.** Origin of the property: `0f770caa232` (Joshua Ashton, 23.09.2022),
+  "Disable 8bpp_ubwc on a6xx gen2 - Fixes text corruption in VSCode on a680" - a
+  workaround, no diagnosis, untouched since. In upstream `main` (raw file, 20.11)
+  `has_8bpp_ubwc` occurs 4 times, all a6xx; a7xx/a8xx never set it. The NV12 Y
+  branch that *does* work was fixed three times (`8ea6f17fdf93`, `fb2646e527e9`,
+  `18399c041267`); `git apply -R --check` says `18399c041267` is already in
+  `mesa27-src`, so "our tree lacks the per-plane plumbing" is false.
+- The "one block row is safe, the step to the next row breaks" model (wrong
+  vertical pitch) cannot be tested at `H <= 16`: there the probe's *linear* control
+  fails too, in both readers. Probe defect at small images, recorded as such, not
+  a UBWC result. See analysis §22.1 before re-using any small-image number.
 - The runtime override **works without a rebuild**: `FD_DEV_FEATURES=has_8bpp_ubwc=1`
   (it is a prop, `freedreno_dev_info.py`).
 
 **What to check:**
-1. **The exact source of False on A740**: confirm that the `GPUProps` default for
-   an unset bool is False (the `GPUProps` class in `freedreno_devices.py`), and that
-   on a7xx the flag was deliberately not raised (rather than simply forgotten).
-2. **Re-interpreting the "HW corruption"**: all zeros in the readback is either (a) real
-   HW corruption of 8bpp UBWC, or (b) the same **r2d copy bug** as with BC (block 0)?
-   R8 is not BC, and the other non-UBWC formats roundtrip cleanly -> r2d works for them,
-   so (a) is more likely. But isolate it: TP/compute readback of an R8
-   UBWC image (if there are zeros there too - the corruption is in the UBWC decoder itself, not in r2d).
-3. **Upstream**: do newer chips (a7xx_gen3 / a8xx) set `has_8bpp_ubwc=True`?
-   If yes -> this is a **gen2-specific HW bug**, not
-   "corruption in general" - rewrite the conclusion in §21.7 more precisely.
-4. (optional) RE4 with `FD_DEV_FEATURES=has_8bpp_ubwc=1`: does RE4 use
-   R8+UBWC, is there corruption/a fault in the game.
+1. **Descriptor / CCU programming for plain 8bpp** - the gap is now localized by
+   shape, not guessed: metadata at 1 byte / 256 texels from the writer, a reader
+   that resolves half the extent on each axis. Which UBWC grid field, metadata
+   pitch and height alignment the driver programs for `FMT6_8_UNORM` versus
+   `FMT6_NV12_Y`, and what the blob programs, is the open part; overriding only
+   `fdl6_get_ubwc_blockwidth/height()` to `{32,8}` faults the GPU, so a fix is more
+   than a table entry.
+2. **Probe AB as a discriminator** (cheap, one build): if a copy-filled R8+UBWC
+   image ever reads EXACT while the 3D-written one stays at 25 %, the bug is in the
+   writer, which is a different patch than a descriptor fix. Today's AB rows at
+   `blockheight >= 8` are post-fault and prove nothing - run it in a fresh process.
+3. (optional) RE4 with `FD_DEV_FEATURES=has_8bpp_ubwc=1`: the game creates 754
+   `R8_UNORM` + 72 `R8_UINT` images (findings §7.10), so this is the ~70 MiB hole -
+   worth a run *after* a real patch, with the fault risk the grid sweep showed, and
+   note UBWC on a 512x512 R8 image *costs* 8 KiB (`0x42000` vs `0x40000`), so small
+   images lose even in the best case.
 
-**Criterion:** a refined conclusion (gen2 HW bug vs default oversight; whether the "corruption"
-is real vs an r2d artifact). Most likely **keep False**, but with an exact
-justification.
+**Criterion:** a patch that makes probe AA (`build/tp8bpp`) round-trip EXACT
+without faulting the GPU. Until then `has_8bpp_ubwc = False` on `a7xx_gen2` is the
+correct default - justified by what the hardware writes and reads back, not by a
+`memreq` counter, and not by "the hardware cannot" either (see probe Z above).
 
-**Artifact:** an edit of §21.7 in `analysis.md`, CEIL/U logs with the flag.
+**Artifact:** `tests/tp8bpp.c` (+ `tests/tp_write.comp`,
+`scripts/gen-tp-write-spv.sh`), `scripts/sweep-8bpp-grid.sh`,
+`scripts/ubwc-dump-analyze.py`, `results/test-8bpp-tp8bpp-{stock,sizes}.log`,
+`results/test-8bpp-meta-pitch-height.log`, `results/test-8bpp-meta-shape.txt`,
+analysis §22, findings §4.10.
 
 ---
 
