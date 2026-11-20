@@ -1,0 +1,95 @@
+exp-21b: send the three format-list predicates back to being static.
+
+The tail of exp-21, applied after it.  Once tu_image_init() asks
+tu6_mutable_format_list_forces_linear() instead of comparing the three
+predicates itself, tu6_format_list_has_swaps(),
+tu6_format_list_reinterprets_r8g8_r16() and
+tu6_format_list_swaps_are_uniform() have no caller outside tu_formats.cc: 0004
+exported the first two (they were static in tu_image.cc before it), 0005
+exported the third, and this removes the exports again - 4 hunks +16/-18, no
+behaviour change.
+
+Kept in its own file because of whose hunks it lands on.  The definitions
+belong to three patches: has_swaps() and reinterprets_r8g8_r16() are 0004's,
+and swaps_are_uniform() is 0005's, rewritten by 0010 - so putting "static"
+above them and deleting the declarations touches 0004, 0005 and 0010, whose
+own hunks are the ones that introduced those lines.  That is a second,
+separate gate, and it is not worth settling in the same run as the equivalence
+check of exp-21: if the counters move, the tail should not be in the way.
+
+NOT BUILT, NOT MEASURED.  Apply after experiments/exp-21-mutable-one-
+decision.patch, revert first.
+
+--- a/src/freedreno/vulkan/tu_formats.cc
++++ b/src/freedreno/vulkan/tu_formats.cc
+@@ -111,7 +111,7 @@
+           !util_format_is_depth_or_stencil(format);
+ }
+ 
+-bool
++static bool
+ tu6_format_list_has_swaps(const VkImageFormatListCreateInfo *fmt_list)
+ {
+    /* If there's no format list, then the app may reinterpret to any compatible
+@@ -134,7 +134,7 @@
+  * formats that would normally be compatible (like R16), and so if we are
+  * trying to, for example, sample R16 as R8G8 we need to demote to linear.
+  */
+-bool
++static bool
+ tu6_format_list_reinterprets_r8g8_r16(
+    enum pipe_format format, const VkImageFormatListCreateInfo *fmt_list)
+ {
+@@ -190,7 +190,7 @@
+  * The lists that must keep going to linear are unaffected: {BGRA8, RGBA8}
+  * (two multi-channel formats, opposite channel order) and NV12.
+  */
+-bool
++static bool
+ tu6_format_list_swaps_are_uniform(const VkImageFormatListCreateInfo *fmt_list)
+ {
+    if (!fmt_list || fmt_list->viewFormatCount < 2)
+--- a/src/freedreno/vulkan/tu_formats.h
++++ b/src/freedreno/vulkan/tu_formats.h
+@@ -32,28 +32,20 @@
+ bool tu6_mutable_format_list_ubwc_compatible(const struct fd_dev_info *info,
+                                              const VkImageFormatListCreateInfo *fmt_list);
+ 
+-bool tu6_format_list_has_swaps(const VkImageFormatListCreateInfo *fmt_list);
+-
+-bool tu6_format_list_reinterprets_r8g8_r16(
+-   enum pipe_format format, const VkImageFormatListCreateInfo *fmt_list);
+-
+-bool tu6_format_list_swaps_are_uniform(
+-   const VkImageFormatListCreateInfo *fmt_list);
+-
+-/* True if a mutable image created with this format list has to be demoted to
+- * the linear fallback, i.e. the list reinterprets the image in a way the
+- * tiled layout cannot describe.  Sparse residency requires the tiled layout,
+- * so tu_image_init() refuses such a create; the format query has to agree,
+- * or it promises support for a create which cannot succeed.
++/* True if a mutable image has to be demoted to the linear fallback, i.e. the
++ * formats it may be viewed as cannot be described by one tiled layout.  With
++ * VkImageFormatListCreateInfo the question is about that list; without one it
++ * is about the compatibility class of the base format, the set of formats the
++ * application would have been allowed to name, so that an image is not demoted
++ * for a reinterpretation nobody asked for.  The compression is asked about
++ * with the list of the application only, so this does not say anything about
++ * UBWC.
++ *
++ * Both paths ask it: tu_image_init(), and the format query, because sparse
++ * residency requires the tiled layout and tu_image_init() refuses such a
++ * create - the query has to agree, or it promises support for a create which
++ * cannot succeed.
+  */
+-bool tu6_format_list_has_swaps(const VkImageFormatListCreateInfo *fmt_list);
+-
+-bool tu6_format_list_reinterprets_r8g8_r16(
+-   enum pipe_format format, const VkImageFormatListCreateInfo *fmt_list);
+-
+-bool tu6_format_list_swaps_are_uniform(
+-   const VkImageFormatListCreateInfo *fmt_list);
+-
+ bool tu6_mutable_format_list_forces_linear(const struct fd_dev_info *info,
+                                            VkFormat format,
+                                            const VkImageFormatListCreateInfo *fmt_list);

@@ -33,17 +33,23 @@ journal 24.1's argument that the prop's broken shape is never created here: a no
 `MUTABLE_FORMAT` image is reinterpretable without a list (journal 24.4,
 `tests/vk-fmt-classes.json`), and the inventories only record creates. It reopens no
 verdict - the prop frees no patch and adds no compression. A second thing is open in this
-direction but is not a measurement: a replacement for `0014` shaped as one layout-decision
-function instead of a call-site substitution, `0016` (queue 11) - it must reproduce the
-`imginv5` counters before anything else is asked of it, and it does not reopen ADR-0006,
-which is about the *rule*, not about where the rule is written. The 8-bit hole in
+direction but is not a measurement: a replacement for `0014` that keeps its rule and
+removes its duplication - `exp-21` (queue 11, graduation number `0016`) moves the class
+synthesis and the layout decision into
+`tu6_mutable_format_list_forces_linear()` and lets `tu_image_init()` call it, instead of
+the create path carrying a copy of both. Written 20.11, **NOT BUILT, NOT MEASURED**; it
+must reproduce the `imginv5` counters before anything else is asked of it, because the
+rule is `0014`'s and a moving counter therefore means the refactor changed behaviour. It
+does not reopen ADR-0006, which is about the rule, not about where the rule is written.
+The 8-bit hole in
 `fd6_ubwc_compat_mode()` is not part of this direction -
 it is closed by `streams/8bpp-ubwc.md`, and its cause sits earlier than the table.
 
 Decisions: ADR-0001, ADR-0003, ADR-0009, ADR-0010.
 Artifacts: `results/test-CEIL-*.log`, `results/test-gen2flag-*.log`,
 `results/test-stock-*matrix.log`, `results/imginv-3variants.txt`,
-`scripts/fmt-list-gate-check.py`, `tests/vk-fmt-classes.json`.
+`scripts/fmt-list-gate-check.py`, `tests/vk-fmt-classes.json`,
+`experiments/exp-21-mutable-one-decision.patch` (the candidate for `0014`).
 Next measurement: `exp-20` (view-format logging over one game run), which settles the
 last gap in journal 24.1. A workload that creates lists mixing byte orders would also
 reopen the direction.

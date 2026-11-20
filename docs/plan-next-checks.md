@@ -449,28 +449,55 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     a shape that carries volume. The verdict of ADR-0001 does not move either way - the
     prop frees no patch and adds no compression (journal 24.3, 27).
 
-11. **0016 - one layout-decision function, as the replacement for `0014`** (no file yet;
-    number `0015` is spoken for by ADR-0009 and numbers are not reused). The operator's
-    direction: keep the gain, do not enter the broken things, and make the shape a path
-    rather than a patch-shaped exception. What `0014` costs today is three files and five
-    hunks, because it substitutes the class at the *call site* in `tu_image_init()` and
-    then needs a second hunk in `tu_formats.cc` so the format query agrees with the create.
-    The replacement's whole idea is to move the substitution one level down, to where the
-    question is already asked once:
+11. **`exp-21` - one layout-decision function, the candidate that replaces `0014`**
+    (`experiments/exp-21-mutable-one-decision.patch`, tail
+    `experiments/exp-21b-predicates-static.patch`; graduation number `0016`, because
+    `0015` is spoken for by ADR-0009 and numbers are not reused). Status: written 20.11,
+    applies clean to `0001..0013` and reverts clean, **NOT BUILT, NOT MEASURED**. It is an
+    alternative to `patches/0014-*.patch`, not a stack on top of it: both define the
+    compatibility-class enumerator.
+    The operator's direction: keep the gain, do not enter the broken things, and make the
+    shape a path rather than a patch-shaped exception.
 
-    - `tu6_mutable_format_list_forces_linear()` (`tu_formats.cc`, introduced by `0004`) is
-      the single existing function that answers "must this mutable image be linear?"; it
-      is what the sparse refusal and `vkGetPhysicalDeviceImageFormatProperties2` use, while
-      `tu_image_init()` re-implements the same reasoning inline. One function returning a
-      three-valued answer (`keeps layout` / `keeps tiling, no UBWC` / `linear`) removes the
-      duplication, and `tu_image_init()` calls it instead of duplicating it;
-    - inside it, the no-list case is answered by `tu6_mutable_compat_class()`; when the
-      class is empty (`0`: depth, multi-planar, or a base the driver cannot use) the
-      worst-case answer stays, so NV12 and depth behaviour is untouched;
-    - scope is a dev-info prop set in `a7xx_gen2` only, per the minimal-footprint rule -
-      upstream-shape, but measured on one generation. `info->chip >= 7` would be a lie
-      here: the rule is not a chip capability, it is a predicate we have only measured
-      on gen2.
+    Correcting what this item said before the file was written, since the code disagrees
+    with it in two places. `0014` does *not* substitute the class only at the call site: it
+    does it inline in `tu_image_init()` **and** inside
+    `tu6_mutable_format_list_forces_linear()` through a static
+    `tu_mutable_format_list_or_class()`, which is why its second `tu_formats.cc` hunk is a
+    comment and not a call - journal 21.12 and `docs/bugs-found.md` already described this
+    correctly, only this item had it wrong. And `0014` carries **no dev-info prop**: adding
+    one scoped to `a7xx_gen2` would change the answer on gen1 and gen3, so it is not a
+    refactor detail but a separate decision (and `info->chip >= 7` stays wrong either way -
+    the rule is not a chip capability).
+
+    What is actually duplicated, read off the shipped diff: the *synthesis* (an inline
+    `VkFormat[64]` plus its own `VkImageFormatListCreateInfo` in the create path, the same
+    thing again behind `or_class()`), and the *decision* (the tail of
+    `forces_linear()`, repeated in `tu_image_init()` as an inline copy of the three
+    predicates). Plus a naming cost: `fmt_list` is shadowed with the synthesized list, so
+    the `perf_debug` line says "fmt list present" about an image whose application passed
+    none, and only `ubwc_list` holds the truth. `exp-21` removes all three: one static
+    `mutable_compat_class()`, the create path calls `forces_linear()` like the query does,
+    `fmt_list` keeps its meaning, and the class is handed to the layout predicates only -
+    `tu6_mutable_format_list_ubwc_compatible()` sees the application's list and nothing
+    else, which is the seam `exp-18` needs (the strict class, not the block one: journal
+    24.4). Two lines of `forces_linear()` change and both are about reachability, not about
+    an image: NV12 answers "not linear" (what `0009` decided; its other caller is the sparse
+    query, which refuses multi-planar formats before asking), and the class no longer reaches
+    the UBWC predicate (`fd6_ubwc_compat_mode()` has one row per format, so a class of two or
+    more members is never "compatible" - no consequence today, structurally the wrong seam).
+
+    Not smaller, and the item should not pretend otherwise: `0014` is 5 hunks `+128/-5`,
+    `exp-21` is 7 hunks `+127/-16`, `exp-21b` 4 hunks `+16/-18`. It buys one decision path
+    instead of two and a public surface that does not grow (`0014` exports
+    `tu6_mutable_compat_class()`; `exp-21` exports nothing and `exp-21b` returns the three
+    predicates to `static`). Applying either to the current stack asks no rebase - both
+    were generated against `0001..0013`, pass `git apply --check`, and revert to the same
+    `+529/-77` (verified 20.11). The ownership that matters for a *future* rebase:
+    `format_list_has_swaps()`/`format_list_reinterprets_r8g8_r16()` were statics in
+    `tu_image.cc` at the base and `0004` moved and exported them, `swaps_are_uniform()` is
+    `0005`'s and `0010` rewrote it - so `exp-21b` touches the hunks of three patches, which
+    is why it is its own file and its own gate.
 
     Four things it must not enter, each with the record that says so: `is_mutable`/
     `MUTABLEEN` (journal 21.4, 14.5.1, ADR-0009); the UBWC predicates
@@ -481,14 +508,13 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     `0004` refusal for classes that still force linear, without which the silent-zero
     sparse hole returns (ADR-0002).
 
-    Gate, in this order: (1) an **equivalence run** - inventory with `0016` must reproduce
+    Gate, in this order: (1) an **equivalence run** - inventory with `exp-21` must reproduce
     the `imginv5` column of `results/imginv-3variants.txt` (`tiled` and `ubwc` counters,
     linear residue 1631 MiB), because the class logic is unchanged and anything else means
     the refactor changed behaviour, not spelling; (2) the 94-row matrix **plus** the rows
     `NL`, `XV`, `UBR`, `S`, `N` read separately - `0014` v2 is the reason "the counter is
-    green" is not a gate (ADR-0006); (3) only then compare patch size and rebase cost:
-    `0005`, `0009`, `0010` and `0014` all edit this branch of `tu_image_init()`, so a
-    unified function changes their context and each of their probes has to be re-run.
+    green" is not a gate (ADR-0006); (3) only then decide `exp-21b` and the graduation, and
+    re-run the probes of `0005`/`0009`/`0010` after their context moves.
 
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
@@ -513,6 +539,7 @@ instead of against a build.
 | 9 | R8 + UBWC: writer or reader | exp-19 (queue 2) |
 | 10 | UBWC format variants for `R16G16B16A16_FLOAT` and `R32G32_FLOAT` | half answered by reading the compat table (queue 1): both have no compat mode on base, `_SFLOAT` gets one from 0012; whether the layout allocates metadata for the 64-bit class is still unmeasured, and it gates exp-18 |
 | 11 | does vkd3d view a mutable RE4 image through another format of the same class | NOT MEASURED, exp-20 (queue 10): the inventories record creates, not views |
+| 12 | is a `VkImageFormatListCreateInfo` with `viewFormatCount == 0` the same as passing no list | NOT MEASURED, and `exp-21` deliberately keeps `0014`'s answer (an empty list is forwarded, and the predicates answer it as the worst case). The spec's wording makes them equal, but the inventories cannot tell the two apart - both are `listn=0` - so this is not a question a replay answers |
 
 ## Pitfalls (reminder)
 

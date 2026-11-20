@@ -21,7 +21,7 @@ add a row here and say in the file itself how to regenerate it.
 | 0011 | R16/10-bit rows in the UBWC compat table | `CEIL`: a ceiling exists; 36 -> 44 classes |
 | 0012 | `_SFLOAT` in the integer compat classes | 31 -> 36 classes; EXACT |
 | 0013 | CCU clean after `buffer->image` on A7XX (deferred bits) | 19 MISMATCH -> 0, 94/94, three repeats |
-| 0014 | mutable with no list: the compatibility class instead of `NULL` | probe `NL`: 8/8 layouts and round trips; +2201 MiB tiled by the model, 2170 MiB measured |
+| 0014 | mutable with no list: the compatibility class instead of `NULL` | probe `NL`: 8/8 layouts and round trips; +2201 MiB tiled by the model, 2170 MiB measured. A candidate that keeps the rule and removes its duplication stands in `experiments/exp-21-mutable-one-decision.patch` (queue 11, NOT BUILT); it replaces this file only if the equivalence run agrees |
 
 `0001`-`0003` belong to the image recipe (they cannot be removed from `image-build/`);
 `0004`-`0014` are this project's stack. Origin of `0001`-`0003`: `patches/PATCHES.md`.
@@ -34,8 +34,9 @@ here), the verdict is an ADR in `docs/decisions/`, the measurement is a journal 
 
 ## Experiments (`experiments/`, never for commit)
 
-`exp-1`..`exp-17` (there is no `exp-12`; `exp-18` is queued and has no file yet), full
-discussion in `experiments/README.md` and in the journal entry named below.
+`exp-1`..`exp-21b` (there is no `exp-12`; `exp-18`, `exp-19` and `exp-20` are queued
+and have no file - the queue owns those numbers), full discussion in
+`experiments/README.md` and in the journal entry named below.
 
 | exp | question | verdict | journal |
 |---|---|---|---|
@@ -55,6 +56,8 @@ discussion in `experiments/README.md` and in the journal entry named below.
 | 15 | 16 `TU_B2I_SYNC` modes | mode 7 -> 0013 | 21.11 |
 | 16 | stock Mesa 27 + one line `ubwc_all_formats_compatible` in `a7xx_gen2` | the prop alone breaks `MUTABLE+SPARSE` creates: 73 EXACT against 76 on stock | 26 |
 | 17 | is `{16,4}` in `fdl6_get_ubwc_blockwidth()` the cause of the 8bpp corruption | no: {16,4}/{32,4}/{64,4} corrupt identically, {16,8}/{32,8}/{8,8} fault the GPU; a diagnostic override, never part of a shipped stack | 22.4 |
+| 21 | can `0014`'s rule be written once: one function decides the mutable layout, the create calls it, the class reaches the layout predicates only | candidate that replaces `0014` (graduation number `0016`); applies clean on `0001..0013`, **NOT BUILT, NOT MEASURED** - the gate is an equivalence run against `imginv5`, not a new number | 21.12 |
+| 21b | with the create path no longer comparing predicates, do the three predicates (`0004`'s two and `0005`'s) go back to `static` | tail of 21, kept as its own gate because it lands on the definitions `0005`/`0010` wrote; **NOT BUILT** | 21.12 |
 
 ## Tools
 

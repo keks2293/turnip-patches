@@ -9,7 +9,8 @@ applied and reverted, which log belongs to it. The registry that owns the one-li
 verdict per experiment is [`../docs/artifacts.md`](../docs/artifacts.md), together with
 the journal entry named there; where the two tables disagree, the journal entry wins.
 `exp-12` was retired 18.11 (files removed, restorable from `39e103d`, verdict in journal
-21.9), `exp-18` is queued in `docs/plan-next-checks.md` and has no file yet.
+21.9). `exp-18`, `exp-19` and `exp-20` are queued in `docs/plan-next-checks.md` and have
+no file yet, so the numbers are reserved by the queue, not by this directory.
 
 | Experiment | What it checks | Result |
 |---|---|---|
@@ -28,10 +29,11 @@ the journal entry named there; where the two tables disagree, the journal entry 
 | `exp-13b-b2i-ccu-clean-candidate.patch` | the same fix in the native `flush_bits` + `tu_emit_cache_flush` idiom instead of a raw event write | 91/91 EXACT; it is the shape 0013 ships, kept only as the intermediate candidate |
 | `exp-14-image-inventory.patch` | byte budget per created image: `TU_IMG_INV=1` prints format/extent/flags/tile/UBWC/mutable/size/`listn`/list. Logs `vkCreateImage` only - a view creation is invisible in it, so it cannot say whether an image is ever reinterpreted (journal 24.4, queue 10) | **4062 MiB of 7977 MiB sampled (50.9%) are `MUT listn=0` in linear**, and that is the input to 0014. `scripts/fmt-list-gate-check.py --no-list <log>` turns the log into the per-class table |
 | `exp-15-b2i-sync-env-bundle.patch` | 16 forms of the post-`b2i` cache operation (`TU_B2I_SYNC=0..15`: per-copy vs deferred vs lazy bits, clean color vs blit cache, with/without invalidate and WFI), plus `TU_B2I_COUNT` | **mode 7 wins**: `flush_bits |= CCU_CLEAN_COLOR \| WAIT_FOR_IDLE` and nothing executed at the copy — 94/94 EXACT over 3 repeats and the cheapest (one clean+WFI per group, merging into `tu_EndCommandBuffer`). Modes 2/3/5/10/13 fail (blit cache is the wrong aperture for r2d), 4/6 pass but pay two events, 1 passes but pays a WFI per copy. → `patches/0013-turnip-b2i-ccu-clean.patch` |
-
-
 | `exp-16-gen2-ubwc-allformats-stock.patch` | stock Mesa 27 (`0001`-`0014` all reverted) plus one line in `freedreno_devices.py`: `ubwc_all_formats_compatible` for `a7xx_gen2`. Is the prop on its own enough, with no patch stack under it | **no**: the matrix drops to 73 EXACT against 76 on the same stock tree without the line - the prop alone breaks `MUTABLE+SPARSE` creates - and yet the game plays 90 s with it (journal 26, `ADR-0001`). Build `44cdf593a5200d8b…` |
 | `exp-17-cpp1-ubwc-blockwidth.patch` | is the `cpp == 1` row of the UBWC metadata geometry table - the `{16,4}` block width in `fdl6_get_ubwc_blockwidth()` - what breaks 8bpp UBWC? The row is overridden from the environment through `TU_8BPP_UBWC=<w>x<h>` | **no**: `{16,4}`/`{32,4}`/`{64,4}` corrupt identically (25.29 % readable), `{16,8}`/`{32,8}`/`{8,8}` fault the GPU with `VK_ERROR_DEVICE_LOST`. Diagnostics only, removed from the tree; build `5395a4f3f2c6fcce` (journal 22.4) |
+| `exp-21-mutable-one-decision.patch` | the rule of `0014` written once instead of twice: `tu6_mutable_format_list_forces_linear()` synthesizes the compatibility class and `tu_image_init()` calls it, instead of the create path carrying its own synthesis and its own copy of the three predicates. The class goes to the layout predicates only; the UBWC predicate keeps seeing the application's list | candidate that replaces `patches/0014-*.patch`, graduation number `0016`. Applies clean on `0001..0013`, reverts clean; **NOT BUILT, NOT MEASURED**. Its gate is an equivalence run against the `imginv5` column of `results/imginv-3variants.txt` first - the rule is `0014`'s, so anything that moves is the refactor changing behaviour (queue 11, ADR-0006) |
+| `exp-21b-predicates-static.patch` | the tail of `exp-21`: with no caller outside `tu_formats.cc`, the three format-list predicates `0004` and `0005` exported go back to `static` | kept separate because of whose hunks it lands on - the definitions are `0004`'s and `0005`'s and `0010` rewrote one of them, so it is a second gate. **NOT BUILT, NOT MEASURED** |
+
 The experiment numbering is `exp-N`, the patch numbering is `000N` - the
 two cannot collide. Which experiment went into which patch and
 which of those is already in mesa - the "Experiment -> patch -> mesa" table
