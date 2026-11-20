@@ -591,10 +591,61 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     3. only then decide `exp-21b` and the graduation, and re-run the probes of
        `0005`/`0009`/`0010` after their context moves.
 
+12. **The driconf perf options the props search never covered** (journal 34; no build
+    needed, no new code). Five options are perf-relevant and off for this game; three are
+    candidates, one is a feature trade and one is unreachable on a740 (journal 34.2).
+    `TU_FORCE_PROPS` (journal 15) covers boolean device properties, and the
+    env switches of journal 13/15.5 cover autotune and draw states. Neither touched Turnip's
+    `perf`/`misc` driconf groups (`src/freedreno/vulkan/tu_drirc_gen.py`), which are overridden
+    by an environment variable of the same name and change the command stream:
+
+    * `tu_disable_conservative_fdm_binning` - the driver's own description says "**Improves
+      performance up to 4% on A7XX.**"; it is off by default because non-identity FDM tiles can
+      leave see-through gaps in dense geometry. The first candidate: the only one with a number
+      attached, from upstream, on this generation;
+    * `tu_allow_concurrent_binning` - A7xx concurrent binning, disabled by default "because it
+      regresses performance on desktop games", where the phrase describes an x86 discrete GPU
+      rather than this SoC running a desktop game through vkd3d-proton;
+    * `disable_conservative_lrz` - stops the conservative default from disabling LRZ writes on
+      draws that blend and write depth (`tu_lrz.cc:1524`, `:1533`); safe only if the game does
+      not contain the three-draw sequence the code comment above those lines spells out, which a
+      screenshot comparison is supposed to answer.
+
+    Correctness on every shape the rig creates is already established (journal 34.3,
+    `results/test-perfprops-rig.log`: four forced runs, 0 differing lines of 621, each carrying
+    the driver's own `ATTENTION: ... overridden by environment` line) - and is explicitly not a
+    verdict, because all three act in a renderpass and the rig has no textured depth renderpass.
+
+    What is left is the fps A/B, which needs the game and therefore most of the 7.3 GiB of this
+    machine (`free -m` at the time of journal 34: 1.1 GiB available). Protocol as in journal
+    15.5, interleaved within one session, `HUDINTERVAL=100`:
+
+    ```sh
+    source scripts/env.sh
+    TAG=fdm1 tu_disable_conservative_fdm_binning=true HUDLOG=150 scripts/run-game.sh patched 170
+    TAG=cb1  tu_allow_concurrent_binning=true         HUDLOG=150 scripts/run-game.sh patched 170
+    TAG=lrx1 disable_conservative_lrz=true            HUDLOG=150 scripts/run-game.sh patched 170
+    # plus a base run between each, and scripts/fps-window.py for p25 over frames with fps < 30
+    ```
+
+    Gate order per option: a screenshot pair (`HUD=1`, the same camera position as the base
+    shot, compared with `scripts/pixelcheck.py`) **before** any fps number - the FDM option is
+    documented to change what is drawn, and LRZ invalidation is a correctness trade by
+    definition. An option that gains fps and changes the picture is a trade the operator decides
+    on, not a patch. vkmark, the second rig of journal 15, is no longer installed, so the game
+    is currently the only workload that exercises these paths.
+
+    Expectation, said before the run rather than after: the wall is `UCHE` at 90 % busy and
+    ~220 ns to `VBIF` (ADR-0008), and every lever tried so far on this game has been zero, so
+    two of the three are likely zeros. That is a reason to run them in one evening session, not
+    a reason to skip them: none has ever been asked here.
+
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
-(ADR-0010), BC + UBWC (ADR-0004), any 8bpp UBWC patch (ADR-0007), driver-side fps levers
-(ADR-0008), removing any shipped patch (`patches/DROPPED.md`). Outside patch stacks keep
+(ADR-0010), BC + UBWC (ADR-0004), any 8bpp UBWC patch (ADR-0007), removing any shipped patch
+(`patches/DROPPED.md`). Driver-side fps levers are closed too (ADR-0008), with one exception:
+the driconf `perf`/`misc` options of queue 12 are not among the switches that record measured,
+so three of them are asked for once instead of assumed. Outside patch stacks keep
 proposing versions of the ideas closed above: `journal 30` maps four files from one such
 stack to these records, so the next outside proposal can be checked against a verdict
 instead of against a build.
@@ -618,6 +669,7 @@ instead of against a build.
 | 13 | why does the system driver give UBWC to a `MUTABLE` image with no list, where both Mesa 27 builds refuse it | ONE ROW, journal 31: `B8G8R8A8_UNORM`, `nolist=0x102000` against `0x100000`. Not in the two refusal functions (byte-identical to refs `mesa-26.2.6` and `main`), so it is either elsewhere in 26.2 or in the distribution's own patches (`mesa-vulkan-drivers-26.2.6-1.fc44.armada`, not in this repository). Chasing it would need the downstream source; it changes no verdict, and `exp-18` does not depend on it |
 | 14 | does a `R64_UINT`/`R64_SINT` view of a UBWC image work, once `STORAGE` makes it legal | NOT MEASURED, and it is the gap `exp-18 (b)` cannot write around: journal 32 measured the two 64-bit compat labels as one cell but deliberately created its images **without** `STORAGE`, while `ubwc_possible()` refuses the `R64_*` formats for their own reasons and `tu_formats.cc` grants the 64-bit image-atomic feature under `has_64b_image_atomics`. A no-list image with `STORAGE` in its usage is viewable as `R64_UINT` whatever the class rule grants. Needs a probe shape (same image, `STORAGE` usage, `R64_UINT` view, atomics in and out), not a build |
 | 15 | is the compressor actually writing compressed bytes, or only a metadata plane | NOT MEASURED by any rig here. Every UBWC claim in this repository rests on the `+0x2000` allocation signature, which journal 22.2 says is an allocation and not a compression claim. The direct detector is a fast-clear that leaves the bytes untouched in a UBWC image and does not in a linear one; it is not written, and journal 32's verdict is stated so as not to need it |
+| 16 | does any of the three reachable driconf perf options change fps in RE4 | NOT MEASURED, queue 12 (journal 34.3 covers correctness on the rig only, and the rig has no textured depth renderpass). `tu_disable_conservative_fdm_binning` carries upstream's "Improves performance up to 4% on A7XX."; the other two are expected zeros given ADR-0008. Needs the game, so it needs most of this machine's 7.3 GiB |
 
 ## Pitfalls (reminder)
 

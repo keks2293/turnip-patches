@@ -798,6 +798,28 @@
    ],
    "verdict_quote": ". On the shapes this rig creates, exp-21 replaces 0014 without changing",
    "verdict_source": "journal 33"
+  },
+  {
+   "id": "34",
+   "title": "After the props, five driconf perf options are left that this device has never run with (21.11)",
+   "question": "which perf-relevant options exist outside TU_FORCE_PROPS, and which of them a740 has never run with",
+   "file": "journal/34-after-the-props-five-driconf-perf-options-were-never-measured.md",
+   "date": "21.11",
+   "status": "open",
+   "decision": "",
+   "verdict_first_line": ". Four of the five options are reachable with an environment variable and no rebuild,",
+   "artifacts": [
+    "results/test-perfprops-rig.log"
+   ],
+   "lines": 120,
+   "headings": [
+    "## 34.1 What has already been measured, so the search does not repeat it",
+    "## 34.2 The surface none of them covered, read off the tree",
+    "## 34.3 The correctness gate the rig can give, on the released driver",
+    "## What this does not show"
+   ],
+   "verdict_quote": ". Four of the five options are reachable with an environment variable and no rebuild,",
+   "verdict_source": "journal 34"
   }
  ]
 }

@@ -21,6 +21,13 @@ Believed, with the evidence:
 Open: fps A/B for mode 7 (`0013`) was never run; the expectation, given a latency bound,
 is small, and the correctness case for `0013` does not depend on it.
 
+Open, and narrower than "find a lever": three of Turnip's own driconf perf options change
+the command stream, were never enabled for this device, and were never asked of it - the
+props search of journal 15 could not see them, because they are not device properties.
+They are listed with what each one costs in queue 12, and journal 34 says which fourth one
+is unreachable on a740 without a build. No fps has been taken for any of them: all three
+act in a renderpass, and the rig has none.
+
 Decisions: ADR-0008, ADR-0001, ADR-0004. Artifacts: `docs/fdperf-a7xx.md`,
 `results/fdperf-mesa27*/steady-state.txt`, `results/fps-*.csv`,
-`tools/fdperf/fdperf-windowed-delta.patch`.
+`results/test-perfprops-rig.log`, `tools/fdperf/fdperf-windowed-delta.patch`.

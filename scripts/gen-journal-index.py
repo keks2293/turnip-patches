@@ -35,7 +35,7 @@ STATUS = {
     "21.10": "shipped", "21.11": "shipped", "21.12": "shipped",
     "22": "closed", "23": "closed", "24": "closed", "25": "reference", "26": "closed",
     "27": "closed", "28": "open", "29": "reference", "30": "closed", "31": "open",
-    "32": "open", "33": "open",
+    "32": "open", "33": "open", "34": "open",
 }
 # where the verdict lives when the entry is not the owning document
 DECISIONS = {
@@ -71,6 +71,7 @@ QUESTION = {
     "17": "how much memory RE4 holds, and in what",
     "18": "does NV12 + MUTABLE have to lose the tiling",
     "19": "why the build image produced a driver that would not load",
+    "34": "which perf-relevant options exist outside TU_FORCE_PROPS, and which of them a740 has never run with",
 }
 
 DECISION_DIR = "docs/decisions"

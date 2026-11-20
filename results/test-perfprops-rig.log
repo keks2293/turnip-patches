@@ -1,0 +1,111 @@
+# Five driconf perf options outside TU_FORCE_PROPS: four forced on the released driver, and what the rig cannot see
+
+# Question: this repository searched driver-side speedups through TU_FORCE_PROPS (journal 15) and
+#           through env switches (journal 13, 15.5). A surface that search did not cover is the
+#           driconf `perf` and `misc` groups: options that change what the command stream does, are
+#           NOT in TU_FORCE_PROPS, need no rebuild (an environment variable of the same name
+#           overrides them), and are off for our device by default. Four of them are forced in the
+#           runs below; the fifth is documented in section 1 because it turns out to be unreachable
+#           on a740 without a build:
+#             tu_allow_concurrent_binning, tu_disable_conservative_fdm_binning,
+#             disable_conservative_lrz, tu_dont_reserve_descriptor_set, (unreachable) tu_independent_icache_miss
+#           Is any of the four a regression on the shapes the test rig creates, and is any of them
+#           even reachable at all on a740?
+# Method:   one test binary, the released driver, five runs; the option forced by an env variable of
+#           the same name as the driconf option. The driver confirms each one in its own output
+#           ("ATTENTION: default value of option <name> overridden by environment."), which is what
+#           proves the run is not a silent no-op.
+#           The FULL logs are compared, minus that one line per run.
+# Tool:     tests/rp6-vkd3d-sparse-test, sha256 5f44a7f7e6ae... (identical in all five runs)
+# Driver:   build/p14-shipped/libvulkan_freedreno.so, sha256 c17d02bcaae9a960...  (the released stack)
+# Device:   Adreno A740 (chip_id 0x43050a01), KMD msm
+# Runs:     21.11, all five exit 0
+# Command:  source scripts/env.sh && RP6_TEST_BIN=/tmp/opencode/testbuild-xmc/rp6-vkd3d-sparse-test \
+#               scripts/run-test.sh build/p14-shipped/freedreno_icd_p14.json <log>
+#           with <option>=true in the environment for the four forced runs
+# Raw:      results/raw/perfprops-{base,tu_allow_concurrent_binning,
+#           tu_disable_conservative_fdm_binning,disable_conservative_lrz,
+#           tu_dont_reserve_descriptor_set}.log (gitignored)
+#
+=== 1. what each option is, in the driver's own words, and whether a740 can reach it
+
+  The names below are verbatim from src/freedreno/vulkan/tu_drirc_gen.py, the descriptions are
+  the driver's own strings; "read at" is where the value is consumed in the Mesa 27 tree.
+
+  tu_allow_concurrent_binning          group perf
+    read at      tu_cmd_buffer.cc:560 (the cache-flush path, gated on CHIP >= A7XX and on
+                 !renderpass_cb_disabled), tu_cmd_buffer.cc:3225
+                 (tu7_cb_disable_reason(.., "globally disabled")), tu_queue.cc:187 (how many
+                 visibility streams the queue reserves)
+    also reachable as TU_DEBUG=force_concurrent_binning / no_concurrent_binning, which
+                 overwrite this option after driconf is parsed (tu_device.cc:2083-2086)
+    the driver   "Allow concurrent binning on A7XX+, the CB is disabled by default because it
+                 regresses performance on desktop games"
+
+  tu_disable_conservative_fdm_binning  group misc
+    read at      tu_cmd_buffer.cc:3674 (cons_vis_in_binning, when the pass has_fdm),
+                 tu_pipeline.cc:3489 (`return CHIP == A7XX && fdm && !...`)
+    the driver   "Don't enable conservative rasterization during binning of a renderpass with
+                 FDM, for non-identity FDM tiles may result in tiny see-through gaps in the
+                 geometry in places with dense geometry. Improves performance up to 4% on A7XX."
+
+  disable_conservative_lrz             group misc
+    read at      tu_lrz.cc:1524 and :1533, where the default (conservative) path calls
+                 tu_lrz_disable_write_for_rp(cmd, "Depth write + blending") and
+                 (cmd, "Depth write + no color writes"). The option stops the driver from
+                 disabling LRZ writes for such a renderpass. The comment above the pair spells
+                 out the draw sequence that makes the conservative default necessary, so this
+                 one is a correctness trade by construction, not by caution.
+    the driver   "Disable conservative LRZ"
+
+  tu_dont_reserve_descriptor_set       group misc
+    read at      tu_device.cc:1876 (whether one HW descriptor set is reserved at create)
+    the driver   "... this frees up an extra descriptor set at the cost of that feature" (the
+                 feature being descriptor set dynamic offsets)
+
+  tu_independent_icache_miss           group perf - NOT REACHABLE on a740
+    read at      tu_cmd_buffer.cc:2226 ANDs the option with the prop has_independent_icache_miss,
+                 which freedreno_devices.py sets only for FD750/753 (:1341) and
+                 freedreno_dev_info.h:408 documents as "A750 only"
+                 (SP_CHICKEN_BITS_2.INDEPENDENT_ICACHE_MISS). Env-only would be a silent no-op;
+                 asking the hardware needs a build.
+
+=== 2. the runs, compared as text
+  run                                     lines  differing lines vs the base run (the ATTENTION line excluded)
+  base (no option)                          621  -
+  tu_allow_concurrent_binning=true          622  0
+  tu_disable_conservative_fdm_binning=true    622  0
+  disable_conservative_lrz=true             622  0
+  tu_dont_reserve_descriptor_set=true       622  0
+
+  Verdict words are identical too (lines containing each word, over the whole log - not a row
+  count; the rows themselves are compared as text by the diff above):
+    perfprops-base.log                             EXACT 124  MISMATCH 8   FAIL 6
+    perfprops-disable_conservative_lrz.log         EXACT 124  MISMATCH 8   FAIL 6
+    perfprops-tu_allow_concurrent_binning.log      EXACT 124  MISMATCH 8   FAIL 6
+    perfprops-tu_disable_conservative_fdm_binning.log EXACT 124  MISMATCH 8   FAIL 6
+    perfprops-tu_dont_reserve_descriptor_set.log   EXACT 124  MISMATCH 8   FAIL 6
+  Each forced run carries exactly one extra line, the driver's own confirmation:
+    ATTENTION: default value of option disable_conservative_lrz overridden by environment.
+    ATTENTION: default value of option tu_allow_concurrent_binning overridden by environment.
+    ATTENTION: default value of option tu_disable_conservative_fdm_binning overridden by environment.
+    ATTENTION: default value of option tu_dont_reserve_descriptor_set overridden by environment.
+
+=== 3. what this does and does not say
+
+  It says: none of the four options changes anything the test rig creates - all 621 lines of
+  the run, every probe and every readback row, are byte-equal with the option forced.
+
+  It does NOT say they are safe, and it cannot: concurrent binning, conservative FDM binning
+  and conservative LRZ all act in a renderpass (binning pass, visibility stream, depth
+  resolve). The rig's shapes are image creates, copies, sparse binds, compute reads and
+  blits; it has no textured depth renderpass of the kind a game submits. The same gate was
+  used for TU_FORCE_PROPS in journal 15 and it was paired there with a picture comparison,
+  because "the counter is green" is not a gate (ADR-0006).
+
+  So these three remain UNMEASURED for performance, and unjudged for correctness on real
+  rendering. They need the game: a run of scripts/run-game.sh with the option set, the p25
+  protocol of journal 15.5 (fps < 30 threshold), and scripts/pixelcheck.py against a base
+  screenshot. The game needs about 7 GiB of RAM, which is the whole machine, so the runs are
+  queued (docs/plan-next-checks.md queue 12) rather than run here; vkmark, the second rig
+  journal 15 used, is no longer installed on this system.
