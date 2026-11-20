@@ -28,6 +28,10 @@ add a row here and say in the file itself how to regenerate it.
 Rejected candidates and the criterion for rejecting: `patches/DROPPED.md` and the files
 under `patches/dropped/`.
 
+A row here is a pointer, not a summary: *why* a patch exists and what it must not do is
+the header of `patches/00NN-*.patch` (and the class-by-class table of `0014` is there, not
+here), the verdict is an ADR in `docs/decisions/`, the measurement is a journal entry.
+
 ## Experiments (`experiments/`, never for commit)
 
 `exp-1`..`exp-17` (there is no `exp-12`; `exp-18` is queued and has no file yet), full
