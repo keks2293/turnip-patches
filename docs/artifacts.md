@@ -59,7 +59,7 @@ discussion in `experiments/README.md` and in the journal entry named below.
 | `tests/rp6-vkd3d-sparse-test.c` | the main test: probes `U`/`T`/`S`/`V`/`N`/`CEIL`/`NL`/`X`/`XV`/`Y` plus the 94-row matrix |
 | `tests/tp8bpp.c` + `tests/tp_write.comp` (`scripts/gen-tp-write-spv.sh`) | standalone 8bpp+UBWC probe: `Z` (NV12 Y), `AA` (`imageStore` writer), `AB` (2D copier), each with a LINEAR control and a dump of the whole allocation. Build: `podman run --rm -v …/tests:/work:Z -v …/build:/out:Z localhost/mesa-build-fedora44-wsi-glslang-vulkan bash -c 'cd /work && gcc -O2 -Wall -o /out/tp8bpp tp8bpp.c -lvulkan'`; size via `-DW=… -DH=…`. Read the header: the tool prints the number of WRONG elements |
 | `tests/repro-first-fill.c` | minimal repro of the "~2 % on the first fill" effect |
-| `tests/vk-fmt-classes.json`, `scripts/gen-vk-fmt-classes.py` | vkd3d format classes |
+| `tests/vk-fmt-classes.json`, `scripts/gen-vk-fmt-classes.py` | the Vulkan texel compatibility classes, generated from `vk.xml` (provenance inside the file): which view formats are legal for a base format, with and without a list - the table that decides both `0014`'s rule and journal 24.4 |
 | `scripts/gen-journal-index.py` | regenerates `docs/analysis.md` and `docs/journal/manifest.json` from the journal entries |
 | `scripts/fmt-list-gate-check.py` | model of the gate (`--vkd3d`, `--no-list`, `--exp-9`, `--blockers`) |
 | `scripts/imginv-stats.py`, `scripts/imginv-classes.py` | inventory counters (mutable from `flags & 0x8`, not from the `mutable=` field) |

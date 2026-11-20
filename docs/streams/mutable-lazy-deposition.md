@@ -7,14 +7,14 @@ Believed, with the evidence:
 
 - an absent format list means "any format of the base's class", not "the worst case";
   the three predicates that answer on `NULL` are the whole cause
-  (`analysis` 21.12, ADR-0006);
+  (journal 21.12, ADR-0006);
 - `0014` returns about 60 % of the deposited volume to tiled and the residue is exactly
-  the classes that legitimately reinterpret a layout (`analysis` 27, class table);
+  the classes that legitimately reinterpret a layout (journal 27, class table);
 - UBWC in that class is zero in every variant measured, including the crude prop - the
   block is one upstream line, `format_list_ubwc_possible()` answering false on `NULL`
-  with `TODO: limit based on compatiblity class` (`analysis` 28);
+  with `TODO: limit based on compatiblity class` (journal 28);
 - the reserve is 64-bit only: 8-bit is closed by ADR-0007, BC by ADR-0004, and 32/16-bit
-  stay linear by design (`analysis` 28).
+  stay linear by design (journal 28).
 
 Open questions, all in `docs/plan-next-checks.md`: who creates the DEPOSED no-list
 images (vkd3d or DXVK - not separated, and it decides which path to verify); and two

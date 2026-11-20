@@ -406,6 +406,21 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    After editing any entry run `scripts/gen-journal-index.py`; the index and
    `docs/journal/manifest.json` are generated, not edited.
 
+10. **exp-20 - does the game ever reinterpret a mutable image** (no file yet; one hook
+    line, one rebuild, one 150 s run; the hook is stack-independent, item 0 only decides
+    whether it runs against the ship stack). `exp-14` logs `vkCreateImage`; nothing in
+    this repository has ever recorded a view creation. Extend the hook to the view path: base format, view
+    format, `MUTABLE_FORMAT` bit, and whether the view format sits in the base's texel
+    compatibility class (`tests/vk-fmt-classes.json`). Report the count of views whose
+    format is not the base, split into same byte order and cross order. Why a rebuild is
+    worth it: journal 24.4 shows that 24.1 does not exclude the prop's broken shape for the
+    1630.2 MiB of 32-bit and 16-bit no-list mutable images the prop tiles, because a
+    no-list `MUTABLE_FORMAT` image is reinterpretable by spec without a list. Zero casts
+    closes the last gap in a shipped direction's argument and makes ADR-0001's "the shape
+    is not created here" a complete sentence; a non-zero count means the prop is unsafe on
+    a shape that carries volume. The verdict of ADR-0001 does not move either way - the
+    prop frees no patch and adds no compression (journal 24.3, 27).
+
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
 (ADR-0010), BC + UBWC (ADR-0004), any 8bpp UBWC patch (ADR-0007), driver-side fps levers
@@ -425,6 +440,7 @@ Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on g
 | 8 | the 32- and 16-bit classes in lazy deposition | they reinterpret the layout; a separate analysis, and the reason 0014 leaves them linear on purpose |
 | 9 | R8 + UBWC: writer or reader | exp-19 (queue 2) |
 | 10 | UBWC format variants for `R16G16B16A16_FLOAT` and `R32G32_FLOAT` | half answered by reading the compat table (queue 1): both have no compat mode on base, `_SFLOAT` gets one from 0012; whether the layout allocates metadata for the 64-bit class is still unmeasured, and it gates exp-18 |
+| 11 | does vkd3d view a mutable RE4 image through another format of the same class | NOT MEASURED, exp-20 (queue 10): the inventories record creates, not views |
 
 ## Pitfalls (reminder)
 

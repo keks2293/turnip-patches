@@ -7,16 +7,16 @@ Believed, with the evidence:
 
 - the property is already False on every a7xx (`True` only in `a6xx_base:118`; the a7xx
   chain does not inherit it) and its origin is a 2022 workaround for text corruption in
-  VSCode on an a680, with no diagnosis - `analysis` 22.5;
+  VSCode on an a680, with no diagnosis - journal 22.5;
 - with the prop forced on, a plain R8 image reads back exactly the top-left quadrant at
   every size measured, and the metadata geometry does not matter: block grid and metadata
-  pitch were both swept and the readable fraction does not move (`analysis` 22.3, 22.4);
+  pitch were both swept and the readable fraction does not move (journal 22.3, 22.4);
 - the chip does compress an 8-bit UBWC plane - NV12 Y round-trips EXACT - and that does
   NOT license `FMT6_8_UNORM`: the tree itself says the two are not UBWC-compatible
-  (`registers/adreno/a6xx_enums.xml:114-116`), `analysis` 22.2;
+  (`registers/adreno/a6xx_enums.xml:114-116`), journal 22.2;
 - "our tree lacks the per-plane plumbing" is false: the last of the three upstream fixes
   for that branch is already applied here (checked with `git apply -R --check`),
-  `analysis` 22.5;
+  journal 22.5;
 - what a fix would require is descriptor/CCU programming for `FMT6_8_UNORM` with 8bpp
   UBWC - not a prop, not a table row, and unverifiable without Qualcomm documentation.
 

@@ -569,9 +569,13 @@
     "results/test-gen2flag-minstack.log",
     "results/test-0014v2-matrix.log",
     "patches/DROPPED.md",
-    "results/test-restore-shipstack.log"
+    "results/test-restore-shipstack.log",
+    "results/raw/game-patched-imginv5.log",
+    "results/raw/game-patched-stockflaginv.log",
+    "tests/vk-fmt-classes.json",
+    "scripts/gen-vk-fmt-classes.py"
    ],
-   "lines": 121,
+   "lines": 185,
    "headings": [],
    "verdict_quote": "ubwc_all_formats_compatible is not set for a7xx_gen2 and is not added to the shipped stack. 0007 (TU_FORCE_PROPS) stays the way to measure a prop without a rebuild.",
    "verdict_source": "ADR-0001"
