@@ -1159,17 +1159,29 @@ cleanup:
  * The linearity control is mandatory and must use the same list: at n=1
  * tu6_mutable_format_list_ubwc_compatible() returns true unconditionally, so
  * a lone format goes past the gate, and a memreq above the linear one means exactly
- * "UBWC started working on its own". */
+ * "UBWC started working on its own".
+ *
+ * The fourth image (added 20.11 for the 64-bit class, queue 1 of
+ * docs/plan-next-checks.md) is MUTABLE with no format list at all, which is the
+ * case exp-18 would have to win: upstream refuses UBWC there in two places
+ * (format_list_ubwc_possible() returns false for NULL, and
+ * tu6_mutable_format_list_ubwc_compatible() returns false for a NULL or empty
+ * list), so `nolist` below says whether the ceiling of this format is reachable
+ * by an image that carries no list.  It is a size, not a layout: a tiled image
+ * without UBWC and a linear one have the same memreq here, so "no UBWC" does not
+ * say which layout the image got - that is what probe NL answers with a sparse
+ * create. */
 static void probe_ubwc_ceiling(VkDevice dev, const char *tag, VkFormat base,
                                const VkFormat *list, unsigned n, unsigned bpt)
 {
     const unsigned w = 512, h = 512;
     VkImageFormatListCreateInfo ifl = { VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO, NULL,
                                         n, list };
-    /* three images: linear reference, the same list without MUTABLE, and it with MUTABLE */
-    struct { VkImage img; VkDeviceSize size; const char *what; } v[3] = {};
+    /* four images: linear reference, the same list without MUTABLE, the same
+     * list with MUTABLE, and MUTABLE with no list */
+    struct { VkImage img; VkDeviceSize size; const char *what; } v[4] = {};
 
-    for (int t = 0; t < 3; t++) {
+    for (int t = 0; t < 4; t++) {
         VkImageCreateInfo ici = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
                                   .imageType = VK_IMAGE_TYPE_2D,
                                   .format = base,
@@ -1185,18 +1197,30 @@ static void probe_ubwc_ceiling(VkDevice dev, const char *tag, VkFormat base,
         switch (t) {
         case 0: ici.tiling = VK_IMAGE_TILING_LINEAR; v[t].what = "lin"; break;
         case 1: ici.tiling = VK_IMAGE_TILING_OPTIMAL; v[t].what = "nonmut"; break;
-        default:
+        case 2:
             ici.tiling = VK_IMAGE_TILING_OPTIMAL;
             ici.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
             ici.pNext = &ifl;
             v[t].what = "list";
             break;
+        default: /* MUTABLE, no VkImageFormatListCreateInfo in pNext */
+            ici.tiling = VK_IMAGE_TILING_OPTIMAL;
+            ici.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+            v[t].what = "nolist";
+            break;
         }
         v[t].img = VK_NULL_HANDLE;
         VkResult rr = vkCreateImage(dev, &ici, NULL, &v[t].img);
         if (rr != VK_SUCCESS) {
-            printf("CEIL[%s] create %s: %s\n", tag, v[t].what, vkerr(rr));
-            goto done;
+            /* A failing no-list create is the answer for that column, not a
+             * reason to lose the three sizes that did work. */
+            if (t != 3) {
+                printf("CEIL[%s] create %s: %s\n", tag, v[t].what, vkerr(rr));
+                goto done;
+            }
+            v[t].size = 0;
+            v[t].what = vkerr(rr);
+            continue;
         }
         VkMemoryRequirements mr;
         vkGetImageMemoryRequirements(dev, v[t].img, &mr);
@@ -1206,18 +1230,24 @@ static void probe_ubwc_ceiling(VkDevice dev, const char *tag, VkFormat base,
     {
         /* nonmut > lin  => the format holds UBWC on its own, there is a ceiling.
          * list  < nonmut => the gate removed what the format could.  list == nonmut
-         * and nonmut == lin => there is no ceiling, the blocker is not in the gate. */
+         * and nonmut == lin => there is no ceiling, the blocker is not in the gate.
+         * nolist >= nonmut => an image with no list reaches the same ceiling; see
+         * the header of this function for what "no" does not say about the layout. */
         int ceiling = v[1].size > v[0].size;
         const char *verdict = !ceiling ? "no ceiling (ubwc_possible)"
                                        : (v[2].size >= v[1].size ? "gate is not in the way" : "GATE REMOVED");
+        const char *nl = !v[3].img                ? "create fails"
+                         : !ceiling               ? "-"
+                         : (v[3].size >= v[1].size ? "has UBWC" : "NO UBWC");
         printf("CEIL[%-22s] n=%u %2uB/texel  lin=0x%08llx nonmut=0x%08llx "
-               "list=0x%08llx  -> %s\n", tag, n, bpt,
+               "list=0x%08llx nolist=0x%08llx  -> %s | no-list: %s\n", tag, n, bpt,
                (unsigned long long)v[0].size, (unsigned long long)v[1].size,
-               (unsigned long long)v[2].size, verdict);
+               (unsigned long long)v[2].size, (unsigned long long)v[3].size,
+               verdict, nl);
     }
 
 done:
-    for (int t = 0; t < 3; t++)
+    for (int t = 0; t < 4; t++)
         if (v[t].img != VK_NULL_HANDLE) vkDestroyImage(dev, v[t].img, NULL);
 }
 
@@ -5598,6 +5628,30 @@ skip_b:
                                                            VK_FORMAT_A2B10G10R10_UINT_PACK32 };
                 static const VkFormat c_bgra8[] = { VK_FORMAT_B8G8R8A8_UNORM,
                                                    VK_FORMAT_B8G8R8A8_SRGB };
+                /* The 64-bit class, added 20.11 for queue 1 (exp-18).  These are the
+                 * four formats journal 28 counts as the game's no-list 64-bit volume
+                 * (R16G16B16A16_FLOAT 312 creates, _UNORM 146, _SNORM 56,
+                 * R32G32_FLOAT 22, 650.8 MiB together), i.e. the reserve that
+                 * exp-18 is about.  What each row separates:
+                 *   - the class list is the one vkd3d builds for a 64-bit typeless
+                 *     resource: all five forms of the same 64 bits;
+                 *   - _SNORM was written as the control for ubwc_possible(), which
+                 *     refuses every snorm format - but only while
+                 *     ubwc_unorm_snorm_int_compatible is false, and that prop is True
+                 *     on a7xx_gen2 (freedreno_devices.py:817).  Measured 20.11 in
+                 *     results/test-CEIL-nolist-mesa27base.log: the row has a ceiling
+                 *     like its three siblings, so it is a second member of the group
+                 *     here and not a control;
+                 *   - the nolist column is the question itself: 0014 tiles these
+                 *     images and both UBWC predicates answer "no" to a NULL list. */
+                static const VkFormat c_r16g16b16a16[] = { VK_FORMAT_R16G16B16A16_SFLOAT,
+                                                           VK_FORMAT_R16G16B16A16_UNORM,
+                                                           VK_FORMAT_R16G16B16A16_SNORM,
+                                                           VK_FORMAT_R16G16B16A16_UINT,
+                                                           VK_FORMAT_R16G16B16A16_SINT };
+                static const VkFormat c_r32g32[] = { VK_FORMAT_R32G32_SFLOAT,
+                                                     VK_FORMAT_R32G32_UINT,
+                                                     VK_FORMAT_R32G32_SINT };
                 /* EXPERIMENT 0012 (BC+UBWC): lists as vkd3d builds them
                  * (a UNORM+SRGB pair).  bpt is only a label: BC1 0.5 B/texel,
                  * BC3/BC7 1 B/texel; bpt is not used by the probe itself
@@ -5637,6 +5691,13 @@ skip_b:
                       ARRAY_SIZE(c_r10g10b10a2), 4 },
                     /* blocker that 0006 closes: the B8G8R8A8 family outside UNORM */
                     { "B8G8R8A8_UNORM", VK_FORMAT_B8G8R8A8_UNORM, c_bgra8, ARRAY_SIZE(c_bgra8), 4 },
+                    /* the game's no-list 64-bit volume, 8 B/texel each (journal 28) */
+                    { "R16G16B16A16_TYPELESS", VK_FORMAT_R16G16B16A16_SFLOAT, c_r16g16b16a16,
+                      ARRAY_SIZE(c_r16g16b16a16), 8 },
+                    { "R16G16B16A16_UNORM", VK_FORMAT_R16G16B16A16_UNORM, NULL, 0, 8 },
+                    { "R16G16B16A16_SNORM", VK_FORMAT_R16G16B16A16_SNORM, NULL, 0, 8 },
+                    { "R32G32_TYPELESS", VK_FORMAT_R32G32_SFLOAT, c_r32g32,
+                      ARRAY_SIZE(c_r32g32), 8 },
                     /* EXPERIMENT 0012: BC.  nonmut (no list, the gate is not
                      * involved) is a statement about the HW; list is about the
                      * compat gate (the blob table).  On the base "no ceiling"

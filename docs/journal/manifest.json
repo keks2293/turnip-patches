@@ -659,8 +659,10 @@
    "artifacts": [
     "results/test-r8-split-{on,off}.log"
    ],
-   "lines": 45,
-   "headings": [],
+   "lines": 65,
+   "headings": [
+    "## Update 20.11 (later): the two facts above are answered, and one of them was mis-framed"
+   ],
    "verdict_quote": "Do not pursue UBWC for block-compressed formats. No patch, no queue item.",
    "verdict_source": "ADR-0004"
   },
@@ -700,6 +702,40 @@
    "headings": [],
    "verdict_quote": ". Nothing to merge, and no queue item changes. The specific rule the operator",
    "verdict_source": "journal 30"
+  },
+  {
+   "id": "31",
+   "title": "The 64-bit class has a UBWC ceiling, and the missing UBWC of a no-list image is upstream's, not ours (20.11)",
+   "question": "The 64-bit class has a UBWC ceiling, and the missing UBWC of a no-list image is upstream's, not ours (20.11)",
+   "file": "journal/31-the-64-bit-class-has-a-ubwc-ceiling-and-the.md",
+   "date": "20.11",
+   "status": "open",
+   "decision": "",
+   "verdict_first_line": ". Both facts journal 28 asked for are answered, and they answer in favour of",
+   "artifacts": [
+    "tests/rp6-vkd3d-sparse-test.c",
+    "scripts/build-test.sh",
+    "scripts/env.sh",
+    "scripts/run-test.sh",
+    "build/p14-shipped/freedreno_icd_p14.json",
+    "results/raw/ceil-nolist-p14-full.log",
+    "build/out-stock-inv/freedreno_icd_stock_inv.json",
+    "results/raw/ceil-nolist-mesa27base-full.log",
+    "results/raw/ceil-nolist-mesa26system-full.log",
+    "build/p14-shipped/libvulkan_freedreno.so",
+    "build/out-stock-inv/libvulkan_freedreno.so",
+    "results/test-CEIL-nolist-p14.log"
+   ],
+   "lines": 158,
+   "headings": [
+    "## The 64-bit class has a ceiling, and a plain image reaches it",
+    "## No no-list image reaches the ceiling, and this stack is not what stops it",
+    "## The five differing `list` rows are 0011 and 0012, measured against the real base",
+    "## Three corrections",
+    "## One row nobody can explain yet (open question 13)"
+   ],
+   "verdict_quote": ". Both facts journal 28 asked for are answered, and they answer in favour of",
+   "verdict_source": "journal 31"
   }
  ]
 }

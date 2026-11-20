@@ -1,0 +1,31 @@
+# CEIL, fourth variant: a MUTABLE image with no format list - the system driver, Mesa 26.2.6 (a different branch, not the base of this stack)
+#
+# Tool:    tests/rp6-vkd3d-sparse-test, sha256 63848afdba52bfa0... (probe_ubwc_ceiling with
+#          the fourth image, MUTABLE without a VkImageFormatListCreateInfo; built in
+#          localhost/mesa-build-fedora44-wsi-glslang-vulkan, gcc 16.2.1)
+# Driver:  /usr/lib64/libvulkan_freedreno.so, package mesa-vulkan-drivers-26.2.6-1.fc44.armada (not a project build)
+# Device:  Adreno A740 (chip_id 0x43050a01), KMD msm, Mesa 27.0-devel stand - see
+#          docs/release.md for the stand and docs/howto-measure.md for the run rules
+# Command: source scripts/env.sh && scripts/run-test.sh <icd> results/raw/ceil-nolist-mesa26system-full.log
+#          (the full log; this file is the grep -E 'CEIL\[' of it, run 20.11)
+#
+=== driver: stock /usr/lib64/libvulkan_freedreno.so ===
+device: Turnip Adreno (TM) 740 (chip_id 0x43050a01)
+#
+CEIL[R16_TYPELESS          ] n=4  2B/texel  lin=0x00080000 nonmut=0x00082000 list=0x00082000 nolist=0x00080000  -> gate is not in the way | no-list: NO UBWC
+CEIL[R16_UINT              ] n=3  2B/texel  lin=0x00080000 nonmut=0x00082000 list=0x00082000 nolist=0x00080000  -> gate is not in the way | no-list: NO UBWC
+CEIL[CTRL_R16G16           ] n=1  4B/texel  lin=0x00100000 nonmut=0x00102000 list=0x00102000 nolist=0x00100000  -> gate is not in the way | no-list: NO UBWC
+CEIL[R8_TYPELESS           ] n=4  1B/texel  lin=0x00040000 nonmut=0x00040000 list=0x00040000 nolist=0x00040000  -> no ceiling (ubwc_possible) | no-list: -
+CEIL[R8_UINT               ] n=3  1B/texel  lin=0x00040000 nonmut=0x00040000 list=0x00040000 nolist=0x00040000  -> no ceiling (ubwc_possible) | no-list: -
+CEIL[R32G32B32_TYPELESS    ] n=3 12B/texel  lin=0x00300000 nonmut=0x00300000 list=0x00300000 nolist=0x00300000  -> no ceiling (ubwc_possible) | no-list: -
+CEIL[R32G32B32_UINT        ] n=2 12B/texel  lin=0x00300000 nonmut=0x00300000 list=0x00300000 nolist=0x00300000  -> no ceiling (ubwc_possible) | no-list: -
+CEIL[CTRL_R32G32B32A32     ] n=1 16B/texel  lin=0x00400000 nonmut=0x00404000 list=0x00404000 nolist=0x00400000  -> gate is not in the way | no-list: NO UBWC
+CEIL[R10G10B10A2_TYPELESS  ] n=2  4B/texel  lin=0x00100000 nonmut=0x00102000 list=0x00102000 nolist=0x00100000  -> gate is not in the way | no-list: NO UBWC
+CEIL[B8G8R8A8_UNORM        ] n=2  4B/texel  lin=0x00100000 nonmut=0x00102000 list=0x00102000 nolist=0x00102000  -> gate is not in the way | no-list: has UBWC
+CEIL[R16G16B16A16_TYPELESS ] n=5  8B/texel  lin=0x00200000 nonmut=0x00202000 list=0x00202000 nolist=0x00200000  -> gate is not in the way | no-list: NO UBWC
+CEIL[R16G16B16A16_UNORM    ] n=1  8B/texel  lin=0x00200000 nonmut=0x00202000 list=0x00202000 nolist=0x00200000  -> gate is not in the way | no-list: NO UBWC
+CEIL[R16G16B16A16_SNORM    ] n=1  8B/texel  lin=0x00200000 nonmut=0x00202000 list=0x00202000 nolist=0x00200000  -> gate is not in the way | no-list: NO UBWC
+CEIL[R32G32_TYPELESS       ] n=3  8B/texel  lin=0x00200000 nonmut=0x00202000 list=0x00202000 nolist=0x00200000  -> gate is not in the way | no-list: NO UBWC
+CEIL[BC1_UNORM             ] n=2  1B/texel  lin=0x00020000 nonmut=0x00020000 list=0x00020000 nolist=0x00020000  -> no ceiling (ubwc_possible) | no-list: -
+CEIL[BC3_UNORM             ] n=2  2B/texel  lin=0x00040000 nonmut=0x00040000 list=0x00040000 nolist=0x00040000  -> no ceiling (ubwc_possible) | no-list: -
+CEIL[BC7_UNORM             ] n=2  2B/texel  lin=0x00040000 nonmut=0x00040000 list=0x00040000 nolist=0x00040000  -> no ceiling (ubwc_possible) | no-list: -

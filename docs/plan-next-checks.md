@@ -368,31 +368,46 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    `results/imginv-3variants.txt` (`0001..0013` + `exp-14`, the control build that column
    was made on). Precedent for spending a build on that: `results/test-restore-shipstack.log`.
 1. **exp-18 - the 64-bit UBWC class** (no patch file yet). Volume: 650.8 MiB, not 4 GB
-   (journal 28). Read from the source on 20.11 (a reading, not a measurement), half of
-   the gate is already answered: in Mesa 27 base `fd6_ubwc_compat_mode()`
-   (`src/freedreno/common/freedreno_ubwc.h:31-83`) gives `R16G16B16A16_UNORM` a compat
-   mode (UNORM, or INT under `ubwc_unorm_snorm_int_compatible`), gives `_UINT`/`_SINT`
-   the INT mode, and returns `FD6_UBWC_UNKNOWN_COMPAT` for `_SFLOAT` (that is what 0012
-   adds) and for `R32G32_FLOAT`, which is absent from the switch as `R32_FLOAT` and
-   `Z32_FLOAT` are, next to the upstream `TODO` about a630 vs a660. So the compat-mode
-   question is closed for `_UNORM`/`_UINT`/`_SINT`. What is still unmeasured is the
-   layout side: whether a UBWC metadata plane is allocated for the class at all - probe
-   `CEIL` on `R16G16B16A16_UNORM` and `_SFLOAT` at 500x500, two minutes once the stack is
-   restored, and the answer decides whether (b) below is worth writing. Rejected before writing it: the
-    variant that keeps UBWC on a no-list image when the *base* format is unswapped and in
-    the UNORM/SNORM/INT group - a view may pick any member of the class, and the 32-bit
-    class contains both byte orders, which are the two shapes journal 24.1 measured broken
-    (the same rule proposed from outside, reviewed in journal 30). Shape: (a) move `format_list_reinterprets_r8g8_r16()` and
-   `format_list_has_swaps()` out of the `!mutable_ubwc_fc` branch - today the
-   `is_mutable` branch skips them, which is why the prop tiles 16-bit no-list images, a
-   real hazard; (b) implement `TODO: limit based on compatiblity class` in
+   (journal 28). The two facts this item used to say must be measured first are measured,
+   in journal 31: probe `CEIL` gained a fourth image (a `MUTABLE` image created with **no**
+   `VkImageFormatListCreateInfo`) and it ran against the shipped stack, the bare Mesa 27
+   base and the system driver - `results/test-CEIL-nolist-{p14,mesa27base,mesa26system}.log`.
+   Four things came out of it, all of them for or against writing this patch:
+
+   * the 64-bit class **has a ceiling**: a plain (non-`MUTABLE`) `R16G16B16A16_FLOAT`,
+     `_UNORM`, `_SNORM` or `R32G32_FLOAT` image gets the metadata plane, `+0x2000` at
+     8 B/texel, on all three drivers;
+   * `_SNORM` is part of the reserve, not a control - the snorm refusal in
+     `ubwc_possible()` is conditional on `ubwc_unorm_snorm_int_compatible`, which is True on
+     `a7xx_gen2`;
+   * **no** `nolist` image reaches a ceiling, on either Mesa 27 build, and the `nolist`
+     column is identical between the base and the shipped stack on all seventeen rows: the
+     refusal is upstream's, in `format_list_ubwc_possible()` and
+     `tu6_mutable_format_list_ubwc_compatible()`, both byte-identical at refs `mesa-26.2.6`
+     and `main`, where `TODO: limit based on compatiblity class` is still in place;
+   * what `0011`/`0012` recovered is now measured against the base, not against the working
+     stack: five `list` rows move from `GATE REMOVED` to `gate is not in the way`.
+
+   So the item is not "unlock a format" but "reverse a current, deliberate default", which
+   raises the bar for it. Rejected before writing it: the variant that keeps UBWC on a
+   no-list image when the *base* format is unswapped and in the UNORM/SNORM/INT group - a
+   view may pick any member of the class, and the 32-bit class contains both byte orders,
+   which are the two shapes journal 24.1 measured broken (the same rule proposed from
+   outside, reviewed in journal 30). Shape: (a) move `format_list_reinterprets_r8g8_r16()`
+   and `format_list_has_swaps()` out of the `!mutable_ubwc_fc` branch - today the
+   `is_mutable` branch skips them, which is why the prop tiles 16-bit no-list images, a real
+   hazard; (b) implement `TODO: limit based on compatiblity class` in
    `format_list_ubwc_possible()` against `tests/vk-fmt-classes.json`, using the **strict**
    Vulkan class (not 0014's block class), with the accepted risk on legal but non-UBWC
-   members (`E5B9G9R9`, `R64_*`) written down and a `perf_debug` counter. Gate: matrix 94
-   EXACT plus the `UBR` and `XV` rows unchanged, and a no-list cast probe before any
-   volume claim. Two facts must be measured first: whether `R16G16B16A16_FLOAT` has a
-   UBWC format variant in the table (the mapping is in a generated header), and the fate
-   of `R32G32_FLOAT`, which has no compat mode at all.
+   members (`E5B9G9R9`, `R64_*`) written down and a `perf_debug` counter. `exp-21` is the
+   seam for it: with one decision function the class the layout is answered with and the
+   class the compression is answered with are two arguments instead of one shadowed pointer.
+   Gate: matrix 94 EXACT plus the `UBR` and `XV` rows unchanged, and a no-list cast probe
+   before any volume claim. Two measured additions from journal 31: the `nolist` column of
+   the `CEIL` rows is the direct readout of the change (it must move to `has UBWC` for the
+   compatible classes and stay where it is for the rest), and the layout consequence must be
+   read with probe `NL`, because `CEIL` compares sizes and cannot tell tiled from linear.
+   **NOT BUILT, NOT MEASURED.**
 2. **exp-19 - who is wrong about R8, the writer or the reader**. Probe AB (the same
    `R8_UNORM` + UBWC image, filled by `vkCmdCopyBufferToImage`) read by `i2b` in a fresh
    process, both at the base grid and at `{32,8}`. Cheaper than one build. If AB ever
@@ -400,8 +415,10 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    descriptor work ADR-0007 declines. The AB rows of the 20.11 sweep are post-fault and
    are not measurements.
 3. **The honest bare base**: run the inventory on `build/out-stock-inv`
-   (`23ccf659c90d3ddf…`, stock + `exp-14`, no prop). It exists and has never been run, so
-   the three-variant scale in journal 27 has no true zero point.
+   (`23ccf659c90d3ddf…`, stock + `exp-14`, no prop). Partly done 20.11: journal 31 ran the
+   probe matrix on it - the first use of that build - and it is the control that shows the
+   no-list UBWC refusal is upstream's. What is still not done is the game: the inventory run
+   that gives the three-variant scale of journal 27 its true zero point.
 4. **Ship stack + prop + inventory**: the fourth column that the caveat in journal 27
    needs (the pair A/B differs by the whole stack, not only by the prop). About four
    minutes of build.
@@ -537,9 +554,10 @@ instead of against a build.
 | 7 | 12_1 | blocked by `VK_EXT_fragment_shader_interlock`, which Turnip does not implement (ADR-0011) |
 | 8 | the 32- and 16-bit classes in lazy deposition | they reinterpret the layout; a separate analysis, and the reason 0014 leaves them linear on purpose |
 | 9 | R8 + UBWC: writer or reader | exp-19 (queue 2) |
-| 10 | UBWC format variants for `R16G16B16A16_FLOAT` and `R32G32_FLOAT` | half answered by reading the compat table (queue 1): both have no compat mode on base, `_SFLOAT` gets one from 0012; whether the layout allocates metadata for the 64-bit class is still unmeasured, and it gates exp-18 |
+| 10 | UBWC format variants for `R16G16B16A16_FLOAT` and `R32G32_FLOAT` | answered, journal 31: there is no "format variant" to look for (UBWC is a layout flag, and the layout never consults `fd6_ubwc_compat_mode()`); the class has a ceiling, both formats reach it as plain images, and `0012` is what gives them a compat mode - on the bare Mesa 27 base their classes lose UBWC |
 | 11 | does vkd3d view a mutable RE4 image through another format of the same class | NOT MEASURED, exp-20 (queue 10): the inventories record creates, not views |
 | 12 | is a `VkImageFormatListCreateInfo` with `viewFormatCount == 0` the same as passing no list | NOT MEASURED, and `exp-21` deliberately keeps `0014`'s answer (an empty list is forwarded, and the predicates answer it as the worst case). The spec's wording makes them equal, but the inventories cannot tell the two apart - both are `listn=0` - so this is not a question a replay answers |
+| 13 | why does the system driver give UBWC to a `MUTABLE` image with no list, where both Mesa 27 builds refuse it | ONE ROW, journal 31: `B8G8R8A8_UNORM`, `nolist=0x102000` against `0x100000`. Not in the two refusal functions (byte-identical to refs `mesa-26.2.6` and `main`), so it is either elsewhere in 26.2 or in the distribution's own patches (`mesa-vulkan-drivers-26.2.6-1.fc44.armada`, not in this repository). Chasing it would need the downstream source; it changes no verdict, and `exp-18` does not depend on it |
 
 ## Pitfalls (reminder)
 

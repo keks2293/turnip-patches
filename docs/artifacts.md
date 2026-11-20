@@ -63,7 +63,7 @@ and have no file - the queue owns those numbers), full discussion in
 
 | file | role |
 |---|---|
-| `tests/rp6-vkd3d-sparse-test.c` | the main test: probes `U`/`T`/`S`/`V`/`N`/`CEIL`/`NL`/`X`/`XV`/`Y` plus the 94-row matrix |
+| `tests/rp6-vkd3d-sparse-test.c` | the main test: probes `U`/`T`/`S`/`V`/`N`/`CEIL`/`NL`/`X`/`XV`/`Y` plus the 94-row matrix. `CEIL` measures four images per row, the fourth being a `MUTABLE` image with no format list (journal 31) |
 | `tests/tp8bpp.c` + `tests/tp_write.comp` (`scripts/gen-tp-write-spv.sh`) | standalone 8bpp+UBWC probe: `Z` (NV12 Y), `AA` (`imageStore` writer), `AB` (2D copier), each with a LINEAR control and a dump of the whole allocation. Build: `podman run --rm -v …/tests:/work:Z -v …/build:/out:Z localhost/mesa-build-fedora44-wsi-glslang-vulkan bash -c 'cd /work && gcc -O2 -Wall -o /out/tp8bpp tp8bpp.c -lvulkan'`; size via `-DW=… -DH=…`. Read the header: the tool prints the number of WRONG elements |
 | `tests/repro-first-fill.c` | minimal repro of the "~2 % on the first fill" effect |
 | `tests/vk-fmt-classes.json`, `scripts/gen-vk-fmt-classes.py` | the Vulkan texel compatibility classes, generated from `vk.xml` (provenance inside the file): which view formats are legal for a base format, with and without a list - the table that decides both `0014`'s rule and journal 24.4 |
@@ -74,7 +74,7 @@ and have no file - the queue owns those numbers), full discussion in
 | `scripts/sweep-8bpp-grid.sh` | runs `tp8bpp` over metadata grids through `TU_8BPP_UBWC` (works only on the exp-17 build) |
 | `scripts/run-test.sh`, `scripts/run-b2i-matrix.sh`, `scripts/run-game.sh`, `scripts/fps-window.py`, `scripts/curate-game-log.sh` | running the test, the mode matrix, the game, the fps window |
 | `scripts/fdperf-sample.sh`, `scripts/fdperf-analyze.py`, `scripts/fdperf-align.py`, `tools/fdperf/fdperf-windowed-delta.patch` | profiling (see `docs/fdperf-a7xx.md`) |
-| `scripts/build-turnip*.sh`, `scripts/build-test.sh`, `container/` | building the driver and the test (there is no compiler on the device) |
+| `scripts/build-turnip*.sh`, `scripts/build-test.sh`, `container/` | building the driver and the test (there is no compiler on the device). `build-test.sh` installs the toolchain only if the image lacks it - on 20.11 a failed Fedora mirror download broke the build although the image had gcc and the headers |
 
 ## Logs that are cited as evidence
 
@@ -92,7 +92,8 @@ and have no file - the queue owns those numbers), full discussion in
 | `results/test-8bpp-meta-shape.txt` | allocation-dump analysis: the AA metadata plane (1024 of 8 KiB, all `0x1f`), the zero metadata of AB, the dense metadata of a working NV12 |
 | `results/test-z-nv12-y8.log` | NV12 Y (`cpp == 1` UBWC, grid `{32,8}`, not gated by the prop) round-trips EXACT in both tilings |
 | `results/test-r8-has8bpp-{on,off}.log` | the first R8 measurement with the flag (October); superseded by the split and Y runs |
-| `results/test-CEIL-*.log` | UBWC ceilings, measured with three images |
+| `results/test-CEIL-*.log` | UBWC ceilings, measured with three images (journal 21.6.2) |
+| `results/test-CEIL-nolist-{p14,mesa27base,mesa26system}.log` | the same probe with a fourth image - a `MUTABLE` image with no format list - on the ship stack, the bare Mesa 27 base and the system driver: the 64-bit class has a ceiling, and nothing reaches it without a list on either Mesa 27 build (journal 31) |
 | `results/test-V-*.log` | tiling of a BGRA8 UAV |
 | `results/test-uq-quirk-{off,on}.log`, `results/test-uq-after-removal.log` | the `ubwc_coherency_quirk` on gen2: not reproducible, and the probe's removal verified |
 | `results/test-p14-{base,ubwc-allformats}.log` | A/B of the prop on the ship driver through `TU_FORCE_PROPS` |

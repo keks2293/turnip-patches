@@ -42,3 +42,23 @@ bypasses `tu6_mutable_format_list_forces_linear()` (tiling) and influences
 `mutable_ubwc_fc` **for lists**, while `format_list_ubwc_possible()` is called earlier
 and answers "no" for `NULL` regardless of props - which is why its no-list class shows
 `ubwc=` zero in section 27 as well.
+
+## Update 20.11 (later): the two facts above are answered, and one of them was mis-framed
+
+Journal 31 measures both, with a fourth image added to probe `CEIL` (a `MUTABLE` image with
+no format list). The class has a ceiling: a plain `R16G16B16A16_FLOAT`, `_UNORM`, `_SNORM`
+or `R32G32_FLOAT` image gets the metadata plane, `+0x2000` at 8 B/texel. `R32G32_FLOAT` and
+`R16G16B16A16_FLOAT` have compat modes in the shipped stack because `0012` added them; on the
+bare Mesa 27 base those two classes lose UBWC, which is the first time that was measured
+against the base rather than against the working stack of the day.
+
+The sentence "the name is not found by grep in `tu_formats.cc`, so the mapping is in the
+generated header" is wrong, and there is no such header to go looking for: UBWC is a layout
+flag, and the only per-format gate is `fd6_ubwc_compat_mode()` in
+`src/freedreno/common/freedreno_ubwc.h`, whose consumers are `tu_formats.cc:71` and gallium's
+`fd6_resource.cc` - the layout code never consults it, which is why a plain image shows a
+ceiling even for a format the table calls `FD6_UBWC_UNKNOWN_COMPAT`.
+
+Unchanged by the correction: the 650.8 MiB, and the refusal of `NULL`. What journal 31 adds
+is that the refusal is identical on the base and on the shipped stack for all seventeen
+`CEIL` rows - the reserve is upstream's, not something this stack took away.
