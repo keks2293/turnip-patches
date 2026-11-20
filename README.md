@@ -60,6 +60,7 @@ release is made and what to check before publishing - `docs/release.md`.
 | `docs/analysis.md` | the analysis: symptom, cause, measurements, applicability boundaries, reproduction; `docs/rp6-vkd3d-analysis.md` - the original short analysis (21.09.2026) it grew out of |
 | `docs/mesa-27-plan.md` | the move to Mesa 27.0-devel: the rebase matrix of 0001-0014, what changed upstream, the build rules with the cache in `/tmp` |
 | `docs/release.md` | how a driver release is made here: the tree that must be built, the hashes to record, the checklist before publishing |
+| `docs/CONVENTIONS.md` | the documentation rules: English everywhere, one fact one home (who owns a number, a hash, a verdict), document types (journal / decision record / direction page / reference / how-to / archive), the honesty rules learned from wrong measurements |
 | `patches/` | 0001-0014 - the Mesa patches that ship; `PATCHES.md` - the origin of 0001-0003 |
 | `experiments/` | `exp-1`-`exp-15` - **not** for commit: reproducible checks of the analysis' conclusions (exp-12 was retired 18.11, the verdict is in `analysis.md` §21.9) |
 | `tests/` | `rp6-vkd3d-sparse-test.c` + shaders; every result was obtained with it |
