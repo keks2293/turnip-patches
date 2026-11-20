@@ -1,6 +1,46 @@
-# Documentation conventions
+# AGENTS.md - how work is done in this repository
 
-What goes where, and in what language. Written 20.11 after two files started
+Instructions for anyone (agent or human) editing this repo. The documentation
+rules - what goes where, and in what language - are in the second half.
+
+## Language
+
+* **Documents, patch headers, commit messages, code comments: English.** The repo
+  was English from the first commit; `docs/findings-2026-11-19.md` was the only
+  exception and is being dissolved (see the last section here). New text is
+  English; if you touch a non-English passage, rewrite that passage in English in
+  the same commit. Quoted device output, log lines and upstream commit titles
+  stay as they are.
+* Conversation with the operator: Russian, unless they switch.
+
+## Working rules, each earned by an incident
+
+* Work on branch `test`. `master` and the tag `27.0.0-devel-p14` are the shipped
+  state: no commit, no rebase, no file edit there. Shipped `.so`
+  (`c17d02bcaae9a960…`) and every recorded hash stay valid forever.
+* Keep `test` pushed: work that is not on `origin/test` does not exist.
+* The Mesa trees (`../mesa27-src`, `../mesa26-src`) are working trees with patches
+  applied by hand. **Never `git checkout`/`git restore` there** - it once dropped
+  a hunk of `0008`. Apply and revert with `git apply` / `git apply -R` and
+  **explicit file names**; `ls | head -1` picks the mesa26 twin of a patch.
+  `git log -S` is useless in the shallow clone: use
+  `https://gitlab.freedesktop.org/mesa/mesa/-/raw/main/<path>` and
+  `/-/commit/<sha>.patch` for upstream lookups (the MR discussion API is not
+  readable).
+* Minimal patch footprint ("nothing extra"): a new prop or gate is scoped to the
+  generation that needs it, and a tiling patch may only pull images out of linear,
+  never push them into it.
+* A driver build runs in the container, `-j2`, ccache under `/tmp`, never while the
+  game is running. Builds are identified by `sha256sum ... | cut -c1-12`, not by
+  version (`MESA_GIT_SHA1` is not embedded).
+* Before writing "the hardware can/cannot": re-read the tool source and the raw
+  log. Two published conclusions this month were wrong in exactly that place
+  (analysis §22.1, §22.2).
+
+## Documentation rules
+
+What goes where. Written 20.11 after two files started
+
 carrying the same numbers twice (`docs/analysis.md` and
 `docs/findings-2026-11-19.md`) and after one measurement was published here in a
 stronger form than the data supported (analysis §22.1 - the counter printed the
@@ -13,20 +53,7 @@ header and the commit message, not in a parallel document), reproducible-researc
 practice (a claim ships with its command and its raw output, or it is marked as
 not reproduced).
 
-## Language
-
-**English, everywhere in this repository**: docs, patch headers, commit
-messages, comments in `tests/` and `scripts/`, log headers. The repo was English
-from the first commit; `docs/findings-2026-11-19.md` was the only exception and
-is being dissolved per the table below.
-
-* New text: English.
-* Touching a non-English passage means rewriting that passage in English in the
-  same commit. Do not translate a whole file as a side effect of another task.
-* Quoted device/driver output, log lines and upstream commit titles stay as they
-  are.
-
-## One fact, one home
+### One fact, one home
 
 Every number, hash and verdict has exactly one owning file. Anywhere else it is
 a pointer, not a copy. If a second copy is needed for reading comfort, it must
@@ -44,7 +71,7 @@ land.
 | what to do next | `docs/plan-next-checks.md`, `docs/mesa-27-plan.md` | queue item + link |
 | state of a workstream right now | `docs/streams/<direction>.md` | links, never new numbers |
 
-## Document types
+### Document types
 
 1. **Journal** - `docs/analysis.md`. One section per experiment, in the order the
    experiments happened. Contents of a section: question, method, exact command,
@@ -71,7 +98,7 @@ Directions currently in use: `ubwc-format-lists`, `r2d-ccu-clean`,
 `mutable-lazy-deposition`, `8bpp-ubwc`, `re4-perf`, `measurement-tooling`,
 `release-build`.
 
-## Naming
+### Naming
 
 * experiment: `experiments/exp-NN-<slug>.patch` (+ its section in the journal);
 * decision: `docs/decisions/ADR-NNNN-<slug>.md`;
@@ -79,7 +106,7 @@ Directions currently in use: `ubwc-format-lists`, `r2d-ccu-clean`,
   driver build hash, the environment, and how to regenerate it;
 * raw logs stay in `results/raw/` (gitignored) - a curated file is what git sees.
 
-## Honesty rules, all of them learned the expensive way
+### Honesty rules, all of them learned the expensive way
 
 * A number points at a committed artifact. If the artifact is not in git, the
   file says where it is and how to regenerate it.
