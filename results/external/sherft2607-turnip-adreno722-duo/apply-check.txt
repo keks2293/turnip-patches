@@ -1,0 +1,59 @@
+# Would the external patches apply to this repository's Mesa tree? A measured answer.
+#
+# Not an artifact of a hardware measurement: nothing was built and nothing ran on the
+# GPU. This is a dry run of the patch scripts' own anchor matching, so that "their stack
+# contains X" can be separated from "their stack contains X in a form that applies to
+# Mesa 27.0-devel".
+#
+# Regenerate:
+#   SB=/tmp/opencode/external-apply-check
+#   rm -rf $SB; mkdir -p $SB/patches $SB/src/freedreno/vulkan $SB/src/freedreno/fdl
+#   cd ../mesa27-src           # commit 9845cfb = base 6dfa32a85f91 + 0001 + 0002
+#   for f in src/freedreno/vulkan/tu_image.cc src/freedreno/vulkan/tu_shader.h \
+#            src/freedreno/vulkan/tu_shader.cc src/freedreno/vulkan/tu_pipeline.cc \
+#            src/freedreno/vulkan/tu_clear_blit.cc src/freedreno/fdl/fd6_format_table.c; do
+#     cp $f $SB/$f; done
+#   cp <this folder>/30-tu-z-mutable.py <this folder>/3*.py.off $SB/patches/
+#   cd $SB && for p in 30-tu-z-mutable.py 34-tu-z-mutable-swap.py.off \
+#            35-tu-z-mutable-safe.py.off 33-tu-z-bgra-swap.py.off \
+#            37-tu-z-bgra-companion.py.off; do python3 patches/$p; done
+#
+# The six files are the only ones the five scripts read. 0001 (tu_knl_drm_msm.cc) and
+# 0002 (freedreno_devices.py) do not touch any of them, so for this check they are the
+# base tree. Each script edits or does not edit its files and prints one line; running
+# them in a copy of the tree is what makes the check non-destructive.
+#
+# Run 20.11.2026, python 3, sandbox /tmp/opencode/external-apply-check. The order is the
+# one their own builder uses (sorted by file name), with 30 first because 34 and 35
+# declare it as a prerequisite.
+
+30-tu-z-mutable.py               -> 30-tu-z-mutable.py: applied (pure upstream mutable handling + QCOM_COMPRESSED TILE6_3 guard)
+34-tu-z-mutable-swap.py.off      -> 34-tu-z-mutable-swap.py: WARNING anchor matched 0x (want 1) in src/freedreno/vulkan/tu_image.cc; needs 30-tu-z-mutable.py first, patch skipped
+35-tu-z-mutable-safe.py.off      -> 35-tu-z-mutable-safe.py: WARNING anchor matched 0x (want 1) in src/freedreno/vulkan/tu_image.cc; needs 30-tu-z-mutable.py first, patch skipped
+33-tu-z-bgra-swap.py.off         -> 33-tu-z-bgra-swap.py: applied (TU_Z_BGRA_SWAP default on)
+37-tu-z-bgra-companion.py.off    -> 37-tu-z-bgra-companion.py: applied (TU_Z_BGRA_SWAP default on)
+
+What the two lines mean, in the scripts' own terms:
+
+  * 34 and 35 anchor on the string
+        if (r8g8_r16 || (fmt_list_has_swaps && z_mutable < 1)) {
+    which is produced by an older form of 30. The 30 currently in their repository
+    (captured in this folder, 2348 bytes, same size as their builder reports) defines no
+    TU_Z_MUTABLE option and never edits that line, so the anchor exists neither in their
+    current 30 nor in Mesa 27 (`tu_image.cc:659` reads
+    `if (r8g8_r16 || fmt_list_has_swaps) {`). Their builder's documented behaviour for a
+    script that changes nothing is a warning and a build that continues
+    (patches/README.md, captured in repo-tree.txt), so on that stack 34 and 35 would be
+    silently absent from the result even if they were renamed without `.off`.
+
+  * 33 and 37 match: 33's anchor is upstream's
+        if (tile_mode && !is_mutable)
+           return WZYX;
+    (`fd6_format_table.c:403-404` in this tree), and all 13 anchors of 37 match in
+    tu_shader.h/.cc, tu_pipeline.cc and tu_clear_blit.cc.
+
+  * 30 matches too, but its effect is unreachable here: the docstring names 15 and 16
+    (Android gralloc, AHardwareBuffer with DRM_FORMAT_MOD_QCOM_COMPRESSED) as the
+    condition that brings a mutable image to that branch with a UBWC modifier. This
+    stand renders through WSI on a Linux display server and never imports a gralloc
+    buffer with that modifier.

@@ -681,6 +681,25 @@
    "headings": [],
    "verdict_quote": "",
    "verdict_source": ""
+  },
+  {
+   "id": "30",
+   "title": "Two outside Turnip patch stacks reviewed: neither carries the A740 fast-path, and the two closest patches are verdicts this repository already has (20.11)",
+   "question": "Two outside Turnip patch stacks reviewed: neither carries the A740 fast-path, and the two closest patches are verdicts this repository already has (20.11)",
+   "file": "journal/30-two-outside-turnip-patch-stacks-reviewed-neither.md",
+   "date": "20.11",
+   "status": "closed",
+   "decision": "",
+   "verdict_first_line": ". Nothing to merge, and no queue item changes. The specific rule the operator",
+   "artifacts": [
+    "results/external/sherft2607-turnip-adreno722-duo/repo-tree.txt",
+    "results/external/sherft2607-turnip-adreno722-duo/apply-check.txt",
+    "tests/vk-fmt-classes.json"
+   ],
+   "lines": 84,
+   "headings": [],
+   "verdict_quote": ". Nothing to merge, and no queue item changes. The specific rule the operator",
+   "verdict_source": "journal 30"
   }
  ]
 }

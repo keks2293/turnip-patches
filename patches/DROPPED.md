@@ -61,12 +61,12 @@ in the table.
 | `0003` ir3 bindless UBO const lowering | stays | unrelated to formats |
 | `0004` sparse residency gate | stays | `0009` and the sparse probes depend on the gate's shape |
 | `0005` mutable uniform-swap tiling | stays | removing it under the flag turns `S` into 16384/16384 mismatches. In RE4 it moves **0 MiB** (journal 25, the per-patch volume table) — it is insurance for `{BGRA…, RGBA…}`-style lists that the game never creates |
-| `0006` B8G8R8A8 int compat type | stays | removed together with `0011`/`0012` in the reduced build; its own probe `T` fails under the flag. In RE4 **0 MiB** (journal 25): no `B8G8R8A8_*` appears in any list, and its Vulkan formats for the INT variants are enum-only (journal 7.10) |
+| `0006` B8G8R8A8 int compat type | stays | removed together with `0011`/`0012` in the reduced build; its own probe `T` fails under the flag. In RE4 **0 MiB** (journal 25): no `B8G8R8A8_*` appears in any list, and its Vulkan formats for the INT variants are enum-only (the caveat above) |
 | `0007` `TU_FORCE_PROPS` | stays | the only way to measure a prop without a rebuild; the flag experiment in `docs/a7xx-gen-props.md` rows 23/24 runs through it |
 | `0008` gen2 generic clear | stays | performance, unrelated to formats (journal 15) |
 | `0009` NV12 mutable keeps tiling | stays | sparse-creation fix, its NV12 branches are reached before the flag is consulted |
 | `0010` single-channel swap tiling | stays | removed with `0005` in the reduced build → `S` FAIL; like `0005`, **0 MiB** in RE4 |
-| `0011` UBWC compat R16/10-bit | stays | removing it under the flag turns `T` into 261120/262144 mismatches, and in RE4 it has measured volume (journal 25): 53 creates / **115 MiB** of `R10G10B10A2_UNORM → {UINT,UNORM}` lists get UBWC only because of it (journal 7.10) |
+| `0011` UBWC compat R16/10-bit | stays | removing it under the flag turns `T` into 261120/262144 mismatches, and in RE4 it has measured volume (journal 25): 53 creates / **115 MiB** of `R10G10B10A2_UNORM → {UINT,UNORM}` lists get UBWC only because of it |
 | `0012` UBWC compat sfloat/int | stays | same file and probe as `0011`; measured volume 26 creates / **43 MiB** (`R32_UINT → {FLOAT,SINT,UINT}`). Its BC half is documented as completeness, not a perf lever — RE4 BC textures are sparse and sparse excludes UBWC (journal 21.11) |
 | `0013` b2i CCU clean | stays | correctness of copy-to-image (journal 21.10, ADR-0005) |
 | `0014` mutable no-list tiling | stays in the shipped form (v1) | see below for the v2 that was dropped |

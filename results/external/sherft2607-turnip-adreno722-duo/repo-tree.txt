@@ -1,0 +1,70 @@
+# External patch stack, captured as evidence (not an artifact of a measurement)
+#
+# Captured 20.11.2026 from https://api.github.com/repos/sherft2607/turnip-adreno722-duo/git/trees/main?recursive=1
+# (tree 766b5ef7034f9425f52054f8e69bdafb0cdc8118). Repo metadata from the same API:
+# created 26.10-, pushed 26.10.2026, language Python, size 193 KB, 67 stars, no license,
+# no description. The release zips are named `Turnip-710-720-722-vX.zip` (see patches/README.md
+# in this folder): the stack targets Adreno 710/720/722, not A740.
+#
+# Filtered to the files under patches/ (paths and byte sizes as returned by the API).
+# `.off` is this repository's own convention for "switched off, not applied to any build":
+# "To turn a patch off without deleting it, rename it, for example `foo.py` to `foo.py.off`"
+# (patches/README.md, captured in this folder).
+#
+# The column APPLIED answers one question only: is the file applied by their builder.
+# It says nothing about whether it works.
+
+path                                                        bytes   APPLIED
+patches/01-u_gralloc-always-use-ubwc-detection.patch         1749   yes
+patches/02-tu-lrz-reuse-dont-care-in-sysmem.patch.off        2366   no
+patches/06-a8xx-cube-coord-sanitize.patch.off                4813   no
+patches/07-a8xx-kgsl-ib-vbo-alias.patch.off                  4803   no
+patches/08-tu-kgsl-cache-retired-a8xx-ib-storage.patch.off   7346   no
+patches/09-tu-ir3-subgroup-half-warp.patch.off              19024   no
+patches/11-wn-fix-a8xx-dev-info.py.off                       3940   no
+patches/12-wn-apply-a8xx-gpus.py.off                         8007   no
+patches/14-wn-apply-a7xx-gen2-ubwc-hint.py.off               1590   no
+patches/15-wn-add-aimapper-gralloc.py                        4233   yes
+patches/16-wn-add-ubwc-swapchain-usage.py                    9074   yes
+patches/17-wn-apply-perf-variant.py                         13194   yes
+patches/18-wn-a8xx-shared-mem.py.off                         1364   no
+patches/19-wn-a840v2.py.off                                  1426   no
+patches/20-default-env.py.off                                2937   no
+patches/25-tu-fix-subpass-fence-sysmem.py                    4651   yes
+patches/30-tu-z-mutable.py                                   2348   yes   <- the one described as
+                                                                            "keep MUTABLE_FORMAT images
+                                                                            tiled and UBWC"
+patches/31-tu-z-lrz-rescue.py.off                            5613   no
+patches/32-tu-z-texfast.py.off                               2623   no
+patches/33-tu-z-bgra-swap.py.off                             2479   no
+patches/34-tu-z-mutable-swap.py.off                          2925   no
+patches/35-tu-z-mutable-safe.py.off                          3647   no
+patches/36-tu-z-sysmem-only.py                               1555   yes
+patches/37-tu-z-bgra-companion.py.off                       11818   no
+patches/40-fd710-ubwc-hint.py.off                            1306   no
+patches/41-fd710-tile-align.py.off                           2458   no
+patches/42-fd710-ab01.py.off                                 2051   no
+patches/43-fd710-linmip-blocks.py.off                        2253   no
+patches/44-fd710-vsc-0d08.py.off                             2612   no
+patches/45-fd710-rb-8e09.py.off                              2599   no
+patches/46-fd710-no-eolm.py.off                              2218   no
+patches/50-fd720-blob.py.off                                 6155   no
+patches/56-fd722-blob.py                                     6723   yes
+patches/57-fd722-duo.py                                      5832   yes
+patches/58-tu-no-force-sample-interp.patch                   1175   yes
+patches/7c14092ffb50622f78f9c466d92f2a6c0fce71a7.patch.off  10288   no
+patches/ec5a9a6d86133c45d3e42bd3583ba3ad9572c3a2.patch.off   9820   no
+patches/tu-sample-shading-gate.patch.off                     2723   no
+patches/aimapper/u_gralloc_aimapper.c                       19730   helper for 15
+patches/default_env.conf                                      479   (read by 20, which is off)
+legacy-patches/                                                  -   not applied by the builder
+bisect-plan/p2_revert_subpass_fence_series.patch            25171   a revert of an upstream series
+
+What the applied set is made of, by kind (their own docstrings and file names):
+  Android/gralloc:  01, 15 (+ aimapper/u_gralloc_aimapper.c), 16
+  sysmem rendering: 36, and 25 (subpass fence in sysmem), plus the bisect plan that reverts
+                    an upstream subpass-fence series
+  per-chip blob:    56, 57 (A722 "duo"), and the off-set for 710/720/8xx
+  WSI/present:      16
+  mutable/UBWC:     30, whose docstring says it leaves game-internal MUTABLE handling at
+                    upstream behaviour (see 30-tu-z-mutable.py in this folder)

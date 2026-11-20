@@ -101,6 +101,19 @@ discussion in `experiments/README.md` and in the journal entry named below.
 Raw game and driver logs live in `results/raw/` and are gitignored: a curated file in
 `results/` is what git sees and what a claim may cite.
 
+## Captures of other people's work (`results/external/`)
+
+Not artifacts of a measurement - no build hash and no device is involved. They are kept so
+an outside proposal can be read without depending on somebody else's repository staying
+online, and so the claim "their stack contains X" can be separated from "their stack
+contains X in a form that applies to Mesa 27.0-devel". Owned by journal 30.
+
+| file | what it is |
+|---|---|
+| `results/external/sherft2607-turnip-adreno722-duo/repo-tree.txt` | the file list with byte sizes and which files that builder applies, from the GitHub tree API (`766b5ef7034f`), plus the stack grouped by kind |
+| `…/30-tu-z-mutable.py`, `…/33-tu-z-bgra-swap.py.off`, `…/34-tu-z-mutable-swap.py.off`, `…/35-tu-z-mutable-safe.py.off`, `…/37-tu-z-bgra-companion.py.off` | the five mutable/BGRA-related scripts, captured byte-for-byte with `curl`; the sizes match the ones the API reports |
+| `…/apply-check.txt` | the dry run of those five against six source files of `../mesa27-src`: which anchors land, which do not, with the command to regenerate |
+
 ## Key numbers and where they are owned
 
 The number stays in the artifact or journal entry named here; this table is a lookup,

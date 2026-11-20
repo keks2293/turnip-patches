@@ -13,14 +13,19 @@ Believed, with the section that owns the evidence:
   (journal 2.1, 21.1-21.6, ADR-0003);
 - the ceiling of UBWC for a given shape is measured with three images - linear, with
   a list, without a list - which is the only way to tell "the gate ate it" from "the
-  hardware cannot" (journal 4.2 method, probes `CEIL`);
+  hardware cannot" (journal 21.6.2 method, probes `CEIL`);
 - inside RE4's real lists, the volume that comes from `0011` and `0012` is separated
   from the volume that rides on an upstream prop, per "base -> list" combo
   (journal 25);
 - the prop is not a superset of the patches: removing the five under the prop breaks
   probes `S` and `T` (journal 24.3, ADR-0001);
 - a UBWC compat mode is part of a resource's layout, not an on/off switch - the single
-  sentence that explains most of this direction.
+  sentence that explains most of this direction;
+- a no-list mutable image cannot be judged by its **base** format, only by its class: the
+  32-bit class holds `B8G8R8A8_UNORM`, `R8G8B8A8_UNORM` and `R32_UINT` at once
+  (journal 24.4), which is the argument behind the two failures in journal 24.1, and
+  behind rejecting the same base-format rule when it arrives from outside
+  (journal 30).
 
 Open: one measurement, `exp-20` (queue 10) - whether RE4 ever creates a view whose
 format differs from the base within one compatibility class. It is the last gap in

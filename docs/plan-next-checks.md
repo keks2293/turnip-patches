@@ -354,7 +354,11 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    question is closed for `_UNORM`/`_UINT`/`_SINT`. What is still unmeasured is the
    layout side: whether a UBWC metadata plane is allocated for the class at all - probe
    `CEIL` on `R16G16B16A16_UNORM` and `_SFLOAT` at 500x500, two minutes once the stack is
-   restored, and the answer decides whether (b) below is worth writing. Shape: (a) move `format_list_reinterprets_r8g8_r16()` and
+   restored, and the answer decides whether (b) below is worth writing. Rejected before writing it: the
+    variant that keeps UBWC on a no-list image when the *base* format is unswapped and in
+    the UNORM/SNORM/INT group - a view may pick any member of the class, and the 32-bit
+    class contains both byte orders, which are the two shapes journal 24.1 measured broken
+    (the same rule proposed from outside, reviewed in journal 30). Shape: (a) move `format_list_reinterprets_r8g8_r16()` and
    `format_list_has_swaps()` out of the `!mutable_ubwc_fc` branch - today the
    `is_mutable` branch skips them, which is why the prop tiles 16-bit no-list images, a
    real hazard; (b) implement `TODO: limit based on compatiblity class` in
@@ -424,7 +428,10 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
 (ADR-0010), BC + UBWC (ADR-0004), any 8bpp UBWC patch (ADR-0007), driver-side fps levers
-(ADR-0008), removing any shipped patch (`patches/DROPPED.md`).
+(ADR-0008), removing any shipped patch (`patches/DROPPED.md`). Outside patch stacks keep
+proposing versions of the ideas closed above: `journal 30` maps four files from one such
+stack to these records, so the next outside proposal can be checked against a verdict
+instead of against a build.
 
 ## Open questions
 
