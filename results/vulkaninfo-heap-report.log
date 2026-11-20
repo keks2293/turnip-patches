@@ -1,0 +1,148 @@
+# What this driver tells an application about memory, and which option moves it
+
+# Question: journal 17 measured what RE4 and the driver *hold* (vkd3d peak 3129 MiB, turnip live BOs
+#           3490 MiB, system 7.24 of 7.32 GiB, swap max 4.95 GiB) and concluded there is no env lever
+#           for the footprint. That question was about use. This is the other half, never asked in
+#           this repository: how big is the heap the driver *reports*, since that number is what
+#           vkd3d-proton reads and what the engine may size its own streaming against - and is there
+#           an option that moves it without a rebuild?
+#           There is one: `heap_memory_percent`. It is not in TU_FORCE_PROPS and not in Turnip's own
+#           perf/misc groups; it is one of the three "common vk" driconf options Turnip accepts
+#           (src/freedreno/vulkan/tu_drirc_gen.py:8-12, with force_vk_devicename and force_vk_vendor),
+#           and an environment variable of the same name overrides it. It changes no command stream:
+#           it changes a number the driver returns from vkGetPhysicalDeviceMemoryProperties2.
+# Method:   five runs of one tool against one driver, one variable, plus a control on the memory
+#           types. The tool allocates nothing, so `usage` is 0 everywhere and the numbers are the
+#           ones a fresh application reads at startup.
+# Tool:     /usr/bin/vulkaninfo, vulkan-tools-1.4.341.0-1.fc44.aarch64, log header
+#           "Vulkan Instance Version: 1.4.341"
+# Driver:   build/p14-shipped/libvulkan_freedreno.so, sha256 c17d02bcaae9a960...  (the released stack)
+# Device:   Adreno A740 (deviceID 0x43050a01), MemTotal 7.32 GiB, swap 7491 MiB
+# Runs:     21.11, all five exit 0
+# Command:  VK_DRIVER_FILES=build/p14-shipped/freedreno_icd_p14.json vulkaninfo > <log> 2>&1
+#           with heap_memory_percent=<value> in the environment for the four forced runs
+# Raw:      results/raw/vi-{base,0.5,0.4,0.25,0.05,dlonly}.log (gitignored)
+#
+=== 1. where the two reported numbers come from, in the Mesa 27 tree
+
+  size    tu_device.cc:2255 `tu_get_system_heap_size()` -> `os_get_gpu_heap_size(percent, &percent)`
+          where `percent` is the driconf option. `os_misc.h:170` `os_gpu_heap_size_calculate()`:
+          percent == 0.0 means "use the heuristic" - <= 1 GiB of RAM -> 0.25, <= 4 GiB -> 0.5,
+          above that -> 0.75. MemTotal here is 7.32 GiB, so the default is 0.75, and
+          0.75 * 7.32 GiB = 5.49 GiB, which is what the default run reads.
+          The option's own description, `src/util/drirc_gen.py:393`: "Percentage of total system
+          memory to report as gpu heap memory (0 = driver default)", default 0.0, range 0.0-1.0.
+          The driver may then cap it by the VA size: `if (physical_device->va_size) available_ram =
+          MIN2(available_ram, physical_device->va_size);` (tu_device.cc:2262-2263). The cap is not
+          visible in these runs: the default size is exactly 0.75 x MemTotal, so no smaller VA cap
+          was applied.
+
+  budget  tu_device.cc:2269 `tu_get_budget_memory()` -> `vk_physical_device_heap_budget_from_system()`
+          with a hard-coded 0.9 and the comment "report at most 90% of available system memory".
+          vk_physical_device.h:202-221 takes `os_get_available_system_memory()`, adds what this
+          process already uses, and caps the result by `MIN2(heap_size, ...)` at :196.
+          So the budget tracks the machine's free memory, NOT the option - until the option makes
+          the heap smaller than the free memory. That is exactly what the 0.05 run shows.
+
+  types   `tu_expose_device_local_only_memory_type` (Turnip's own `misc` group, off by default) is
+          the memory-type switch: it adds a DEVICE_LOCAL type that is not host-visible. Upstream
+          turns it on in exactly one place in `00-turnip-defaults.conf`, for Red Dead Redemption 2's
+          native Vulkan renderer (:136-145), i.e. when an application is known to ask for such a
+          type - which is the opposite of a perf option.
+
+=== 2. the runs, verbatim from the tool's own output
+  (listed by option value, not in the order they were taken; the raw logs in results/raw/ are
+  named per value, and the tab indentation inside each block is the tool's own)
+
+  heap_memory_percent unset - the released default:
+
+    memoryHeaps: count = 1
+    	memoryHeaps[0]:
+    		size   = 5891948544 (0x15f300000) (5.49 GiB)
+    		budget = 1027604480 (0x3d400000) (980.00 MiB)
+    		usage  = 0 (0x00000000) (0.00 B)
+    		flags: count = 1
+    			MEMORY_HEAP_DEVICE_LOCAL_BIT
+    memoryTypes: count = 4
+
+  heap_memory_percent=0.5:
+
+    memoryHeaps: count = 1
+    	memoryHeaps[0]:
+    		size   = 3927965696 (0xea200000) (3.66 GiB)
+    		budget = 1011875840 (0x3c500000) (965.00 MiB)
+    		usage  = 0 (0x00000000) (0.00 B)
+    		flags: count = 1
+    			MEMORY_HEAP_DEVICE_LOCAL_BIT
+    memoryTypes: count = 4
+
+  heap_memory_percent=0.4 - one of the two values queue 13 wants in the game:
+
+    memoryHeaps: count = 1
+    	memoryHeaps[0]:
+    		size   = 3142582272 (0xbb500000) (2.93 GiB)
+    		budget = 1004535808 (0x3be00000) (958.00 MiB)
+    		usage  = 0 (0x00000000) (0.00 B)
+    		flags: count = 1
+    			MEMORY_HEAP_DEVICE_LOCAL_BIT
+    memoryTypes: count = 4
+
+  heap_memory_percent=0.25:
+
+    memoryHeaps: count = 1
+    	memoryHeaps[0]:
+    		size   = 1963982848 (0x75100000) (1.83 GiB)
+    		budget = 1026555904 (0x3d300000) (979.00 MiB)
+    		usage  = 0 (0x00000000) (0.00 B)
+    		flags: count = 1
+    			MEMORY_HEAP_DEVICE_LOCAL_BIT
+    memoryTypes: count = 4
+
+  heap_memory_percent=0.05 - here the cap of vk_physical_device.h:196 becomes visible:
+
+    memoryHeaps: count = 1
+    	memoryHeaps[0]:
+    		size   = 392167424 (0x17600000) (374.00 MiB)
+    		budget = 392167424 (0x17600000) (374.00 MiB)
+    		usage  = 0 (0x00000000) (0.00 B)
+    		flags: count = 1
+    			MEMORY_HEAP_DEVICE_LOCAL_BIT
+    memoryTypes: count = 4
+
+  The size is the option times MemTotal, rounded down to MiB: 0.75 (the heuristic default) / 0.5 /
+  0.4 / 0.25 give 5.49 / 3.66 / 2.93 / 1.83 GiB, and 0.05 gives 374 MiB. The budget does not follow
+  the option while the heap is bigger than the free memory (980, 965, 958, 979 MiB - the spread is
+  the machine, not the option: the runs were taken minutes apart with 0.7-1.0 GiB available), and
+  once the heap falls below the free memory budget == size, which is what the 0.05 run is for.
+
+  Each run with the option set carries the driver's own confirmation that the option reached it:
+
+    ATTENTION: default value of option heap_memory_percent overridden by environment.
+
+  The memory-types control (no heap option, `tu_expose_device_local_only_memory_type=true`, raw log
+  results/raw/vi-dlonly.log): memoryTypes goes 4 -> 5, the new one being `propertyFlags = 0x0001`,
+  MEMORY_PROPERTY_DEVICE_LOCAL with no host-visible bit; the heap block is unchanged. So the two
+  switches are independent: one changes the size of the single heap, the other changes which types
+  share it.
+
+=== 3. what this does and does not say
+
+  It says: on this machine the released driver reports one DEVICE_LOCAL heap of 5.49 GiB - 75 % of
+  RAM, because that is the heuristic branch of `os_gpu_heap_size_calculate()` for a machine above
+  4 GiB - and a budget of roughly what the system happens to have free. One environment variable
+  moves the reported size, and below the free-memory level it moves the reported budget too.
+
+  It does NOT say the reported number is wrong, and it does not say changing it helps. Journal 17
+  measured that vkd3d-proton peaks at 3129 MiB of its own resources and turnip holds 3490 MiB of
+  BOs, so the game's behaviour with a heap reported as smaller than that is unknown from this
+  artifact: vkd3d-proton may stream more, may move resources to a system-memory type that on this
+  driver is the same physical DRAM, or may simply fail an allocation. 0.05 is a control chosen to
+  expose the MIN2 cap, not a candidate value.
+
+  It measures nothing about frame rate and nothing about what the game does: the tool allocates
+  nothing and exits. The measurement that would decide the question is a game run with
+  `heap_memory_percent` set, `VKD3D_CONFIG=log_memory_budget` for vkd3d's own view, and the
+  MangoHud RAM/swap columns journal 17 used - queue 13 in docs/plan-next-checks.md.
+
+  The other number in the same surface, the hard-coded 0.9 in `tu_get_budget_memory()`, is not
+  reachable by any option: it is a literal in the driver, so reaching it needs a patch.

@@ -39,3 +39,15 @@ git) and MangoHud CSV (`ram_used`/`swap_used`). Artifacts:
    swappiness=180/zram — root only, outside the project's scope.
 5. `TU_DEBUG=bos` must not be used in repeated measurements: a dump after every
    submit = 242 MB of log.
+
+### Narrowing of conclusion 3 (21.11)
+
+Conclusion 3 says "There are no env levers for memory". For what it searched - the env surface of
+journal 15 and journal 15.5, whose options change what the driver *holds* and what it submits - it
+still stands, and none of the numbers above moved. It did not cover the option that changes what
+the driver **reports**: `heap_memory_percent`, a driconf option outside Turnip's own `perf`/`misc`
+groups, which on this machine decides how much DEVICE_LOCAL memory a fresh application is told
+exists (the measured number is owned by journal 34.4 and `results/vulkaninfo-heap-report.log`).
+Whether a smaller report changes what vkd3d-proton does with the 3129 MiB measured above is
+queue 13 - NOT MEASURED, and the 4.95 GiB of swap recorded here is why the question is worth a
+game run rather than another probe.

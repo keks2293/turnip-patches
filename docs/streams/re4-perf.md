@@ -28,6 +28,11 @@ They are listed with what each one costs in queue 12, and journal 34 says which 
 is unreachable on a740 without a build. No fps has been taken for any of them: all three
 act in a renderpass, and the rig has none.
 
+Open in the same surface but a different kind - the report rather than the command stream:
+what the game does when the driver tells it there is less memory than the heap it reports
+today. The report is measured (journal 34.4); the behaviour is queue 13. This is the only
+unasked driver-side question here that points at the bound in ADR-0008 instead of around it.
+
 Decisions: ADR-0008, ADR-0001, ADR-0004. Artifacts: `docs/fdperf-a7xx.md`,
 `results/fdperf-mesa27*/steady-state.txt`, `results/fps-*.csv`,
 `results/test-perfprops-rig.log`, `tools/fdperf/fdperf-windowed-delta.patch`.

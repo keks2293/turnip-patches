@@ -342,14 +342,15 @@
    "date": "30.09",
    "status": "closed",
    "decision": "ADR-0008",
-   "verdict_first_line": "",
+   "verdict_first_line": "3 says \"There are no env levers for memory\". For what it searched - the env surface of",
    "artifacts": [
     "scripts/run-game.sh",
     "results/vkd3d-mem.log",
     "results/game-patched-mem.log",
-    "results/fps-at-mem.csv"
+    "results/fps-at-mem.csv",
+    "results/vulkaninfo-heap-report.log"
    ],
-   "lines": 42,
+   "lines": 54,
    "headings": [],
    "verdict_quote": "Stop looking for an fps lever inside the driver for this game. Reduce bytes instead: UBWC and tiling of texture traffic, or MSAA/resolution - the latter changes the numbers, not the nature of the bound.",
    "verdict_source": "ADR-0008"
@@ -809,13 +810,15 @@
    "decision": "",
    "verdict_first_line": ". Four of the five options are reachable with an environment variable and no rebuild,",
    "artifacts": [
-    "results/test-perfprops-rig.log"
+    "results/test-perfprops-rig.log",
+    "results/vulkaninfo-heap-report.log"
    ],
-   "lines": 128,
+   "lines": 182,
    "headings": [
     "## 34.1 What has already been measured, so the search does not repeat it",
     "## 34.2 The surface none of them covered, read off the tree",
     "## 34.3 The correctness gate the rig can give, on the released driver",
+    "## 34.4 The same surface, second kind: what the driver reports about memory (added the same day)",
     "## What this does not show"
    ],
    "verdict_quote": ". Four of the five options are reachable with an environment variable and no rebuild,",

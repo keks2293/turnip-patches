@@ -101,6 +101,57 @@ where the three candidates act, so the measurement that decides them is the game
 the bound on the expectation is the wall of ADR-0008 - except for the FDM option, which carries
 upstream's own "Improves performance up to 4% on A7XX." and is the first candidate in the queue.
 
+## 34.4 The same surface, second kind: what the driver reports about memory (added the same day)
+
+The five options above change the command stream. The surface has a second kind, and on a machine
+whose wall is memory it is the one worth naming, so the search is complete rather than narrow:
+options that change what the driver **reports**, which an application then sizes itself against.
+One of them is reachable without a build and had never been looked at here.
+
+`heap_memory_percent` is not in Turnip's own `perf`/`misc` groups and not in `TU_FORCE_PROPS`. It is
+one of the three "common vk" driconf options Turnip accepts (`tu_drirc_gen.py:8-12`, next to
+`force_vk_devicename` and `force_vk_vendor`), its description is "Percentage of total system memory
+to report as gpu heap memory (0 = driver default)" (`drirc_gen.py:393`), and an environment variable
+of the same name overrides it. What it feeds is `tu_get_system_heap_size()` (`tu_device.cc:2255`):
+with the default `0.0` the driver takes `os_gpu_heap_size_calculate()`'s heuristic branch
+(`os_misc.h:170`), which for a machine above 4 GiB of RAM returns **0.75**.
+
+Five runs of `vulkaninfo` against the released driver, one variable, verbatim in the artifact:
+
+| run | reported `size` | reported `budget` |
+|---|---|---|
+| default | 5.49 GiB | 980 MiB |
+| `heap_memory_percent=0.5` | 3.66 GiB | 965 MiB |
+| `heap_memory_percent=0.4` | 2.93 GiB | 958 MiB |
+| `heap_memory_percent=0.25` | 1.83 GiB | 979 MiB |
+| `heap_memory_percent=0.05` | 374 MiB | 374 MiB |
+
+So on this machine the driver tells a fresh application that there are 5.49 GiB of DEVICE_LOCAL
+memory - 75 % of 7.32 GiB, because of the heuristic, not because anyone chose it - while journal 17
+measured that the game's own vkd3d resources peak at 3129 MiB and turnip's live BOs at 3490 MiB on
+a system that was then already running with 4.95 GiB of swap used. The budget is a separate number:
+`tu_get_budget_memory()` (`tu_device.cc:2269`) hard-codes 0.9 of *free* system memory, so the budget
+follows the machine and not the option, until the heap drops below it - which is why the last row
+has `budget == size` and why that row is a control on the cap at `vk_physical_device.h:196`, not a
+candidate value.
+
+The memory-type switch in the same area, `tu_expose_device_local_only_memory_type`, is a different
+axis and was checked as a control: it moves the reported type count 4 -> 5, the new type being
+`0x0001` (DEVICE_LOCAL, not host-visible), with the heap block unchanged. Upstream enables it in one
+place only, for RDR2's native Vulkan renderer, i.e. when an application is known to ask for such a
+type.
+
+**Verdict of 34.4.** One number in the driver, reachable by environment, decides what this game is
+told about memory: 5.49 GiB on this machine. Nothing here says the number is wrong, and nothing here
+says changing it helps - journal 17's own conclusion ("no env levers for memory") stands for what it
+measured, which is *use*; this is the *report*, and no rig here has ever observed what vkd3d-proton
+does when the report shrinks. It is the one unasked question in the option surface that points at
+the bound in ADR-0008 rather than away from it, so it is queued with the game as queue 13 and open
+question 17, and it is explicitly not a patch: the 0.9 in `tu_get_budget_memory()` is a literal and
+would need code, which is a different conversation with different risk.
+
+Artifact: [`../../results/vulkaninfo-heap-report.log`](../../results/vulkaninfo-heap-report.log).
+
 ## What this does not show
 
 * It measures **nothing about frame rate**. No fps was taken in this entry: RE4 needs about
@@ -108,6 +159,9 @@ upstream's own "Improves performance up to 4% on A7XX." and is the first candida
 * The rig's equality is not a safety verdict - see the last section of the artifact: no
   textured depth renderpass, no visibility stream, no FDM tiles. The precedent for what "the
   counter is green" is worth is ADR-0006.
+* The 34.4 numbers are a **report**, taken with `vulkaninfo` while the game was not running and the
+  machine had roughly 0.7-0.8 GiB available. The `budget` column is therefore a statement about the
+  machine at that minute; only the `size` column follows the option.
 * The second rig journal 15 used (`vkmark`) is no longer installed on this system: the prefix
   its `$D` pointed at is gone. Until it is reinstalled, the game is the only workload here that
   exercises these paths, so the queue item names it directly.

@@ -21,6 +21,11 @@ images (vkd3d or DXVK - not separated, and it decides which path to verify); and
 unmeasured facts before exp-18 (a UBWC format variant for `R16G16B16A16_FLOAT`, and the
 fate of `R32G32_FLOAT`, which has no compat mode).
 
+Open on the memory side, added 21.11 from the perf search: the size this driver *reports* to the
+application - one DEVICE_LOCAL heap, 5.49 GiB here because of a heuristic, not a decision - has
+never been varied here, and nobody has observed what vkd3d-proton does when it shrinks. The
+report is measured, the behaviour is not (journal 34.4, queue 13).
+
 The shape of exp-18, so that it does not get written wrong: (a) move
 `format_list_reinterprets_r8g8_r16()` and `format_list_has_swaps()` out of the
 `!mutable_ubwc_fc` branch - today the `is_mutable` branch skips them, which is why the
@@ -34,4 +39,4 @@ Decisions: ADR-0006, ADR-0004, ADR-0007, ADR-0008. Artifacts:
 `patches/0014-turnip-mutable-no-list-tiling.patch`,
 `experiments/exp-14-image-inventory.patch`, `scripts/imginv-stats.py`,
 `scripts/imginv-classes.py`, `results/imginv-3variants.txt`,
-`results/test-0014-*.log`.
+`results/test-0014-*.log`, `results/vulkaninfo-heap-report.log`.

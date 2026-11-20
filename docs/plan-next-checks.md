@@ -640,6 +640,45 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     two of the three are likely zeros. That is a reason to run them in one evening session, not
     a reason to skip them: none has ever been asked here.
 
+13. **What the game does when the driver reports less memory** (journal 34.4; no build, no new
+    code). The other kind of option in the same surface: not the command stream but the report.
+    `heap_memory_percent` (a "common vk" driconf option, `tu_drirc_gen.py:8-12`, environment name
+    `heap_memory_percent`) feeds `tu_get_system_heap_size()`; at its default `0.0` the driver takes
+    the heuristic branch and reports a percentage of RAM as the one DEVICE_LOCAL heap - the numbers,
+    measured on this machine, are owned by journal 34.4 and `results/vulkaninfo-heap-report.log`,
+    four `vulkaninfo` runs. The reported budget is separate
+    and follows free memory (0.9 of it, hard-coded at `tu_device.cc:2269`), so it needs no patch to
+    be honest, only a smaller heap to become the binding number.
+
+    Why this and not another probe: journal 17 measured vkd3d peaking at 3129 MiB of its own
+    resources, turnip holding 3490 MiB of BOs, system RAM 7.24 of 7.32 GiB and swap 4.95 GiB. The
+    report is bigger than what the machine was able to back. Nothing here says the report is wrong,
+    and nothing here says shrinking it helps - what vkd3d-proton does with a smaller heap is
+    unmeasured, and on a driver with one memory heap it may equally fail an allocation.
+
+    Run with the game, one option at a time, interleaved with base as in journal 15.5, and the
+    memory logging of journal 17 rather than a bare fps number:
+
+    ```sh
+    source scripts/env.sh
+    TAG=hp50 heap_memory_percent=0.5 VKD3D_CONFIG=log_memory_budget VKD3D_DEBUG=info \
+        HUDLOG=150 scripts/run-game.sh patched 170
+    # base run between each; compare vkd3d's peak, the MangoHud ram_used/swap_used, and p25
+    ```
+
+    Values to try: `0.5` (the heap then sits above journal 17's vkd3d peak - the safe probe) and
+    `0.4` (just below it). Both are measured rows in the artifact, so the game runs start from
+    reported sizes that are known rather than computed. Not the 0.05 that the artifact uses as a
+    control: that is a cap demonstration, and an allocation failure there would be an artefact of
+    the value, not a result.
+
+    What each outcome would mean, said in advance: lower swap with the same vkd3d peak means the
+    engine was sizing itself against the report and the report was misleading; the same swap and
+    the same fps means the report is ignored by this stack and the whole branch closes with a
+    measurement instead of a guess; an allocation failure or a black screen means vkd3d trusts the
+    report and the branch closes too, in the other direction - and in that case the honest artifact
+    is the failure, kept in `results/`.
+
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
 (ADR-0010), BC + UBWC (ADR-0004), any 8bpp UBWC patch (ADR-0007), removing any shipped patch
@@ -670,6 +709,7 @@ instead of against a build.
 | 14 | does a `R64_UINT`/`R64_SINT` view of a UBWC image work, once `STORAGE` makes it legal | NOT MEASURED, and it is the gap `exp-18 (b)` cannot write around: journal 32 measured the two 64-bit compat labels as one cell but deliberately created its images **without** `STORAGE`, while `ubwc_possible()` refuses the `R64_*` formats for their own reasons and `tu_formats.cc` grants the 64-bit image-atomic feature under `has_64b_image_atomics`. A no-list image with `STORAGE` in its usage is viewable as `R64_UINT` whatever the class rule grants. Needs a probe shape (same image, `STORAGE` usage, `R64_UINT` view, atomics in and out), not a build |
 | 15 | is the compressor actually writing compressed bytes, or only a metadata plane | NOT MEASURED by any rig here. Every UBWC claim in this repository rests on the `+0x2000` allocation signature, which journal 22.2 says is an allocation and not a compression claim. The direct detector is a fast-clear that leaves the bytes untouched in a UBWC image and does not in a linear one; it is not written, and journal 32's verdict is stated so as not to need it |
 | 16 | does any of the three reachable driconf perf options change fps in RE4 | NOT MEASURED, queue 12 (journal 34.3 covers correctness on the rig only, and the rig has no textured depth renderpass). `tu_disable_conservative_fdm_binning` carries upstream's "Improves performance up to 4% on A7XX."; the other two are expected zeros given ADR-0008. Needs the game, so it needs most of this machine's 7.3 GiB |
+| 17 | what does the game do when the driver reports less memory than the heap it reports today | NOT MEASURED, queue 13. The report itself is measured - journal 34.4, `results/vulkaninfo-heap-report.log`, five `vulkaninfo` runs over `heap_memory_percent` - and the queue names the two values to try in the game. What vkd3d-proton does under a smaller report is not, and journal 17's 3129 MiB peak against 4.95 GiB of swap is why the question is not empty |
 
 ## Pitfalls (reminder)
 
