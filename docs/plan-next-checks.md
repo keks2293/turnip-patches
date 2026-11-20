@@ -52,7 +52,7 @@ place, the hash is correct. `build/out` is currently = base.
 works - candidate patch **0013** (BC copy through r3d), verification:
 roundtrip BC1/BC3/BC7 EXACT on the base and on A+B.
 
-**Artifact:** `results/test-BCcopy-<name>.log`, a section in `analysis.md`.
+**Artifact:** `results/test-BCcopy-<name>.log`, the journal entry it became (journal 21.8).
 
 ### Status (18.11)
 
@@ -102,8 +102,7 @@ roundtrip BC1/BC3/BC7 EXACT on the base and on A+B.
   fails with the old BC3-512 signature, 256x128/512x64/256x256 pass. The wording
   "readback addressing" held until the final verdict below - it is visibility,
   not addressing.
-- **CLOSED the same evening (see `bugs-found.md` final section, `analysis.md`
-  §21.10): root cause = missing CCU clean on A7XX between b2i and the next
+- **CLOSED the same evening (see the final section of `bugs-found.md`, journal 21.10): root cause = missing CCU clean on A7XX between b2i and the next
   reader in one submit.** `TU_I2B_SYNC=1` (FD_CCU_CLEAN_COLOR + WFI before the
   readback) and the producer-side variant both give 91/91 EXACT; invalidate-only
   and clean-without-WFI still fail. Fix candidate:
@@ -179,7 +178,8 @@ fault (fast-clear value + R8G8 + sizes ~960x540 + GMEM renderpass); at
 the time of the patch it was applied to all R8G8 (blanket, possibly excessive - see the plan).
 
 **Artifact:** `results/test-fastclear-<name>.log` (vkmark), `dmesg` excerpts,
-a section in `analysis.md`; a header edit in `patches/0008-*.patch`.
+a journal entry (journal 15 is the one that measures this prop); a header edit in
+`patches/0008-*.patch`.
 
 ### Status (18.11): closed by analysis - keep the blanket
 
@@ -218,7 +218,7 @@ a section in `analysis.md`; a header edit in `patches/0008-*.patch`.
   (190/204/234); the a7xx chain `[a7xx_base, a7xx_gen2]` doesn't inherit from a6xx.
 - Gate: `tu_image.cc:386` `!has_8bpp_ubwc && blocksizebits==8 &&
   plane_count==1 -> return false` (R8 without UBWC).
-- Early measurement (analysis §21.7): `FD_DEV_FEATURES=has_8bpp_ubwc=1` ->
+- Early measurement (journal 21.7): `FD_DEV_FEATURES=has_8bpp_ubwc=1` ->
   CEIL[R8] `nonmut=0x42000 > lin` (the *driver* allocates a metadata plane), but
   the roundtrip readback is **all zeros** (65536/65536 MISMATCH). That number is
   not a statement about the chip: the metadata size comes from
@@ -263,7 +263,7 @@ a section in `analysis.md`; a header edit in `patches/0008-*.patch`.
 - The "one block row is safe, the step to the next row breaks" model (wrong
   vertical pitch) cannot be tested at `H <= 16`: there the probe's *linear* control
   fails too, in both readers. Probe defect at small images, recorded as such, not
-  a UBWC result. See analysis §22.1 before re-using any small-image number.
+  a UBWC result. See journal 22.1 before re-using any small-image number.
 - The runtime override **works without a rebuild**: `FD_DEV_FEATURES=has_8bpp_ubwc=1`
   (it is a prop, `freedreno_dev_info.py`).
 
@@ -280,7 +280,7 @@ a section in `analysis.md`; a header edit in `patches/0008-*.patch`.
    writer, which is a different patch than a descriptor fix. Today's AB rows at
    `blockheight >= 8` are post-fault and prove nothing - run it in a fresh process.
 3. (optional) RE4 with `FD_DEV_FEATURES=has_8bpp_ubwc=1`: the game creates 754
-   `R8_UNORM` + 72 `R8_UINT` images (findings §7.10), so this is the ~70 MiB hole -
+   `R8_UNORM` + 72 `R8_UINT` images (journal 25), so this is the ~70 MiB hole -
    worth a run *after* a real patch, with the fault risk the grid sweep showed, and
    note UBWC on a 512x512 R8 image *costs* 8 KiB (`0x42000` vs `0x40000`), so small
    images lose even in the best case.
@@ -294,7 +294,7 @@ correct default - justified by what the hardware writes and reads back, not by a
 `scripts/gen-tp-write-spv.sh`), `scripts/sweep-8bpp-grid.sh`,
 `scripts/ubwc-dump-analyze.py`, `results/test-8bpp-tp8bpp-{stock,sizes}.log`,
 `results/test-8bpp-meta-pitch-height.log`, `results/test-8bpp-meta-shape.txt`,
-analysis §22, findings §4.10.
+journal 22 (the whole second pass on 8bpp) and `ADR-0007`.
 
 ---
 
@@ -329,23 +329,92 @@ analysis §22, findings §4.10.
 **Criterion:** the exact gate + HW/driver classification + a significance estimate.
 Most likely **the dead end is confirmed**, low priority.
 
-**Artifact:** an edit of the analysis of the 36 classes (`analysis.md` §21.6.3a), a CEIL log
+**Artifact:** an edit of the analysis of the 36 classes (journal 21.6.3a), a CEIL log
 with R32G32B32A32.
 
 ---
 
-## Priority and order
+## Queue (20.11)
 
-1. **Block 0 (BC copy)** - re-framed 18.11: the 0012 verification premise is
-   withdrawn (0012 retired, §21.9), but the block stayed alive as its own
-   correctness bug: the r2d readback zero-windows are geometry/state-dependent,
-   not BC- and not UBWC-dependent (a plain RGBA32 128x128 fails the same way).
-   The fix is a candidate on its own, 0012 no longer blocks anything.
-2. **Block 1 (fast-clear)** - a real performance lever (generic clear
-   is already enabled, the only question is the R8G8 exception) + an improvement of the 0008 description.
-3. **Block 3 (R32G32B32)** - a quick re-check, most likely it will confirm the dead end
-   and lower its significance (128-bit is already in UBWC).
-4. **Block 2 (R8)** - a re-check, most likely it will keep False, but will refine the conclusion.
+Ordered by what unblocks what. A closed branch is not repeated here - it has an ADR in
+[`decisions/`](decisions/); this file owns only the next actions.
+
+0. **Blocker for every measurement build**: restore `0003..0014` in `../mesa27-src` by
+   explicit file names. The tree currently has only the `exp-14` tooling and fragments of
+   `0001`/`0002`; `0003` needs offsets resolved by hand, and `ls | head -1` picks the
+   mesa26 twin of `0002`. `git checkout`/`git restore` is forbidden there (`AGENTS.md`).
+1. **exp-18 - the 64-bit UBWC class** (no patch file yet). Volume: 650.8 MiB, not 4 GB
+   (journal 28). Shape: (a) move `format_list_reinterprets_r8g8_r16()` and
+   `format_list_has_swaps()` out of the `!mutable_ubwc_fc` branch - today the
+   `is_mutable` branch skips them, which is why the prop tiles 16-bit no-list images, a
+   real hazard; (b) implement `TODO: limit based on compatiblity class` in
+   `format_list_ubwc_possible()` against `tests/vk-fmt-classes.json`, using the **strict**
+   Vulkan class (not 0014's block class), with the accepted risk on legal but non-UBWC
+   members (`E5B9G9R9`, `R64_*`) written down and a `perf_debug` counter. Gate: matrix 94
+   EXACT plus the `UBR` and `XV` rows unchanged, and a no-list cast probe before any
+   volume claim. Two facts must be measured first: whether `R16G16B16A16_FLOAT` has a
+   UBWC format variant in the table (the mapping is in a generated header), and the fate
+   of `R32G32_FLOAT`, which has no compat mode at all.
+2. **exp-19 - who is wrong about R8, the writer or the reader**. Probe AB (the same
+   `R8_UNORM` + UBWC image, filled by `vkCmdCopyBufferToImage`) read by `i2b` in a fresh
+   process, both at the base grid and at `{32,8}`. Cheaper than one build. If AB ever
+   reads EXACT while AA does not, the 3D writer is at fault and the fix is not the
+   descriptor work ADR-0007 declines. The AB rows of the 20.11 sweep are post-fault and
+   are not measurements.
+3. **The honest bare base**: run the inventory on `build/out-stock-inv`
+   (`23ccf659c90d3ddf…`, stock + `exp-14`, no prop). It exists and has never been run, so
+   the three-variant scale in journal 27 has no true zero point.
+4. **Ship stack + prop + inventory**: the fourth column that the caveat in journal 27
+   needs (the pair A/B differs by the whole stack, not only by the prop). About four
+   minutes of build.
+5. **fps A/B for mode 7** (`0013`): the correctness case does not depend on it, and the
+   expectation on a latency-bound game is small (ADR-0008), so it is low priority.
+6. **Who creates the DEPOSED no-list images** - vkd3d or DXVK. Not separated, and it
+   decides which path the exp-18 verification must cover: vkd3d means the driver lever is
+   the whole story, DXVK means the same fix has to be verified on the DX11 path too. There
+   is no env lever on the vkd3d side: the empty-list branch in `resource.c`
+   (`disable_compression`) is compiled in.
+7. **Probes to add to the test**: b2i -> sampler inside a renderpass; b2i -> dispatch;
+   secondary-CB b2i -> primary i2b (the boundary journal 21.10 leaves uncovered).
+8. **R32G32B32 (96-bit)** - the re-check in section 3 above, still worth one run: it most
+   likely confirms the dead end and lowers its priority.
+9. **Documentation**, two open pieces, neither of them a measurement:
+   - a distilled how-to page over the operational journal entries 7-12 and 19 (driver
+     swap, running the game and reading its logs, the `vkCreateInstance` rejection and its
+     real cause, the stale build image). The entries stay as they are; the page is the
+     version you read while working.
+   - the Russian left outside the archive. `AGENTS.md` says a passage is translated when
+     it is touched; these were not touched, so they are listed instead of quietly kept:
+     `scripts/imginv-stats.py` and `scripts/imginv-classes.py` (their own output labels)
+     and the annotation headers of
+     `results/{series-autotune,series-drirc,vkmark-ab-autotune,vkmark-ab-r8g8,vkmark-flags,test-8bpp-meta-shape}.txt`
+     and `results/fdperf-mesa27{,-vertex}/steady-state.txt`. Translating the two scripts
+     means re-running them over `results/raw/` and checking that every number in
+     `results/imginv-3variants.txt` comes out identical - the labels may change, the
+     counters may not.
+
+   After editing any entry run `scripts/gen-journal-index.py`; the index and
+   `docs/journal/manifest.json` are generated, not edited.
+
+Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
+(ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
+(ADR-0010), BC + UBWC (ADR-0004), any 8bpp UBWC patch (ADR-0007), driver-side fps levers
+(ADR-0008), removing any shipped patch (`patches/DROPPED.md`).
+
+## Open questions
+
+| # | question | status |
+|---|---|---|
+| 1 | the ~2 % lost on the first fill into a fresh image, inside the driver | the probe-side part is documented (journal 20); whether a driver-side component remains is not established, the hypothesis is the same CCU race (journal 21.10) |
+| 2 | moving `WAIT_FOR_IDLE` into `ExecuteCommands` | proposed, +2 lines, NOT MEASURED |
+| 3 | the price of mode 7 in RE4 | correctness matrix exists, no fps A/B |
+| 4 | who creates the DEPOSED no-list images | vkd3d or DXVK, not separated (queue 6) |
+| 5 | the 1024/262144 residue in the tiled run | unexplained, 0.39 %, does not change any verdict (journal 21.5) |
+| 6 | fast clear under `_SFLOAT` (0012) | a byte round trip cannot see it; needs its own probe |
+| 7 | 12_1 | blocked by `VK_EXT_fragment_shader_interlock`, which Turnip does not implement (ADR-0011) |
+| 8 | the 32- and 16-bit classes in lazy deposition | they reinterpret the layout; a separate analysis, and the reason 0014 leaves them linear on purpose |
+| 9 | R8 + UBWC: writer or reader | exp-19 (queue 2) |
+| 10 | UBWC format variants for `R16G16B16A16_FLOAT` and `R32G32_FLOAT` | unmeasured, gates exp-18 (queue 1) |
 
 ## Pitfalls (reminder)
 
@@ -358,24 +427,23 @@ with R32G32B32A32.
 - Verification of each step: the patch is in the binary, the loaded driver = the built one
   (hash/mtime), CEIL controls; RC=0 from ninja is not proof of a build.
 
-## Status (19.11): 0014 replaced by the block-only rule (branch `test`)
+## Status (19.11, corrected 20.11): 0014 - the shipped form is v1, not the block rule
 
-`patches/0014-turnip-mutable-no-list-tiling.patch` on this branch is not the
-form that shipped as `27.0.0-devel-p14`. The shipped one enumerates the base
-format's compatibility class and hands the predicates a synthesized
-`VkImageFormatListCreateInfo`. This one answers the no-list question from the
-texel block alone: an absent list returns `tu_is_r8g8_compatible(base)` and
-nothing else, and `tu_image_init()` now calls the same predicate the format
-query calls instead of repeating it inline. `ubwc_all_formats_compatible` is
-not touched - it is the A750 feature bit, it also gates sparse residency, and
-it measured broken on A740 (a7xx-gen-props.md row 23).
+*Written 19.11, corrected 20.11. The text below used to say that on this branch `0014` is
+the block-only rule and that the `XV` probe was the remaining gate. That was true at
+19.11 noon; the same evening the block rule was built and measured broken, so the branch
+keeps v1.*
 
-What is still open is not the gain but the safety: a read through a view of a
-*different member* of the block, on a tiled image with UBWC off, has never been
-measured - by either form. Section XV of the test does that (texelFetch through
-the view, so r2d's use of the image format cannot hide it) with the 2-byte class
-as the guard. Until XV, the 94-check matrix and the RE4 inventory have been run
-on it, this patch is DRAFT: the file says so in its own header.
+What the correction is: `patches/0014-turnip-mutable-no-list-tiling.patch` is the shipped
+form - it enumerates the base format's compatibility class and hands the predicates a
+synthesized `VkImageFormatListCreateInfo`. The block-only variant is
+`patches/dropped/0014-turnip-mutable-no-list-tiling-block-rule.patch`: it tiles
+`RGBA8->BGRA8` and `BGRA8->RGBA8` on the tiled non-mutable path, and the failure is
+visible in the `XV` rows while the 94-row counter stays EXACT (journal 24.3, ADR-0006).
+
+The open part of that note survives, and it is exactly why the class rule is not extended
+to UBWC casually: a read through a view of a *different member* of the block, on a tiled
+image with UBWC off, has still never been measured, by either form.
 
 Checked so far: `git apply --check` for 0001-0014 on `6dfa32a85f91`, no `--3way`
 and no fuzz; the test compiles clean with `scripts/build-test.sh` flags. Not

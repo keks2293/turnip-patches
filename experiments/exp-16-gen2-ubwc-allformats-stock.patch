@@ -1,4 +1,7 @@
 Stock Mesa 27 (6dfa32a85f91) + one line: ubwc_all_formats_compatible for a7xx_gen2.
+Measured in journal 24.2 and 26 of docs/analysis.md (the section cited below as
+"findings ... 7.9" is now journal 24.2; the 19.11 report itself is in
+docs/archive/).
 No other patch in the tree - 0001..0014 are not applied. Generated with:
   diff -u <(git show 6dfa32a:src/freedreno/common/freedreno_devices.py) src/freedreno/common/freedreno_devices.py
 --- a/src/freedreno/common/freedreno_devices.py

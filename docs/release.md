@@ -4,6 +4,61 @@ A release here is a build of the driver plus the source bundle that reproduces
 it. Nothing is published that was not run on the device first: the asset is the
 exact binary that produced the log referenced in its notes.
 
+## The stand and the versions
+
+Everything below was measured on this machine and no other. Procedures (how to build,
+how to run, how to take a window) are in `docs/howto-measure.md`.
+
+| | |
+|---|---|
+| device | Retroid Pocket 6 (aarch64) |
+| GPU | Adreno 740, `FD740`, a7xx **gen2**, chip_id `0x43050a01` |
+| memory | 7.32 GiB RAM, LPDDR5X, ~51 GB/s peak; zram ~7.9 GiB |
+| disk | the game on an exFAT volume mounted **by label** (the label changed from `Z Slim` to `Slim` and broke absolute paths; the scripts now find the directory) |
+| kernel | 7.2.6 |
+
+Properties the analysis rests on:
+
+* 6 CCU and `num_sp_cores = num_ccu`, so `number_of_usptp = 12`;
+* `has_8bpp_ubwc` is **absent** from the generated table for a7xx gen2 - the C
+  initializer zeroes the field, the explicit `False` exists only on a6xx gen2/3/4, and
+  the chain `[a7xx_base, a7xx_gen2]` does not inherit from it (ADR-0007);
+* `num_ccu = 6` and the counter dividers: `docs/fdperf-a7xx.md`.
+
+| component | version |
+|---|---|
+| stock Mesa (the system driver) | 26.2.3 (`mesa-vulkan-drivers-26.2.3-1.fc44.armada`) |
+| working tree | Mesa 27.0-devel (`../mesa27-src`, base `6dfa32a85f91`) |
+| vkd3d-proton | 3.1.0 (DX12) |
+| DXVK | 3.1.1 (DXGI) |
+| Proton | `proton-cachyos-11.0-arm64` |
+| prefix | `/var/home/armada/Games/Heroic/Prefixes/re4` |
+| game | RE4 Gold Edition, DX12, `VKD3D_CONFIG=''` |
+
+RE4 goes down the DX12 path: DXVK provides DXGI, vkd3d-proton provides D3D12. The logs
+contain both `re4.exe` and `xalia.exe` - two different clients, both of which load the
+driver.
+
+### Reference builds
+
+`MESA_GIT_SHA1` is not embedded in the `.so`, and rebuilding the same stack is not
+bit-for-bit, so a hash names a build and never a source state; stack identity is proven
+by the 94-row matrix (journal 24.3).
+
+| build | what it is | journal |
+|---|---|---|
+| `c17d02bcaae9a960…` | the shipped `.so` (tag `27.0.0-devel-p14`) | - |
+| `4c3cdb2100823b2f…` | the ship stack rebuilt on the bench, 94 EXACT, matrix line for line with p14 | 24.3 |
+| `c9dad346f906` | clean base: stack 0001-0012 without the experimental rig | 29 |
+| `cd436fd897f2` | stack + the `TU_B2I_SYNC` rig (modes 0-7, 15) | 21.11 |
+| `050375a18b7b` | ship stack with 0014, the `imginv5` inventory run | 27 |
+| `5e99409774838be5` | ship stack + `ubwc_all_formats_compatible` written into the gen2 table | 24.2 |
+| `c60dfb26` | stack without 0005/0006/0010/0011/0012/0014, plus the prop | 24.3 |
+| `44cdf593a5200d8b…` | stock Mesa 27 (`0001`/`0002` reverted too) + the prop line | 26 |
+| `32d20074b8a128e4…` | the same + the `exp-14` inventory | 27 |
+| `23ccf659c90d3ddf…` | stock + inventory, **no** prop: the honest bare base, built and NOT RUN | 27 |
+| `5395a4f3f2c6fcce` | the exp-17 build (`TU_8BPP_UBWC` override) | 22.4 |
+
 ## What goes into a release
 
 | asset | contents |
@@ -120,3 +175,22 @@ that the release points at a commit that exists on the remote.
 | tag | date | note |
 |---|---|---|
 | `27.0.0-devel-p14` | 19.11.2026 | first release of this repository: stack 0001-0014 on Mesa 27.0.0-devel `6dfa32a85f91`, `.so` `c17d02bcaae9`, 94/94. The source bundle was rebuilt the same day: 0002 in its Mesa 27 form and 0014 with the context fixed, so the published stack installs clean on its stated base - see "Provenance" above. |
+
+## Chronology of the work
+
+Not a release history - a timeline of when the measurements happened, so that an entry
+in `docs/analysis.md` can be placed in time. Journal entries 7-19 carry no date in their
+heading; this is where the dates come from.
+
+| date | what happened |
+|---|---|
+| 21.09 | the initial RP6/vkd3d analysis: why DX12 games refuse 12_0 (journal 1-6) |
+| 30.09 | vkmark and RE4 props, memory measurement, autotune (journal 15, 17) |
+| 02.10 | R8 and `has_8bpp_ubwc`, the first measurement (journal 21.7, superseded by 22) |
+| 04.10 | 12_1 traced to `VK_EXT_fragment_shader_interlock`; 0012 into the stack (ADR-0011) |
+| 17.11 | fdperf: the memory wall (`docs/fdperf-a7xx.md`) |
+| 18.11 | BC readback: 0013 v1/A/B rejected, root cause is the CCU, i2b 91/91; the form of the fix chosen later by exp-15 (journal 21.8, 21.10) |
+| 18.11 | R8 re-checked in split submits; the CPU governor checked and dismissed (journal 21.7, 29) |
+| 19.11 | exp-15: 16 modes, mode 7 -> 0013; the root-cause text corrected; the linear-deposition inventory -> 0014 (2201 MiB by the model, 2170 MiB in game); the "1.86 fps" artefact (journal 21.10-21.12, 29) |
+| 19.11 evening | `ubwc_all_formats_compatible` on gen2 reconciled with the patch stack - the removable list is empty; 0014 v2 rejected; stock + one prop line built and shown to play (journal 24-26, ADR-0001) |
+| 20.11 | 8bpp second pass: R8 + UBWC reads back exactly a quarter at every size, metadata geometry excluded, no patch (journal 22, ADR-0007); documentation restructured into journal/decisions/streams |

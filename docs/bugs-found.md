@@ -185,7 +185,7 @@ Nothing is executed at the copy. The next natural flush point emits one clean +
 WFI for the whole group of copies, and a command buffer that ends there merges
 into the CCU clean `tu_EndCommandBuffer` already emits. That form is mode 7 of
 the exp-15 matrix: 94/94 EXACT over three repeats, and the only correct form
-that costs nothing per copy (`docs/analysis.md` §21.11). The earlier
+that costs nothing per copy (journal 21.11). The earlier
 raw-event-write / `tu_emit_cache_flush` forms (`exp-13b`) are correct too but
 pay a WFI per copy; the blit-cache aperture is simply the wrong one (19
 MISMATCH, exactly like no fix).
@@ -235,4 +235,4 @@ block-compressed classes become tiled, 4- and 2-byte classes stay linear (their
 class really does hold both channel orders), 94/94 byte-exact
 (`results/test-0014-ship.log`), and the in-game deposed set drops from 3801 MiB
 to 1631 MiB (`results/test-0014-inventory-ab.log`). Full analysis:
-`docs/analysis.md` §21.12.
+journal 21.12.

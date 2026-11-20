@@ -3,14 +3,32 @@
 Дата: 19.11.2026. Область: Mesa Turnip на Adreno 740 (a7xx gen2), RE4 (DX12,
 vkd3d-proton) как целевая нагрузка, плюс correctness-линия копирования r2d.
 
-> **EN - status 20.11: frozen, pending dissolution.** The role of this file is
-> split per `AGENTS.md`: stand/versions/hashes -> `docs/release.md`,
-> branch-closing verdicts -> `docs/decisions/` (ADR), the live state of each
-> direction -> `docs/streams/`, queue and next steps -> `docs/plan-next-checks.md`,
-> artifact registry -> the README table. It is the last non-English document in
-> the repository and the only file that duplicates `docs/analysis.md`, so nothing
-> new is written here: a new measurement becomes a numbered section of the
-> journal, plus a decision record if it closes a branch.
+> **EN - archived 20.11.2026, frozen. Not a source of numbers.**
+>
+> This was the consolidated report of 19.11. It duplicated `docs/analysis.md` - the
+> same measurement lived in two files with two section numbers, which is how one
+> number reached a summary in a stronger form than the data supported (journal
+> 22.1: the probe prints the count of *wrong* elements, a draft printed it as
+> "readable"). It has been dissolved per `AGENTS.md`:
+>
+> | here | now owned by |
+> |---|---|
+> | 1 stand, versions, build identification | `docs/release.md` (the stand, reference builds) |
+> | 2 measurement methodology, the nine classes of error, the pipeline-cache mechanism, "1.86 fps" | journal 29 + `docs/howto-measure.md` |
+> | 3-6, 4.x, 5.x the experiment narrative (12_0, UBWC lists, r2d) | journal 1-6, 16-21 (the same text, in English) |
+> | 7.7-7.14 the 19-20.11 material (quirk, the prop, the inventories, the ceiling) | journal 23-28 - they were written here first and had no journal entry |
+> | verdicts that close a branch | `docs/decisions/ADR-0001..0011` |
+> | where a direction stands | `docs/streams/` |
+> | 8 the artifact registry | `docs/artifacts.md` |
+> | 9-11 open questions, next steps, the queue | `docs/plan-next-checks.md` |
+> | appendices A (numbers) and B (chronology) | `docs/artifacts.md`, `docs/release.md` |
+>
+> Nothing is cited from this file any more, and nothing is added to it: a new
+> measurement becomes a numbered entry in `docs/journal/`, plus an ADR if it closes
+> a branch. It is kept - rather than deleted - because it is the frozen snapshot of
+> what was believed on the evening of 19.11, and because it is the only place where
+> some of that wording survives; it is also the last non-English document here, and
+> that is now a property of the archive, not of the working tree.
 
 Документ сводит воедино результаты, разбросанные по `docs/analysis.md`
 (§1–§21.10), `docs/bugs-found.md`, `docs/fdperf-a7xx.md`, `patches/` и

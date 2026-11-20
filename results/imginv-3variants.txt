@@ -1,9 +1,15 @@
-# Сводка трёх инвентарей (docs/findings-2026-11-19.md §7.13), сгенерировано 2026-11-20.
-# Вход (results/raw/ в .gitignore: полный stdout/stderr proton; курированные копии — results/game-patched-*.log):
-#   results/raw/game-patched-imginv4.log               839 KB  sha256 cde39e2971a60097
-#   results/raw/game-patched-imginv5.log               953 KB  sha256 80d433927103ef02
-#   results/raw/game-patched-stockflaginv.log         2177 KB  sha256 b297168ac43b30ca
-# Сборы: imginv4 = шип-стек без 0014; imginv5 = шип-стек + 0014 (050375a18b7b); stockflaginv = чистый Mesa 27 + exp-14 + одна строка ubwc_all_formats_compatible (32d20074b8a128e4).
+# Three image inventories on one scale (journal 27 of docs/analysis.md), generated 2026-11-20.
+# Input (results/raw/ is gitignored: full proton stdout/stderr; curated copies live in results/):
+#   results/raw/game-patched-imginv4.log              839 KB  sha256 cde39e2971a60097
+#   results/raw/game-patched-imginv5.log              953 KB  sha256 80d433927103ef02
+#   results/raw/game-patched-stockflaginv.log        2177 KB  sha256 b297168ac43b30ca
+# Builds: imginv4 = the ship stack without 0014 (0001..0013 present); imginv5 = the ship stack
+#   with 0014 (build 050375a18b7b); stockflaginv = stock Mesa 27 6dfa32a + exp-14 + one line
+#   ubwc_all_formats_compatible (build 32d20074b8a128e4).
+# Counters: scripts/imginv-stats.py and scripts/imginv-classes.py - regenerate with
+#   python3 scripts/imginv-stats.py game-patched-imginv4.log game-patched-imginv5.log game-patched-stockflaginv.log
+# MUTABLE_FORMAT is taken from `flags & 0x8`, not from the `mutable=` field, whose meaning
+# changed between revisions of the tooling.
 
 $ python3 scripts/imginv-stats.py game-patched-imginv4.log game-patched-imginv5.log game-patched-stockflaginv.log
 

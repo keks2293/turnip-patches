@@ -298,7 +298,7 @@ podman run --rm \
   (17.11.2026, `podman commit` on top of `mesa-build-fedora44-wsi-glslang`)
   contains gcc + vulkan-headers + vulkan-loader-devel - dnf is no longer needed
   to build the test. With `--rm` packages installed in one run
-  do not carry over to the next (analysis.md §19.3), so "install into the
+  do not carry over to the next (journal 19.3), so "install into the
   image" means a commit of the image only, not an install into the container. Two pitfalls
   were recorded when it was created: (a) `podman start` without `-a` does not wait for
   dnf to finish - a commit in the middle of a transaction corrupts the rpm DB, wait for completion;
@@ -322,7 +322,7 @@ podman run --rm \
 
 ## A/B on RE4
 
-- The same scene section, the `p25` fps metric, as in `docs/analysis.md` §13.
+- The same scene section, the `p25` fps metric, as in journal 13.
 - Expectation: 13-15 fps +/-1. Stock 26.2 and patched 26.2 already give the same
   result, and the bottleneck is the 7.3 GiB of RAM and the shared LPDDR5, not the driver code.
 - If possible - RE4's built-in benchmark instead of the manual scene
@@ -336,13 +336,13 @@ podman run --rm \
 
 ### First measurement (17.11.2026)
 
-Protocol §13: `HUDLOG=120 HUDINTERVAL=100 scripts/run-game.sh patched 150`,
+Protocol journal 13: `HUDLOG=120 HUDINTERVAL=100 scripts/run-game.sh patched 150`,
 DX12 (vkd3d -> Turnip), `p25` over frames `fps < 30`, one run.
 
 | config | fps p25 | n |
 |---|---|---|
 | 26.2 stock | 13.0 | - |
-| 26.2 patched (§13 baseline) | 13.9 | - |
+| 26.2 patched (journal 13 baseline) | 13.9 | - |
 | **27.0-devel, patched** | **14.57** | 700 |
 
 p50 14.90, p95 17.36, mean 13.93. +0.7 fps over the baseline - within the expected
@@ -376,7 +376,7 @@ Compared are the **baseline** (0012-baseline, stack 0001-0011 without BC, .so sh
   **Comparison window: [40, 60] s** from the first MangoHud sample (the menu
   appears at ~40 s). Metric: p25 + median over the window.
   (`elapsed` in the CSV is nanoseconds from process start; the first sample is ~0.1 s.)
-  The old protocol from §13 ("p25 over all samples with fps<30" for the whole run) is
+  The old protocol from journal 13 ("p25 over all samples with fps<30" for the whole run) is
   equivalent for the mesa27 run: p25=14.57, n=700 reproduces exactly.
 - Reference (mesa27, 14:21, baseline): window [40,60) s: med=15.0, n=198.
 
@@ -412,6 +412,6 @@ complete (logs `results/test-BCUBWC-stageA.log`,
 - **Expected gain +/-1 fps.** The move is justified only as a test of the
   hypothesis "27 changes something", not as a way to raise FPS.
 - Closed 18.11: BC+UBWC (exp-12 A+B) is retired as a lever and removed from the
-  repo (`analysis.md` §21.9) - RE4's BC textures are sparse, UBWC is forbidden
+  repo (journal 21.9) - RE4's BC textures are sparse, UBWC is forbidden
   for them regardless. The A/B here stays on record as a control, not a lever;
   the verification thread became the r2d-readback bug fix (bugs-found Bug 2).

@@ -1,26 +1,37 @@
 # Experiments (NOT FOR COMMIT)
 
 The patches from `patches/` ship; these do not. They exist so that the
-conclusions in `docs/analysis.md` can be re-checked rather than taken on faith.
+conclusions in the journal (`docs/analysis.md` is its index) can be re-checked
+rather than taken on faith.
+
+This file is the operating note: what each probe asks, what it depends on, how it is
+applied and reverted, which log belongs to it. The registry that owns the one-line
+verdict per experiment is [`../docs/artifacts.md`](../docs/artifacts.md), together with
+the journal entry named there; where the two tables disagree, the journal entry wins.
+`exp-12` was retired 18.11 (files removed, restorable from `39e103d`, verdict in journal
+21.9), `exp-18` is queued in `docs/plan-next-checks.md` and has no file yet.
 
 | Experiment | What it checks | Result |
 |---|---|---|
 | `exp-1-ubwc-all-formats-compatible-a7xx-gen2.patch` | whether gen2 can reinterpret UBWC on a format change (the `MUTABLEEN` bit) | no: reading through the R32_UINT view falls apart, `H` memreq 0x100000 → 0x102000 |
 | `exp-2-force-is-mutable.patch` | isolation: is it MUTABLEEN itself that breaks, or "something else got switched on" | MUTABLEEN itself breaks: with the format pair unchanged, `T-tr` 0/262144 → 261120/262144 |
-| `exp-3-no-sparse-create-refusal.patch` | whether the 0004 create refusal removes what makes the game on 12_0 print "GPU does not meet the minimum requirements" | run on the game, analysis in `docs/analysis.md`, section 9 |
+| `exp-3-no-sparse-create-refusal.patch` | whether the 0004 create refusal removes what makes the game on 12_0 print "GPU does not meet the minimum requirements" | run on the game, verdict in journal 9 |
 | `exp-4-force-wzyx-when-mutable.patch` | rolling the `fd6_format_table.c:396` hack out to the mutable branch: keep `WZYX` also when `is_mutable`. Requires 0002 — without it the T lists have no `is_mutable` | **the MUTABLEEN corruption lies entirely in swap**: `T-tr` 261120/262144 → **0/262144**, `S-tr` 16384/16384 → **0/16384** |
 | `exp-5-ubwc-on-without-mutableen.patch` | UBWC enabled for an incompatible list while `is_mutable` (i.e. `MUTABLEEN`) is set to 0 — "the bit is harmful" or "the capability isn't there"? | **the capability isn't there**: `H d1'` gives the same garbage byte for byte (`0x079d685e…`) as with the bit |
-| `exp-6-cross-order-list-tiled-ubwc.patch` | whether tiled+UBWC same-shape keeps a cross-order list `{BGRA8, RGBA8}` (probe S3 in the test): mechanical robustness and cross-view semantics | mechanically yes (`S3-tr` 0/262144, base EXACT, cross-view deterministic), but the behavior changes: identity → swapped (the view's channel order is ignored) vs stock/linear; plus a sparse query/create desync (`E`/`S2` SUCCESS while `FORMAT_NOT_SUPPORTED`) → **rollback**, analysis — `docs/analysis.md`, section 16 |
-| `exp-7-nv12-keep-tiling.patch` | NV12 + MUTABLE: drop only `force_linear_tile`, keeping the UBWC removal | **yes**, and it was moved to `patches/0009-turnip-nv12-mutable-keep-tiling.patch`: N2 (NV12 + MUTABLE + SPARSE) on 0004–0008 gives `FEATURE_NOT_PRESENT`, with 0009 — `SUCCESS`. Analysis — `docs/analysis.md`, section 18. Caveat: layout identity does not prove the sampling path |
-| `exp-8-sfloat-int-ubwc-compat.patch` | adding `_SFLOAT` members to the integer UBWC compat classes (`freedreno_ubwc.h`) | **yes, by the gate**: 5 TYPELESS classes get `list=0x102000` (UBWC), roundtrip EXACT, from 31 to 36 classes with UBWC. Fast-clear is not covered by the byte roundtrip — caveat. **Moved to `patches/0012-turnip-ubwc-compat-sfloat-int.patch`** (04.10.2026: an isolated A/B on the 0005–0010 stack changes exactly 5 lines of probe U; the fast-clear caveat is kept in the patch header). Analysis — `docs/analysis.md`, section 20.5 |
-| `exp-9-single-channel-swap-vacuous.patch` | a single-channel format (`R32_UINT` and the like) must not push the list into linear: it has no channel order | **yes, exactly 2 classes out of 72** get tiling (`B8G8R8A8/B8G8R8X8_TYPELESS+UAV`); the BGRA8 side is EXACT `0/262144`. What changes is visibility through the `R32_UINT` view: bytes 0 and 2 are swapped, `261120/262144` words disagree with linear. Cross-order and NV12 are unaffected. **Moved to `patches/0010-turnip-single-channel-swap-tiling.patch`**, the caveat about the `R32` view — in `README.md`. Analysis — `docs/analysis.md`, section 21.3 |
-| `exp-10-is-mutable-without-ubwc.patch` | isolation: does `is_mutable` (MUTABLEEN) break things by itself, without UBWC and without sparse — the combination from §14 had remained unmeasured | **no, the rejection is alarming**: the `R32_UINT` view did not change by a single byte, but the BGRA8 side broke — `261119/262144` MISMATCH. The breakage is swap's exchange applied once instead of twice (write through the layout with forced WZYX, read through the view with format WXYZ). The hole in the `is_mutable` measurements is closed. Analysis — `docs/analysis.md`, section 21.4 |
-| `exp-11-ubwc-compat-r16-and-10bit.patch` | rows for single-channel 16-bit and packed 10-bit in `fd6_ubwc_compat_mode()`: the stock table has no such formats, and any vkd3d list with `R16` or `R10G10B10A2` silently loses UBWC | **yes, by the gate, and this is not over-caution but a gap in the table**: the CEIL probe showed that a lone `R16_UNORM` and `R10G10B10A2_UNORM` hold up without a UBWC list (`0x82000`/`0x102000` vs the linear `0x80000`/`0x100000`), i.e. there is a ceiling and the gate is what lifts it. An isolated A/B (same stack, `git apply -R`) changes exactly 3 log lines: `R16_TYPELESS`, `R16_UINT`, `R10G10B10A2_TYPELESS` go from `GATE REMOVED` to `gate is not in the way`. The model counts 8 classes out of 72 (with 0012). `R8_*` and `R32G32B32_*` are unaffected — they have no ceiling at all. The contents under UBWC and fast-clear were not verified. **Moved to `patches/0011-turnip-ubwc-compat-r16-and-10bit.patch`** (the header no longer says NOT FOR COMMIT; the caveat about unverified content — in `README.md`). Analysis — `docs/analysis.md`, section 21.6 |
+| `exp-6-cross-order-list-tiled-ubwc.patch` | whether tiled+UBWC same-shape keeps a cross-order list `{BGRA8, RGBA8}` (probe S3 in the test): mechanical robustness and cross-view semantics | mechanically yes (`S3-tr` 0/262144, base EXACT, cross-view deterministic), but the behavior changes: identity → swapped (the view's channel order is ignored) vs stock/linear; plus a sparse query/create desync (`E`/`S2` SUCCESS while `FORMAT_NOT_SUPPORTED`) → **rollback**, analysis in journal 16 |
+| `exp-7-nv12-keep-tiling.patch` | NV12 + MUTABLE: drop only `force_linear_tile`, keeping the UBWC removal | **yes**, and it was moved to `patches/0009-turnip-nv12-mutable-keep-tiling.patch`: N2 (NV12 + MUTABLE + SPARSE) on 0004–0008 gives `FEATURE_NOT_PRESENT`, with 0009 — `SUCCESS`. Analysis — `docs/analysis.md`, section 18. Caveat: layout identity does not prove the sampling path (journal 18) |
+| `exp-8-sfloat-int-ubwc-compat.patch` | adding `_SFLOAT` members to the integer UBWC compat classes (`freedreno_ubwc.h`) | **yes, by the gate**: 5 TYPELESS classes get `list=0x102000` (UBWC), roundtrip EXACT, from 31 to 36 classes with UBWC. Fast-clear is not covered by the byte roundtrip — caveat. **Moved to `patches/0012-turnip-ubwc-compat-sfloat-int.patch`** (04.10.2026: an isolated A/B on the 0005–0010 stack changes exactly 5 lines of probe U; the fast-clear caveat is kept in the patch header). Analysis — journal 20.5 |
+| `exp-9-single-channel-swap-vacuous.patch` | a single-channel format (`R32_UINT` and the like) must not push the list into linear: it has no channel order | **yes, exactly 2 classes out of 72** get tiling (`B8G8R8A8/B8G8R8X8_TYPELESS+UAV`); the BGRA8 side is EXACT `0/262144`. What changes is visibility through the `R32_UINT` view: bytes 0 and 2 are swapped, `261120/262144` words disagree with linear. Cross-order and NV12 are unaffected. **Moved to `patches/0010-turnip-single-channel-swap-tiling.patch`**, the caveat about the `R32` view — in `README.md`. Analysis — journal 21.3 |
+| `exp-10-is-mutable-without-ubwc.patch` | isolation: does `is_mutable` (MUTABLEEN) break things by itself, without UBWC and without sparse — the combination from journal 14 had remained unmeasured | **no, the rejection is alarming**: the `R32_UINT` view did not change by a single byte, but the BGRA8 side broke — `261119/262144` MISMATCH. The breakage is swap's exchange applied once instead of twice (write through the layout with forced WZYX, read through the view with format WXYZ). The hole in the `is_mutable` measurements is closed. Analysis — journal 21.4 |
+| `exp-11-ubwc-compat-r16-and-10bit.patch` | rows for single-channel 16-bit and packed 10-bit in `fd6_ubwc_compat_mode()`: the stock table has no such formats, and any vkd3d list with `R16` or `R10G10B10A2` silently loses UBWC | **yes, by the gate, and this is not over-caution but a gap in the table**: the CEIL probe showed that a lone `R16_UNORM` and `R10G10B10A2_UNORM` hold up without a UBWC list (`0x82000`/`0x102000` vs the linear `0x80000`/`0x100000`), i.e. there is a ceiling and the gate is what lifts it. An isolated A/B (same stack, `git apply -R`) changes exactly 3 log lines: `R16_TYPELESS`, `R16_UINT`, `R10G10B10A2_TYPELESS` go from `GATE REMOVED` to `gate is not in the way`. The model counts 8 classes out of 72 (with 0012). `R8_*` and `R32G32B32_*` are unaffected — they have no ceiling at all. The contents under UBWC and fast-clear were not verified. **Moved to `patches/0011-turnip-ubwc-compat-r16-and-10bit.patch`** (the header no longer says NOT FOR COMMIT; the caveat about unverified content — in `README.md`). Analysis — journal 21.6 |
 | `exp-13-i2b-ccu-clean-env-bundle.patch` | one env knob per hypothesis around the r2d readback (`TU_I2B_R3D`, `TU_I2B_ROWS`, `TU_B2I_WFI/CLEAN`, `TU_I2B_SYNC=1..4`, the GDBG src dump) | the defect is producer-side: `b2i` leaves its writes in the CCU, the barrier emits nothing mid-submit, and the clean **and** the WFI are each necessary (`TU_B2I_CLEAN` 91/91 EXACT, invalidate-only and clean-without-WFI fail). Verdict → `patches/0013-turnip-b2i-ccu-clean.patch` |
 | `exp-13b-b2i-ccu-clean-candidate.patch` | the same fix in the native `flush_bits` + `tu_emit_cache_flush` idiom instead of a raw event write | 91/91 EXACT; it is the shape 0013 ships, kept only as the intermediate candidate |
 | `exp-14-image-inventory.patch` | byte budget per created image: `TU_IMG_INV=1` prints format/extent/flags/tile/UBWC/mutable/size/`listn`/list | **4062 MiB of 7977 MiB sampled (50.9%) are `MUT listn=0` in linear**, and that is the input to 0014. `scripts/fmt-list-gate-check.py --no-list <log>` turns the log into the per-class table |
 | `exp-15-b2i-sync-env-bundle.patch` | 16 forms of the post-`b2i` cache operation (`TU_B2I_SYNC=0..15`: per-copy vs deferred vs lazy bits, clean color vs blit cache, with/without invalidate and WFI), plus `TU_B2I_COUNT` | **mode 7 wins**: `flush_bits |= CCU_CLEAN_COLOR \| WAIT_FOR_IDLE` and nothing executed at the copy — 94/94 EXACT over 3 repeats and the cheapest (one clean+WFI per group, merging into `tu_EndCommandBuffer`). Modes 2/3/5/10/13 fail (blit cache is the wrong aperture for r2d), 4/6 pass but pay two events, 1 passes but pays a WFI per copy. → `patches/0013-turnip-b2i-ccu-clean.patch` |
 
+
+| `exp-16-gen2-ubwc-allformats-stock.patch` | stock Mesa 27 (`0001`-`0014` all reverted) plus one line in `freedreno_devices.py`: `ubwc_all_formats_compatible` for `a7xx_gen2`. Is the prop on its own enough, with no patch stack under it | **no**: the matrix drops to 73 EXACT against 76 on the same stock tree without the line - the prop alone breaks `MUTABLE+SPARSE` creates - and yet the game plays 90 s with it (journal 26, `ADR-0001`). Build `44cdf593a5200d8b…` |
+| `exp-17-cpp1-ubwc-blockwidth.patch` | is the `cpp == 1` row of the UBWC metadata geometry table - the `{16,4}` block width in `fdl6_get_ubwc_blockwidth()` - what breaks 8bpp UBWC? The row is overridden from the environment through `TU_8BPP_UBWC=<w>x<h>` | **no**: `{16,4}`/`{32,4}`/`{64,4}` corrupt identically (25.29 % readable), `{16,8}`/`{32,8}`/`{8,8}` fault the GPU with `VK_ERROR_DEVICE_LOST`. Diagnostics only, removed from the tree; build `5395a4f3f2c6fcce` (journal 22.4) |
 The experiment numbering is `exp-N`, the patch numbering is `000N` - the
 two cannot collide. Which experiment went into which patch and
 which of those is already in mesa - the "Experiment -> patch -> mesa" table
@@ -41,11 +52,14 @@ composition) and on its own gave no conclusion about the cause.
 Run: `scripts/run-experiment-mutableen.sh` (the first one). For the rest:
 
 ```sh
-cd $WORK/mesa-rp6
-git apply experiments/exp-2-force-is-mutable.patch
+cd /var/home/armada/opencode/mesa27-src            # $SRC, the tree that is built today
+git apply /var/home/armada/opencode/turnip-patches/experiments/exp-2-force-is-mutable.patch
 # rebuild the driver, run the test, T-tr 261120/262144 expected
-git apply -R experiments/exp-2-force-is-mutable.patch
+git apply -R /var/home/armada/opencode/turnip-patches/experiments/exp-2-force-is-mutable.patch
 ```
+
+Always an explicit file name, never a wildcard: `ls | head -1` on `patches/0002*` picks
+the Mesa 26 twin of the chip-id patch (rules: `../AGENTS.md`).
 
 exp-4 is applied on top of exp-2 (otherwise swap is `WZYX` anyway, the
 difference is zero), exp-5 — on its own. The A/B of 0002 vs 0002+0004 was done
@@ -54,7 +68,9 @@ exp-5 — `results/test-expE.log`.
 
 The third one is run on the game, not on the test, and requires rebuilding the
 driver, so the order is: game closed, patch applied, driver rebuilt,
-`scripts/run-game.sh patched 200`, then `git checkout`. Do not run the build
-and the game at the same time — device memory is shared with the GPU.
+`scripts/run-game.sh patched 200`, then `git apply -R` the experiment patch.
+**Never `git checkout` in the Mesa tree** - it drops the uncommitted stack, which has
+already cost one rebuild (journal 24.3). Do not run the build and the game at the same
+time - device memory is shared with the GPU.
 
 Logs are in `results/test-mutableen.log` and `results/test-expC.log`.
