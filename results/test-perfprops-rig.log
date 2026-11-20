@@ -37,7 +37,7 @@
                  !renderpass_cb_disabled), tu_cmd_buffer.cc:3225
                  (tu7_cb_disable_reason(.., "globally disabled")), tu_queue.cc:187 (how many
                  visibility streams the queue reserves)
-    also reachable as TU_DEBUG=force_concurrent_binning / no_concurrent_binning, which
+    also reachable as TU_DEBUG=forcecb / nocb (the names in tu_util.cc:56-57), which
                  overwrite this option after driconf is parsed (tu_device.cc:2083-2086)
     the driver   "Allow concurrent binning on A7XX+, the CB is disabled by default because it
                  regresses performance on desktop games"

@@ -34,7 +34,7 @@ five turns out not to be reachable without a build:
 | option (group) | where the value is read | what the driver's own description says | reachable on a740 |
 |---|---|---|---|
 | `tu_disable_conservative_fdm_binning` (misc) | `tu_cmd_buffer.cc:3674` (`cons_vis_in_binning` when the pass has FDM), `tu_pipeline.cc:3489` (`CHIP == A7XX && fdm && !…`) | "Don't enable conservative rasterization during binning of a renderpass with FDM, for non-identity FDM tiles may result in tiny see-through gaps … **Improves performance up to 4% on A7XX.**" | yes, and it is the only option here with an upstream number attached |
-| `tu_allow_concurrent_binning` (perf) | `tu_cmd_buffer.cc:560` (cache flush, `CHIP >= A7XX`), `tu_cmd_buffer.cc:3225` (`tu7_cb_disable_reason(.., "globally disabled")`), `tu_queue.cc:187` (how many visibility streams the queue reserves) | "Allow concurrent binning on A7XX+, the CB is disabled by default because **it regresses performance on desktop games**" | yes, also as `TU_DEBUG=force_concurrent_binning`, which overwrites the option after driconf is parsed (`tu_device.cc:2083-2086`) - and "desktop games" describes an x86 discrete GPU, not this SoC running a desktop game through translation |
+| `tu_allow_concurrent_binning` (perf) | `tu_cmd_buffer.cc:560` (cache flush, `CHIP >= A7XX`), `tu_cmd_buffer.cc:3225` (`tu7_cb_disable_reason(.., "globally disabled")`), `tu_queue.cc:187` (how many visibility streams the queue reserves) | "Allow concurrent binning on A7XX+, the CB is disabled by default because **it regresses performance on desktop games**" | yes, and also as `TU_DEBUG=forcecb` / `nocb` (`tu_util.cc:56-57`), which overwrite the option after driconf is parsed (`tu_device.cc:2083-2086`) - and "desktop games" describes an x86 discrete GPU, not this SoC running a desktop game through translation |
 | `disable_conservative_lrz` (misc) | `tu_lrz.cc:1524`, `:1533`, where the conservative default calls `tu_lrz_disable_write_for_rp(cmd, "Depth write + blending")` and `("Depth write + no color writes")` | "Disable conservative LRZ"; the driconf comment allows it "for games which do not have the problematic sequence of draws *and* suffer a performance loss with conservative LRZ" | yes, needs a picture check: the code comment above those two lines is a three-draw sequence where the non-conservative choice discards fragments that should be visible, so this option is a correctness trade by construction |
 | `tu_dont_reserve_descriptor_set` (misc) | `tu_device.cc:1876` (whether one HW descriptor set is reserved at create) | "…frees up an extra descriptor set at the cost of that feature" (descriptor set dynamic offsets) | yes, but the cost is a feature vkd3d-proton can use; low priority |
 | `tu_independent_icache_miss` (perf) | `tu_cmd_buffer.cc:2226` ANDs the option with the prop `has_independent_icache_miss` | "On A750, let each wave handle its instruction cache misses independently instead of stalling all waves together" | **no** - the prop is set only for FD750/753 (`freedreno_devices.py:1341`) and `freedreno_dev_info.h:408` documents the bit as "A750 only". Env-only would be a silent no-op; asking the hardware needs a build |
@@ -113,6 +113,14 @@ upstream's own "Improves performance up to 4% on A7XX." and is the first candida
   exercises these paths, so the queue item names it directly.
 * The 4 % in the FDM option's description is upstream's measurement on their hardware and their
   scenes, not ours; it is a reason to run, not a number to quote as ours.
+
+**Correction (21.11, same day, commit `965d817`).** The first version of the table above spelled
+the two debug names `TU_DEBUG=force_concurrent_binning` and `no_concurrent_binning`, taken from the
+enum constants at `tu_device.cc:2083-2086`. Those are not the names the parser accepts: the strings
+in `tu_util.cc:56-57` are `nocb` and `forcecb`, so the wording as committed would have described a
+`TU_DEBUG` value that does nothing. The table now carries the parser's names. Nothing measured here
+used `TU_DEBUG` at all - the four runs forced the driconf options by their own environment
+variables - so no number in this entry depends on the correction.
 
 Related: journal 13 (the env switches), journal 15 (the props), journal 17 and
 `docs/fdperf-a7xx.md` (the wall), ADR-0008 (the verdict this entry narrows but does not reopen),

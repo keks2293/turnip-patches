@@ -811,7 +811,7 @@
    "artifacts": [
     "results/test-perfprops-rig.log"
    ],
-   "lines": 120,
+   "lines": 128,
    "headings": [
     "## 34.1 What has already been measured, so the search does not repeat it",
     "## 34.2 The surface none of them covered, read off the tree",
