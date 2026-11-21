@@ -1,0 +1,126 @@
+# exp-21 against the shipped 0014 on the game's own image creates: zero differing decisions
+
+# Question: `exp-21` rewrites the rule of `0014` (the UBWC/tiling decision for a MUTABLE_FORMAT
+#           image created without a VkImageFormatListCreateInfo) as one decision function instead
+#           of a special case in two callers. Its gate, queue 3 and journal 33.1, is "the same
+#           decisions as `0014` on the game's creates" before it may become patch `0016`. The rig
+#           half of that gate is results/test-exp21-equiv-p14.log; this file is the inventory half.
+# Method:   two inventories of the same game, one scene load, read by three counters.
+#           Total-level (scripts/imginv-stats.py), class-level (scripts/imginv-classes.py) and
+#           per-create (scripts/imginv-decisions.py, new with this run): two images with the same
+#           create signature - format, view format, extent, mip/array/sample counts, usage, flags,
+#           list length and list content - must agree in `tile=` and `ubwc=`. A create present in
+#           one session and absent in the other is scene content, not a decision, so the three
+#           levels are reported apart.
+# Drivers:  A  results/raw/game-patched-imginv5.log, sha256 80d433927103ef02..., 976 648 B.
+#             The reference column: the ship stack with `0014`, build `050375a18b7b` (journal 27).
+#             Run 19.11 with MANGOHUD=1.
+#           B1 results/raw/game-patched-exp21inv.log,  sha256 705d1219590a7f03..., 1 199 225 B.
+#           B2 results/raw/game-patched-exp21inv2.log, sha256 926b4c625e8b..., 2 239 493 B.
+#             Both: build/out-exp21/libvulkan_freedreno.so, sha256 d49d094a8d6e...
+#             (`0001..0013` + exp-14 + exp-21, `0014` not applied). B1 was run without the
+#             overlay, B2 with MANGOHUD=1 as the reference run had it; the difference between
+#             B1 and B2 is section 4.
+# Runs:     21.11, RE4 (DX12, proton-cachyos) 170 s each, exit 124 by design - the runner kills
+#           the game at the timeout so that the next run cannot start on top of this one.
+# Command:  source scripts/env.sh && MANGOHUD=1 TU_IMG_INV=1 TAG=<exp21inv2> \
+#               ICD=/var/home/armada/opencode/build/out-exp21/freedreno_icd.json \
+#               scripts/run-game.sh patched 170
+# Counters: python3 scripts/imginv-stats.py     results/raw/game-patched-{imginv5,exp21inv2}.log
+#           python3 scripts/imginv-classes.py   results/raw/game-patched-{imginv5,exp21inv2}.log
+#           python3 scripts/imginv-decisions.py results/raw/game-patched-{imginv5,exp21inv2}.log
+#           (results/raw/ is gitignored: full proton stdout/stderr; the counters' output is this
+#           file, and the game log lines are truncated by interleaved wine/vkd3d stderr - the
+#           counters count those lines and skip them, they do not guess at them)
+
+=== 1. totals (scripts/imginv-stats.py) ===
+                                    A imginv5                       B2 exp21inv2
+  всего созда            4176   8080.8 MiB 100.0 %      4169   8088.6 MiB 100.0 %
+    tile=tiled           3125   6449.9 MiB  79.8 %      3125   6461.0 MiB  79.9 %
+    ubwc=1               1595   3925.6 MiB  48.6 %      1597   3948.4 MiB  48.8 %
+  MUTABLE со списком      726    766.3 MiB   9.5 %       728    773.4 MiB   9.6 %
+    из них ubwc           632    696.3 MiB   8.6 %       634    703.3 MiB   8.7 %
+  MUTABLE без списка     2474   4081.1 MiB  50.5 %      2465   4066.1 MiB  50.3 %
+    из них tiled         1450   2450.3 MiB  30.3 %      1448   2438.6 MiB  30.1 %
+    из них ubwc             0      0.0 MiB   0.0 %         0      0.0 MiB   0.0 %
+  без MUTABLE             976   3233.4 MiB  40.0 %       976   3249.1 MiB  40.2 %
+    из них ubwc           963   3229.3 MiB  39.9 %       963   3245.0 MiB  40.1 %
+
+  The no-list row is the one the patch is about: 1450 tiled creates / 2450.3 MiB against
+  1448 / 2438.6 MiB, and `ubwc=0` in both, which is the part neither patch touches (the UBWC
+  refusal for a list-less create is upstream's, journal 31).
+
+=== 2. the same no-list bytes, by texel-block class (scripts/imginv-classes.py) ===
+класс                                imginv5                  exp21inv2
+8 bit                  1183.8 100.0 %    0.0u     1175.9 100.0 %    0.0u
+32 bit                 1023.5   0.0 %    0.0u     1019.6   0.0 %    0.0u
+64 bit                  666.4 100.0 %    0.0u      666.4 100.0 %    0.0u
+16 bit                  606.7   0.0 %    0.0u      607.3   0.0 %    0.0u
+BC (compressed)         600.7  99.9 %    0.0u      597.0  99.9 %    0.0u
+ИТОГО                  4081.1  60.0 %    0.0u     4066.1  60.0 %    0.0u
+
+  The share per class is identical, including the two classes `0014` refuses on purpose:
+  32-bit and 16-bit stay at 0.0 % tiled, because their class members differ in channel order
+  (journal 24). A rewrite that had widened the rule by one class would show here as a nonzero
+  share; it shows nothing.
+
+=== 3. decisions, per create signature (scripts/imginv-decisions.py) ===
+=== results/raw/game-patched-imginv5.log  (4176 creates) ===
+=== results/raw/game-patched-exp21inv2.log  (4169 creates) ===
+signatures in both:              784
+signatures with a DIFFERENT tile/ubwc verdict: 0
+
+only in the first (signature absent from the other log): 0 creates, 0.0 MiB
+only in the second (signature absent from the other log): 0 creates, 0.0 MiB
+
+multiset: the first has more of: 13 creates, 21.8 MiB
+  R32G32_FLOAT               1x1x1        listn=0   x2
+  R32G32_FLOAT               1x1x1        listn=0   x2
+  R32_UINT                   1x1x1        listn=0   x2
+  R11G11B10_FLOAT            1280x800x1   listn=0   x1
+  R32_UINT                   1280x800x1   listn=0   x1
+  R32_UINT                   1x1x1        listn=0   x1
+  R11G11B10_FLOAT            426x240x1    listn=0   x1
+  R11G11B10_FLOAT            426x240x1    listn=0   x1
+
+multiset: the second has more of: 6 creates, 29.5 MiB
+  R11G11B10_FLOAT            1280x800x1   listn=0   x1
+  R11G11B10_FLOAT            1280x720x1   listn=0   x1
+  R10G10B10A2_UNORM          1280x720x1   listn=2   x1
+  R8G8B8A8_SRGB              1280x720x1   listn=4   x1
+  R16_FLOAT                  640x360x1    listn=0   x1
+  Z32_FLOAT                  2560x1440x1  listn=0   x1
+
+  784 create signatures exist in both sessions. Not one of them is tiled in one log and linear
+  in the other, or UBWC in one and not in the other. Both sessions made all the same creates:
+  the signature set is equal, and what differs is how many times the same image was recreated
+  (13 against 6), which is what a session further along or back in the same area looks like.
+
+=== 4. the first run, and the confound its numbers carried ===
+The first comparison (B1 against A) left 19 creates whose signature was missing from B1, among
+them four `R8_UNORM 1024x1024 listn=0 tile=tiled ubwc=0`. A 1024x1024 single-channel image is
+what an overlay's font atlas looks like, and B1 was the run without MANGOHUD while A had it on.
+B2, run with the overlay on, removes the whole set: `only in the first` and `only in the second`
+both go to 0. That is why the gate is read from B2 and B1 is kept as the record of the confound:
+an inventory log is a session, and an overlay in the session is part of what created images.
+B1 also had 0 differing decisions on its 775 shared signatures.
+
+=== 5. verdict ===
+The inventory half of the `exp-21` gate passes in the form queue 3 asked for. On 784 create
+signatures taken from the game itself, `exp-21` returns the same tiling and UBWC verdicts as the
+shipped `0014`, class for class and create for create, and the no-list volume it returns is the
+same 2.4 GiB of tiled / 1.6 GiB of linear in the same proportions. Together with
+results/test-exp21-equiv-p14.log (0 differing lines of 598 on the whole rig), nothing measured
+here separates the two builds.
+
+=== 6. what this does not show ===
+  * It is one game session against one game session. A create the game never reached in either
+    run is not covered by either log; the two runs are the same area and timeout, not a sweep.
+  * `ubwc=0` on every no-list create is the reference behaviour and the patch's behaviour alike.
+    This gate says the rewrite did not change the UBWC answer; it says nothing about whether
+    that answer should be different (that is the 64-bit question, journal 31 and queue 1).
+  * No fps, and no claim about performance: an inventory is a list of allocations, and the wall
+    this game runs into is UCHE (ADR-0008).
+  * The reference column is an inventory log, not a driver under our control: build
+    `050375a18b7b` was the tree with `0014` as it was released, and the binary is not in this
+    repository. What we compare are decisions in two logs of the same game.

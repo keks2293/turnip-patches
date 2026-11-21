@@ -849,6 +849,35 @@
    ],
    "verdict_quote": ". The header the tree builds against has it the other way round:",
    "verdict_source": "journal 35"
+  },
+  {
+   "id": "36",
+   "title": "exp-21 returns the same tiling decision as 0014 on every create the game made; the gate's last item is closed (21.11)",
+   "question": "does exp-21 make the same tiling decision as the shipped 0014 on the game's own creates",
+   "file": "journal/36-exp-21-and-0014-make-the-same-tiling-decision-on-every.md",
+   "date": "21.11",
+   "status": "closed",
+   "decision": "",
+   "verdict_first_line": ". On the creates the game actually made, `exp-21` is `0014`: 784 create signatures",
+   "artifacts": [
+    "build/out-exp21",
+    "scripts/imginv-stats.py",
+    "scripts/imginv-classes.py",
+    "scripts/imginv-decisions.py",
+    "results/test-exp21-inventory-ab.log",
+    "scripts/run-game.sh",
+    "results/test-exp21-equiv-p14.log",
+    "patches/0016-turnip-mutable-no-list-tiling.patch"
+   ],
+   "lines": 97,
+   "headings": [
+    "## The decisions agree, create for create",
+    "## The confound the first run carried, and what it says about reading a log",
+    "## What this does not show",
+    "## Verdict"
+   ],
+   "verdict_quote": ". On the creates the game actually made, exp-21 is 0014: 784 create signatures",
+   "verdict_source": "journal 36"
   }
  ]
 }

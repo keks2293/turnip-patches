@@ -458,9 +458,11 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    probe matrix on it - the first use of that build - and it is the control that shows the
    no-list UBWC refusal is upstream's. What is still not done is the game: the inventory run
    that gives the three-variant scale of journal 27 its true zero point.
-   One run of the same rig, on the same evening, answers the last open half of item 11: an
-   inventory against `build/out-exp21` is the column that must match `imginv5` before
-   `exp-21` is graduated to `0016` (`exp-14` is in that build, `grep -ac TU_IMG_INV` = `1`).
+   **Done for the other half 21.11**: the inventory that was queued here against
+   `build/out-exp21` is run and matches `imginv5` per create (journal 36,
+   `results/test-exp21-inventory-ab.log`), which closes item 11's gate. What is still open in
+   this item is the bare base itself - the `build/out-stock-inv` column of the three-variant
+   scale, which is the run that gives journal 27 its true zero point.
 4. **Ship stack + prop + inventory**: the fourth column that the caveat in journal 27
    needs (the pair A/B differs by the whole stack, not only by the prop). About four
    minutes of build.
@@ -575,11 +577,16 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
 
     Gate, in this order:
 
-    1. an **equivalence run** - **met 21.11** in the strongest form available here: the same
-       test binary against the two drivers with the **full logs** compared, 0 differing
-       lines (journal 33). The form this item asked for first, reproducing the `imginv5`
-       column of `results/imginv-3variants.txt` (the `tiled`/`ubwc` counters and the 1631 MiB
-       linear residue), is the *game* half of the same requirement and is still open - item 3;
+    1. an **equivalence run** - **met 21.11, both halves**. Rig half: the same test binary
+       against the two drivers with the **full logs** compared, 0 differing lines (journal 33).
+       Game half, the form this item asked for first: two inventory runs on `build/out-exp21`
+       against the `imginv5` column, read per create
+       (`results/test-exp21-inventory-ab.log`, journal 36) - 784 create signatures present in
+       both sessions, **0** with a different `tile=`/`ubwc=` verdict, 0 signatures present in
+       only one of them, and the same class shares (32-bit and 16-bit still 0.0 % tiled, the
+       no-list tiled volume 2 438.6 MiB against the reference 2 450.3). The first of the two
+       runs had `MANGOHUD` off while the reference had it on, which cost 19 create signatures
+       to an overlay font atlas; journal 36 keeps that as the record of the confound.
     2. ~~the 94-row matrix~~ - **corrected 21.11**. The sentence this one replaces asked for
        the matrix as part of this gate; the matrix is produced by `scripts/run-b2i-matrix.sh`
        on a driver carrying the `exp-15` rig, and neither `build/out-exp21` nor the released
