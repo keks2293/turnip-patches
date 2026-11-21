@@ -953,22 +953,49 @@ semantics of `VPC_PS_BUSY` (no `desc=` in the XML); `fdperf.cfg-vpc3` was run as
     attribute buffer. `STALL_CYCLES_LM_ACK` and `NUM_LM_REQ_HIT` read exactly 0 in both arms, so the LM
     hit rate is `NOT MEASURED` rather than 0 %.
 
-20. **Program the `BV_*` counter groups explicitly** (one cfg and two runs, no build; journal 40.8
-    found the question). The dump's second half is the `BV_*` group set of
-    `src/freedreno/registers/adreno/a7xx_perfcntrs.json` - `BV_VPC` (num 6, `select_offset` 6), `BV_TSE`
-    (num 4), `BV_PC`, `BV_VFD`, `BV_TP`, `BV_SP`, `BV_UFC`, `BV_RAS`, `BV_LRZ`, `BV_HLSQ`, `BV_CP` - and
-    each twin's countable list is the same enum as the ordinary group's. Left unprogrammed they print
-    what they print: medians of 0.02-0.08 % of the core for `BV_VPC`/`BV_TSE`/`BV_LRZ`, and
-    `BV_TP_BUSY_CYCLES` at 950-967 % of a one-second window, which is not a usable busy fraction and is
-    not decided. `fdperf.c`'s `config_restore()` resolves every group of `fd_perfcntrs()` by name in the
-    cfg, so a `BV_VPC = { ... }` / `BV_TSE = { ... }` section should program the BV select registers
-    directly. Arms: that cfg with the default drirc (CB off) and with `TU_DEBUG=forcecb`. Reading fixed
-    now: if the BV counters stay ~0 in the `forcecb` arm too, the CB direction is closed at counter level
-    with a direct measurement instead of the VSC-tile proxy; if they become real numbers, the BV thread
-    is doing geometry work that the ordinary VPC/TSE counters do not show, and the discard question of
-    journal 40.2 has to be re-asked per thread. Budget caveat to check first: the BV groups may or may
-    not share the ordinary group's hw budget - `select_offset` 6 for VPC suggests they do not, and a set
-    that exceeds a budget is silently ignored (docs/fdperf-a7xx.md, "silent-ignore").
+20. **Closed 22.11, journals 40.11 and 40.12: the `BV_*` groups are addressable, and in the runs that
+    were made they had no work to do.** `tools/fdperf/fdperf.cfg-bv` names `BV_VPC`/`BV_TSE`/`BV_PC`/
+    `BV_TP` and the selects land: on an idle GPU the BV half of the same slots prints the requested names
+    (`PC_IA_PRIMITIVES`, `VPC_VPCRAM_FULL_CYCLES`, `TSE_INPUT_PRIM`) where a cfg without BV sections
+    prints the group's first countables (`results/fdperf-bv-idle-labelcheck.txt`). The register map in
+    `a7xx_perfcntrs.json` says how separate they are: `BV_PC`/`BV_VFD`/`BV_VPC`/`BV_TP`/`BV_SP`/`BV_UFC`
+    share their ordinary twin's select register with a `select_offset`, `BV_TSE`/`BV_RAS`/`BV_LRZ`/
+    `BV_HLSQ`/`BV_CP` have none and so share the very words; the value registers are separate.
+    Measured (`cfg-bv`, six arms `results/fdperf-bv-*/`, p25 15.15-15.29): the BV banks report
+    0.06-0.08 % of the core on their own `BUSY`/`WORKING` counters and 0/s on every per-primitive counter
+    in them (`BV_PC` `PC_IA_PRIMITIVES`, `BV_TSE` `TSE_INPUT_PRIM`/`TSE_OUTPUT_VISIBLE_PRIM`, `BV_VPC`
+    `VPCRAM_FULL`/`WIT_FULL`), with CB off and with `TU_DEBUG=forcecb` whose delivery the driver logged
+    (`tu_util.cc:135`, `TU: info: TU_DEBUG=0x1000000001`). Two things the measurement is **not**: it is
+    not a statement about a working BV thread, because 40.12 shows the 22.11 sessions had no binning pass
+    to count: every forced arm read 0 tiles in every window (`cfg-tse3` and plain `forcecb` included),
+    and the unforced `bvbase` fed tiles only in the 22 windows where the core was not at the pinned clock
+    (median 16/s), against 1,532/s in all 88 windows of the 21.11 `cbforce` arm; and the earlier habit of
+    reading the unprogrammed BV half is dead - whole groups of it mirror the ordinary counter
+    (100.0-100.6 % in `cbforce`), which is also what settles the 950-967 % `BV_TP` number 40.8 left
+    uninterpreted (the 12-instance TP sum, mirrored). Queue 21 asks the real question again in a session
+    that bins.
+
+21. **Get one run where CB actually engages, and read the BV counters in it** (no build; journals 40.11
+    and 40.12 leave the question here). On 22.11 every forced arm read `VSC_INPUT_TILES` = 0 in every
+    window - `cfg-tse3` without any BV section included, and with `forcecb` delivered and logged - where
+    21.11's `cfg-tse3` + `forcecb` arm fed 1,532 tiles/s in all 88 windows and its CB-off twin in 32 of 40
+    at a median of 56/s (`results/fdperf-tse3-cbforce/`, `results/fdperf-tse3-cbbase/`,
+    `scripts/fdperf-tile-table.py`). So the flag was set and the driver still did not bin: `forcecb`
+    clears one gate (`tu_cmd_buffer.cc:3506`) and the other reasons (`cb_disable_reason`) stay, and what
+    decides them is not visible in any log of this repository. Arms: a scene or stretch where the tile
+    counter is nonzero again - the first step is to find one, and the cheapest probe is a short `cfg-tse3`
+    sampling run over a longer session, since the 21.11 arms produced tiles at the same clock and content
+    type - then that arm with `cfg-bv` and no flag, and the same with `forcecb`. One hint from 40.12 about
+    where to look: the only 22.11 windows that fed tiles were `bvbase`'s 22 windows whose
+    `CP_ALWAYS_COUNT` was below the pinned clock (median 649 MHz), and its 16 pinned-clock windows fed
+    none - so a stretch where the geometry node has slack is the candidate, and the clock has to be read
+    in the same sample, not assumed. Reading fixed now: if during windows with tiles > 0 the `BV_TSE`
+    `TSE_INPUT_PRIM` and `BV_PC` `PC_IA_PRIMITIVES` stay 0, the BV thread provably never runs primitives
+    and the CB direction is closed by direct measurement; if they rise, journal 40.2's discard has to be
+    re-asked per thread, because the ordinary TSE counters then describe only the non-bin pass. Caveat
+    carried forward: an unprogrammed `BV_*` half is not a measurement (40.11: whole groups mirror the
+    ordinary counter), so the comparison has to be made inside one `cfg-bv` run, between its own ordinary
+    and BV halves.
 
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2

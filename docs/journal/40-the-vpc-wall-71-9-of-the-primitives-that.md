@@ -15,7 +15,9 @@ and the group contains no per-primitive counter. Also closed here: the `VKD3D_FE
 (vkd3d-proton v3.1 semantics + the log-rank trap that hid its own message), the DX11 route (queue 14),
 the fragment-shader texture prefetch (already on, removing it is a no-op), concurrent binning (in this
 tree `tu_allow_concurrent_binning` defaults to False, and `TU_DEBUG=forcecb` leaves the discard at
-71.9 %, the VSC at ~0.4 % of the core and the `BV_*` copies of VPC/TSE/LRZ at 0.02-0.08 %), and the VPC
+71.9 %, the VSC at ~0.4 % of the core and the binning/visibility counter banks at 0 primitives/s, with CB
+off and forced (40.8, 40.11; 40.12 adds that those runs never started a binning pass, so that is not a
+measurement of a working BV thread), and the VPC
 attribute buffer (`TU_FORCE_PROPS=has_gmem_vpc_attr_buf` delivers - the driver logs the a750 sizes - and
 moves nothing, 40.9). What stays open is the wall itself: `VPC_BUSY` 91 %, of whose time
 `VPC_VPCRAM_FULL_CYCLES` accounts for ~51 % - the largest single named component measured so far.
@@ -331,7 +333,11 @@ artifact of my own averaging script, not of the selector, and the `INPUT_TILES` 
 reproducible. One sample in 70 of `results/raw/fdperf-cbbase.txt` prints
 `PERF_VSC_INPUT_TILES: 18446744073709551290`, i.e. 2**64 - 82: a negative window delta shown as an
 unsigned 64-bit value. Averaged as printed, that one sample turned a counter whose other 69 windows
-read 0-21,728 into the number quoted above. The same class of defect was already written up in
+read 0-21,728 into the number quoted above. (22.11, for exactness: that dump carries 70 sample labels
+and 68 tile values, one of them the wrapped one, and the rest run 0 to 28,306 over the whole file and
+0 to 21,728 inside `t_rel` 20-105 s. It is also a committed artifact now,
+`results/fdperf-tse3-cbbase/fdperf-raw.txt`, which is what `scripts/fdperf_sections.py` re-reads.) The
+same class of defect was already written up in
 journal 22.1 (quoting a tool's printed number without reading how it is produced), and it is now
 filtered in the script: `scripts/fdperf_sections.py`, shared by the three ratio scripts, drops values
 >= 2**63 and counts them, and separates the two halves of a sample. The second half is the set of
@@ -434,8 +440,8 @@ SAMPCFG=tools/fdperf/fdperf.cfg-vpc3 /tmp/opencode/session.sh vpc3base
 SAMPCFG=tools/fdperf/fdperf.cfg-vpc3 env TU_FORCE_PROPS=has_gmem_vpc_attr_buf /tmp/opencode/session.sh attrbuf
 ```
 
-Delivery is proved from the game log, 9 lines each in `results/raw/game-patched-attrbuf.log`, 0 in the
-control:
+Delivery is proved from the game log, 9 lines each in `results/game-patched-attrbuf.log`, 0 in
+`results/game-patched-vpc3base.log` (the raw files are `results/raw/game-patched-{attrbuf,vpc3base}.log`):
 
 ```
 TU: info: TU_FORCE_PROPS: has_gmem_vpc_attr_buf
@@ -496,8 +502,274 @@ runs belongs to the pair, not to the table of arms in 40.2.
 * The `BV_*` copies of the groups are quoted only where they are consistent across runs (medians
   0.02-0.08 %); `BV_TP` `TP_BUSY_CYCLES` at 950-967 % of a one-second window is recorded and not
   interpreted, and the BV selects were never programmed deliberately.
+  (22.11: they were programmed, `BV_TP` is the 12-instance TP sum mirrored, and those 0.02-0.08 % medians
+  were readings of unprogrammed selects - 40.11 and 40.12.)
 * `VPC_STALL_CYCLES_LM_ACK` and `VPC_NUM_LM_REQ_HIT` read exactly 0 in both arms of 40.9, so the LM hit
   rate is `NOT MEASURED`, not 0 %.
 * The `vpc3base`/`attrbuf` pair is its own content cluster on p25 (14.71/14.73 against the day's
   15.15-15.24), and the `cbbase`/`cbforce` pair is its own again on the counter side (VPC busy 68.9 % and
   91.6 %). Within-pair comparisons in this entry are sound; cross-pair absolute values are not.
+  (22.11: this bullet is void on the counter side - both of those percentages were means over windows in
+  which the core was not at 680 MHz, and on pinned-clock windows the pair is 91.73 % and 91.67 %, i.e. the
+  same VPC pressure as the rest of the day; and the last sentence about the BV selects was overtaken by
+  programming them. See 40.12's Correction 2 and 40.11.)
+
+## 40.11 The binning/visibility counter groups can be programmed deliberately (queue 20)
+
+**Why.** 40.8 could ask the CB question only through one proxy, `VSC_INPUT_TILES`, because every cfg of
+this repository programs the ordinary counter groups and never names a `BV_*` group - the
+binning/visibility thread's own copy of the same block. The dump prints those copies regardless, which
+is where 40.8's 0.02-0.08 % medians came from; what was missing was the right to call them the BV
+thread's. `fdperf.c`'s `config_restore()` resolves every group of `fd_perfcntrs()` by name in the cfg,
+so `tools/fdperf/fdperf.cfg-bv` (new) has `BV_VPC`, `BV_TSE`, `BV_PC`, `BV_TP` sections whose selects
+are deliberately different from the defaults.
+
+**Control, run on an idle GPU** (`results/fdperf-bv-idle-labelcheck.txt`): fdperf prints the *label* of
+whatever it programmed, so the same slots of the BV half are compared between a `cfg-tse3` run (no BV
+section) and a `cfg-bv` run. `cfg-tse3` prints a group's first countables there - `PERF_PC_WORKING_CYCLES`,
+`PERF_VPC_STALL_CYCLES_UCHE`, `PERF_TSE_CLIPPING_CYCLES` - and `cfg-bv` prints exactly what was asked
+for: `PERF_PC_IA_PRIMITIVES`, `PERF_VPC_VPCRAM_FULL_CYCLES`, `PERF_VPC_WIT_FULL_CYCLES`,
+`PERF_TSE_INPUT_PRIM`, `PERF_TSE_OUTPUT_VISIBLE_PRIM`. The sections reach the BV groups.
+
+**The register map, read in `a7xx_perfcntrs.json`, says how separate the two halves are.** `BV_PC`,
+`BV_VFD`, `BV_VPC`, `BV_TP`, `BV_SP`, `BV_UFC` name the same select register as their ordinary twin and
+add a `select_offset` (8, 8, 6, 12, 24, 4), i.e. `VPC_PERFCTR_VPC_SEL` holds six ordinary slots and
+then six BV slots; `BV_TSE`, `BV_RAS`, `BV_LRZ`, `BV_HLSQ`, `BV_CP` have no `select_offset`, so their
+selects *are* the ordinary group's words. The value registers are separate anyway: in
+`results/fdperf-bv-bvbase/fdperf-raw.txt` slot 0 of `TSE` reads 247 M primitives/s and slot 0 of
+`BV_TSE` reads 0.
+
+**What was run** (all on the ship stack `4c3cdb210082`, env only; dumps
+`results/fdperf-bv-{bvbase,bvforce,bvforce2,bvforce3,bvforce4,bvforce5}/fdperf-raw.txt`; one RE4
+session each, 110 x 1 s windows, core pinned to 680 MHz - which `bvbase` held in only 16 of its 38
+steady windows, see the notes under the numbers table):
+
+| arm | cfg | driver env | purpose |
+|---|---|---|---|
+| `bvbase` | `cfg-bv` | none | CB off (the drirc default of 40.8), BV halves programmed |
+| `bvforce` | `cfg-bv` | `TU_DEBUG=forcecb` | the same with CB forced |
+| `bvforce2` | `cfg-bv` | `TU_DEBUG=forcecb GALLIUM_PRINT_OPTIONS=1` | an attempt at a delivery line: **it produced none** (0 hits in the log), because `u_debug.c`'s print path never reached the game log |
+| `bvforce3` | `cfg-bv` | `TU_DEBUG=startup,forcecb` | the working delivery control: the driver logs `TU: info: TU_DEBUG=0x1000000001` (`tu_util.cc:135`; bit 36 = `FORCE_CONCURRENT_BINNING`, `tu_util.h:75`) and `Created an instance` (`tu_device.cc:2133`) |
+| `bvforce4` | `cfg-bv2` (no `BV_PC`, no `BV_TP`) | `TU_DEBUG=startup,forcecb` | which BV section kills the VSC tile counter |
+| `bvforce5` | `cfg-bv3` (`BV_VPC` only) | `TU_DEBUG=startup,forcecb` | the same question from the other side |
+
+**The numbers** (mean over `t_rel` 20-105 s, `scripts/fdperf-bv-table.py`, which is the one reader that
+keeps both halves of a dump):
+
+| counter | ordinary group, `bvbase` | `BV_*` copy, `bvbase` | ordinary group, `bvforce3` | `BV_*` copy, `bvforce3` |
+|---|---|---|---|---|
+| `VPC_BUSY_CYCLES` | 604.00 Mc/s = 88.8 % | 0.43 = 0.063 % | 623.27 = 91.7 % | 0.44 = 0.065 % |
+| `VPC_WORKING_CYCLES` | not programmed | 0.16 | not programmed | 0.17 |
+| `VPC_VPCRAM_FULL_CYCLES` | 317.35 | 0.00 | 334.11 | 0.00 |
+| `VPC_WIT_FULL_CYCLES` | not programmed | 0.00 | not programmed | 0.00 |
+| `PC_BUSY_CYCLES` | 626.82 = 92.2 % | 0.06 | 646.87 = 95.1 % | 0.06 |
+| `PC_IA_PRIMITIVES` | 247.27 M/s | 0.0/s | 254.00 M/s | 0.0/s |
+| `TSE_INPUT_PRIM` | 247.28 M/s | 0.2/s | 254.00 M/s | 0.0/s |
+| `TSE_OUTPUT_VISIBLE_PRIM` | 69.61 M/s | 0.2/s | 71.33 M/s | 0.0/s |
+| `TSE_BUSY_CYCLES` | not programmed | 0.14 | not programmed | 0.14 |
+| `LRZ_BUSY_CYCLES` | 543.67 = 79.9 % | 0.15 | 560.08 = 82.4 % | 0.16 |
+| `TP_BUSY_CYCLES` | 6364.78 (530.4 per instance = 78.0 %) | 6364.75 = 100.000 % of it | 6536.32 | 6536.31 = 100.000 % |
+| discard `1 - visible/input` | 71.85 % | - | 71.92 % | - |
+| `VSC_BUSY_CYCLES` | 2.49 = 0.37 % | - | 2.55 = 0.38 % | - |
+| `VSC_INPUT_TILES` (median) | 16/s in the steady window, 0/s in its pinned-clock ones (40.12) | - | 0/s | - |
+
+p25 fps (60-90 s, `scripts/fps-window.py`): 15.22 (`bvbase`), 15.29 (`bvforce`), 15.21 (`bvforce2`),
+15.15 (`bvforce3`), 15.27 (`bvforce4`), 15.18 (`bvforce5`).
+
+Two notes on that table, both learned after it was cut and written up in 40.12. The percentages are over
+every steady window, and `bvbase` is the one run of 22.11 whose core clock sagged: 22 of its 38 steady
+windows are not within 1 % of the pinned 680 MHz (their median is 649 MHz, minimum 613), which is why its
+`VPC_BUSY` reads 88.8 % where every other arm reads 91.6-91.7 %; on its 16 pinned-clock windows `bvbase`
+reads 91.68 %, and those 16 are exactly the ones with no tiles. The tile count of `bvbase` sits in the
+other 22 windows, so in that row the tile column and the duty-cycle column are not windows of the same
+GPU state.
+
+**Reading.**
+
+* The BV banks are addressable and their value registers are separate: their own cycle counters count
+  (`BV_VPC` busy 0.43-0.45 Mc/s, `VPC_WORKING` 0.16-0.17, `BV_TSE` busy 0.14, `BV_LRZ` busy 0.15-0.16,
+  `BV_PC` busy 0.06), and slot 0 of `BV_TSE` reads 0 primitives/s where slot 0 of `TSE` reads 247 M/s in
+  the same sample. What they do not count, in all four programmed arms, is primitives: `BV_PC`
+  `PC_IA_PRIMITIVES`, `BV_TSE` `TSE_INPUT_PRIM` and `TSE_OUTPUT_VISIBLE_PRIM` read 0/s - 0.2/s in
+  `bvbase`'s `BV_TSE` half, which against the 247 M/s of the ordinary half is none - and `BV_VPC`
+  `VPCRAM_FULL`/`WIT_FULL` read 0.00 Mc/s. 40.12 shows what that is worth: none of these sessions had a
+  binning pass that counted - `bvbase` fed about one tile per frame in its off-clock windows, every
+  forced arm fed none.
+* Forcing CB changes nothing in them: `BV_VPC` busy 0.43 against 0.44 Mc/s, every per-primitive counter
+  still 0, and the ordinary-side anchors stayed where they belong (TSE input 247.28 against 254.00 M/s,
+  discard 71.85 against 71.92 %). How much that is worth as a statement about the CB thread depends on
+  whether these sessions binned at all, and 40.12 shows they did not: the `BV_*` zeros of 22.11 are the
+  counters of a binning thread that was never started.
+* `BV_TP` `TP_BUSY_CYCLES` is **not** a per-thread number, and this corrects the sentence of 40.8 that
+  read "*the BV copy of `TP_BUSY_CYCLES` reads 6.5 G/s, i.e. 950-967 % of a one-second window of a 680
+  MHz core. Either it is a sum over the 12 TP instances ... or the BV select was never programmed ...
+  that is not decided here*". It is now decided, and both of the two offered explanations were the
+  wrong pair: with `BV_TP` programmed deliberately, and also with its section removed (`bvforce4`,
+  `bvforce5`), the BV copy reads 100.000 % of the ordinary copy (6364.75 against 6364.78 Mc/s). The TP
+  print in the BV half mirrors the ordinary TP counter, whose 6.36 G/s is the sum over the 12 TP
+  instances, i.e. 530 Mc/s per instance = 78 % of the core. There is no separate BV-TP measurement to
+  make on this chip, and 950-967 % was never a duty cycle.
+* The mirroring is not limited to TP, and that is the reason an unprogrammed `BV_*` half must not be
+  read at all. In the 21.11 dumps, where no cfg named a BV group, whole groups of the BV half equal
+  their ordinary twin: in `cbforce`, `BV_TP` 100.076 %, `BV_CP` 100.076 %, `BV_UCHE` 100.355 %,
+  `BV_CCU` 101.278 %, `BV_RB` 100.668 % and the BV copies of `PC_IA_PRIMITIVES`, `TSE_INPUT_PRIM` and
+  `TSE_OUTPUT_VISIBLE_PRIM` 100.5-100.6 % of the ordinary counters (`scripts/fdperf-bv-table.py` on
+  `results/fdperf-tse3-cbforce/fdperf-raw.txt`). A select word that was never written carries the
+  previous run's value or zero, and the BV value register then reports the same event as the ordinary
+  one. So 40.8's "BV medians of 0.02-0.08 % of the core" measured nothing about the BV thread: those
+  were groups whose BV select happened to name a nearly-idle counter.
+* `TU_DEBUG` has no delivery line of its own and unknown keys are ignored (`u_debug.c`,
+  `debug_parse_flags_option`), so a bogus key proves nothing and `GALLIUM_PRINT_OPTIONS=1` printed
+  nothing in the game log (`bvforce2`). `TU_DEBUG=startup,<flag>` is the control to use: the driver logs
+  the flag word itself (`tu_util.cc:135`). That is also what settles the `bvforce`/`bvforce3` difference
+  below: CB really was forced, so the counter difference is in the cfg, not in the environment.
+
+**The caveat this leaves, and 40.12 closes it.** In every forced arm of 22.11 - `cfg-bv` with
+`TU_DEBUG=forcecb`, and `cfg-bv2` and `cfg-bv3` the same way - `PERF_VSC_INPUT_TILES` reads 0 in every
+sample, where `cfg-tse3` on 21.11 fed tiles in 32 of its 40 steady windows with CB off and in all 88 with
+`forcecb`. The unforced `cfg-bv` arm (`bvbase`) is in between: tiles in 22 of 38 steady windows at a
+median of 16/s. `cfg-bv` and `cfg-tse3` hold an identical `VSC` section, so a `BV_*` section was the
+suspect; dropping `BV_PC`/`BV_TP` (`bvforce4`) and then dropping `BV_TSE` too (`bvforce5`, only `BV_VPC`
+left) did not bring the tiles back.
+
+## 40.12 The VSC tile counter is a per-session switch, and that decides what 40.11 measured
+
+**Why.** Three explanations were left for the dead tile counter: a `BV_*` section clobbers the VSC
+counters, the `startup` flag added for the delivery line changed the driver, or the sessions differ.
+Two more arms test the last two: `tse3cb2` (`cfg-tse3`, no BV section at all,
+`TU_DEBUG=startup,forcecb`) and `tse3cb3` (`cfg-tse3`, plain `TU_DEBUG=forcecb`, the 21.11 arm repeated
+tonight). Dumps `results/fdperf-tse3-{tse3cb2,tse3cb3}/`, plus `results/fdperf-bv-{bvforce4,bvforce5}/`
+from 40.11.
+
+**Tiles fed per second.** Two window rules, both printed, because the two kinds of counter need
+different ones:
+
+* *steady* = `t_rel` 20-105 s of the sample set, wrapped window deltas and `[invalid]` dropped;
+* *pinned-clock* = the steady windows whose `CP_ALWAYS_COUNT` is within 1 % of the pinned 680 MHz. A
+  duty cycle is meaningless in a window where the core ran at 649 MHz (it is diluted, see Correction 2);
+  an event count like tiles/s is not clock-dependent, so it is cut over both sets.
+
+`scripts/fdperf-tile-table.py` is the only place these numbers are cut, and it prints:
+
+| run | date | cfg | `TU_DEBUG` | steady | pinned | tiles med / max /s, steady | windows with tiles, steady | tiles med / max /s, pinned | windows with tiles, pinned | VSC busy % (pinned) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `cbbase` | 21.11 | `cfg-tse3` | none (CB off) | 42 | 29 | 56 / 21,728 | 32 of 40 | 2 / 2,189 | 21 of 29 | 0.38 |
+| `cbforce` | 21.11 | `cfg-tse3` | `forcecb` | 88 | 87 | 1,532 / 8,957 | 88 of 88 | 1,532 / 8,957 | 87 of 87 | 0.46 |
+| `bvbase` | 22.11 | `cfg-bv` | none | 38 | 16 | 16 / 26 | 22 of 38 | 0 / 0 | 0 of 16 | 0.38 |
+| `bvforce` | 22.11 | `cfg-bv` | `forcecb` | 41 | 40 | 0 / 3 | 1 of 41 | 0 / 0 | 0 of 40 | 0.38 |
+| `bvforce3` | 22.11 | `cfg-bv` | `startup,forcecb` | 40 | 40 | 0 / 0 | 0 of 40 | 0 / 0 | 0 of 40 | 0.38 |
+| `bvforce4` | 22.11 | `cfg-bv2` | `startup,forcecb` | 40 | 40 | 0 / 0 | 0 of 40 | 0 / 0 | 0 of 40 | 0.38 |
+| `bvforce5` | 22.11 | `cfg-bv3` | `startup,forcecb` | 40 | 40 | 0 / 0 | 0 of 40 | 0 / 0 | 0 of 40 | 0.37 |
+| `tse3cb2` | 22.11 | `cfg-tse3` | `startup,forcecb` | 41 | 41 | 0 / 0 | 0 of 41 | 0 / 0 | 0 of 41 | 0.38 |
+| `tse3cb3` | 22.11 | `cfg-tse3` | `forcecb` | 39 | 39 | 0 / 0 | 0 of 39 | 0 / 0 | 0 of 39 | 0.37 |
+
+p25 fps (60-90 s, `scripts/fps-window.py`): 15.26 (`tse3cb2`), 15.20 (`tse3cb3`).
+
+**Reading.**
+
+* No cfg of 22.11 kills the tile counter, and neither does `TU_DEBUG=startup`: `bvbase`, which carries
+  all four `BV_*` sections, reads tiles in 22 of its 38 steady windows, and the 21.11 arm repeated
+  verbatim tonight (`tse3cb3`) reads 0 like the rest. The difference is the session.
+* The scale says how big that difference is. At the ~15 fps these runs hold (this 21.11 pair lost its
+  fps CSVs, 40.10), `cbforce`'s 1,532 tiles/s is about 100 tiles per frame - a real binning pass - while
+  `bvbase`'s 16 tiles/s is about one tile per frame, and every other 22.11 arm is at none, with the flag
+  delivered and logged (`tse3cb2` carries `TU: info: TU_DEBUG=0x1000000001`) or without it.
+* `VSC_INPUT_TILES` tracks neither the cfg nor the flag reliably across runs: the same cfg family and
+  the same kind of scene read 56/s unforced and 1,532/s forced on 21.11, and 16/s unforced and 0/s
+  forced on 22.11. Inside one run it does work - `cbforce` has tiles in 87 of its 87 pinned-clock
+  windows, `cbbase` in 21 of 29 - so it is a per-session switch, and the "forcing CB feeds the VSC" step
+  of 40.8 stands only as what that session showed.
+* The one 22.11 arm that binned at all binned only while the core was below the pinned clock:
+  `bvbase`'s 22 tile-windows have a median `CP_ALWAYS_COUNT` of 649 MHz and its 16 pinned-clock windows
+  read 0 tiles. That is a hint for queue 21: the way to a run with a real binning pass may be a stretch
+  where the geometry node is not saturated, and the first counter to check in such a run is the clock.
+* So 40.11's per-primitive `BV_*` zeros are the counters of a binning thread that had no pass to run in
+  those sessions. They say the BV banks are addressable and that a session without binning leaves them
+  at ~0, and nothing more. The CB direction stays closed on 40.8's evidence (forcing it moved p25 by
+  0.09 fps and the discard by 0.1 points), not by a direct BV reading, and queue 21 of
+  `docs/plan-next-checks.md` asks for a run with a real binning pass before the BV thread can be read
+  at work.
+
+**Correction 1, 22.11: the tile row of 40.8.** That table read
+"*`VSC_INPUT_TILES` | 0 (median) / 21,728 (max) | 775 / 8,957*". Those four numbers come from three
+sample sets and none of them is a column of the table above. For `cbbase` the median is 56/s over the 40
+tile values of the steady window, 2/s over its 29 pinned-clock ones, and 528/s over the whole raw file -
+the published "0" was the median of all 68 tile values in the file, which is not a steady-window
+statistic. For `cbforce` the median is 1,532/s in both window rules, and "775" was its minimum, not its
+median. The paragraph's conclusion is unaffected: `cbbase` feeds tiles in 21 of 29 pinned-clock windows
+and `forcecb` in 87 of 87, and the discard stays at 71.76 % and 71.86 %.
+
+**Correction 2, 22.11: the duty cycles of this entry were cut over windows in which the core was not at
+the pinned clock.** `scripts/fdperf-arm-table.py` now averages a duty cycle only over the pinned-clock
+windows (`CP_ALWAYS_COUNT` within 1 % of 680 MHz), and prints how many windows it dropped and the dump's
+median clock. The percentages published here were means over every sample of the run, so the difference
+is the windows where DVFS had not reached 680 MHz:
+
+| run | VPC busy as published here | every sample | steady window | pinned-clock windows | n, all / steady / pinned |
+|---|---|---|---|---|---|
+| `tse3-cbbase` | 68.9 % (40.10) | 77.24 % | 68.95 % | **91.73 %** | 70 / 42 / 29 |
+| `tse3-cbforce` | 81.8 % (40.10) | 90.21 % | 91.61 % | **91.67 %** | 118 / 88 / 87 |
+| `tse-tse1` | 91.6 % (40.8) | 91.56 % | 91.61 % | 91.61 % | 52 / 40 / 40 |
+| `tse-forcecb` | 90.6 % (40.8) | 90.83 % | 90.60 % | **91.61 %** | 52 / 40 / 33 |
+| `vpc3-vpc3base` | 91.70 % (40.9) | 91.67 % | 91.70 % | 91.75 % | 51 / 40 / 39 |
+| `vpc3-attrbuf` | 90.86 % (40.9) | 90.78 % | 90.86 % | **91.63 %** | 50 / 39 / 35 |
+| `bv-bvbase` | 88.8 % (40.11) | 89.13 % | 88.82 % | **91.68 %** | 49 / 38 / 16 |
+| `vpc-vpcbase1` | 90.5 % (40.10) | 77.16 % | 90.51 % | **91.49 %** | 51 / 40 / 38 |
+| `vpc-vpcbase2` | 91.0 % (40.6) | 90.59 % | 90.96 % | **91.57 %** | 50 / 39 / 29 |
+| `vpc-hp50` | 88.4 % (40.6) | 89.00 % | 88.43 % | **91.45 %** | 50 / 39 / 31 |
+| `vpc-hp40` | 62.7 % (40.6) | 60.92 % | 62.71 % | none - median clock 585 MHz | 43 / 39 / 0 |
+| `tse-algo-prefer_gmem`, `tse2`, `vpc2b`, `nopref`, `fl111`, `fl121`, `cb1`, `lrz2`, `hpbase2`, `mesa27` | as published | within 0.7 points | as published | within 0.3 points | - |
+
+What that changes in the entry's own wording:
+
+* 40.10's "*the `cbbase`/`cbforce` pair is its own again on the counter side (VPC busy 68.9 % and
+  91.6 %)*" and its other bullet's "*VPC busy 68.9 % (`cbbase`) and 81.8 % (`cbforce`)*" are both wrong on
+  the counter side: on pinned-clock windows that pair is 91.73 % and 91.67 %, the same VPC pressure as
+  every other arm, and the two published numbers were not even cut the same way - 81.8 % is a mean over
+  all 118 samples of `cbforce`, 68.9 % a mean over the steady window of `cbbase`. What still separates
+  that pair from the rest of 21.11 is its primitive rate (TSE input 244.8 M/s against 255 M/s) and its
+  DRAM (15.27 GB/s against 15.7).
+* 40.9's "*VPC busy within 0.8 points*" for the attribute-buffer pair holds as the numbers were cut, and
+  on pinned-clock windows the gap is 0.12 points (`vpc3base` 91.75 %, `attrbuf` 91.63 %). Same verdict,
+  stronger.
+* 40.6's `hp40` row is not a 680 MHz number at all: none of its 39 steady windows is pinned-clock
+  (median `CP_ALWAYS_COUNT` 585 MHz), so its 62.7 % says the core was throttled, not that the VPC had
+  slack. The arm table prints that row's duty cycles as `-` with the clock named.
+* `bvbase`'s 88.8 % of 40.11 is the same artifact, and it matters there because `bvbase` is also the arm
+  whose tiles were read: its tile-windows and its pinned-clock windows are disjoint sets, so the tiles
+  column and the duty-cycle column of that row are not windows of the same GPU state. Its VPC busy on
+  pinned-clock windows is 91.68 %.
+
+## 40.13 What the 22.11 additions do not show
+
+* Whether the BV thread shades primitives when CB actually runs. Every forced arm of 22.11 ran without a
+  binning pass (`tse3cb3` proves it is not the cfg), so the question is open and queue 21 states how to
+  close it: find a session with tiles > 0, then read `BV_TSE` and `BV_PC` in it.
+* Why the sessions differ. The 21.11 arms reached a binned stretch and the 22.11 arms did not; nothing in
+  the logs of 22.11 says what the driver decided (`cb_disable_reason` is not logged), and the two nights'
+  `cbbase`-equivalents differ by 11 M primitives/s of TSE input, which is within the content spread this
+  entry already reports. The one pattern in the dumps is the clock: the only 22.11 windows with tiles are
+  the off-clock ones (`bvbase`, median 649 MHz), and 21.11's `cbbase` fed tiles in 21 of its 29
+  pinned-clock windows while its other counters say those windows are indistinguishable from its
+  tile-free ones (VPC busy 91.70 % against 91.84 %, TSE input 244.8 M/s in both). So the correlation with
+  the clock is real in one run and absent in the other, and it is not an explanation.
+* Whether the wall's duty cycles differ between arms at all. With the pinned-clock window rule of
+  Correction 2, `VPC_BUSY` is 91.45-91.75 % in every arm of `cfg-vpc`, `cfg-vpc2`, `cfg-vpc3`, `cfg-tse`,
+  `cfg-tse2`, `cfg-tse3` and `cfg-bv` - 25 of the 27 arms in that band - with only the two
+  autotune-target arms outside it (91.81 % and 92.40 %) and the two `mesa27` runs of the unpatched driver
+  below it (90.21 % and 90.53 %). Differences of the size this entry has been reporting, 0.1 to 0.9 points, are within what the
+  choice of windows alone moves, so no lever measured here is credited with a duty-cycle change; only
+  `algo-prefer_gmem` (92.40 % busy, 26.23 % visible, 13.72 fps) stands outside the band on both counters.
+  `scripts/fdperf-arm-table.py` prints that table.
+* `vpc-hp40` has no usable duty-cycle number at all: all 39 of its steady windows are off-clock (median
+  585 MHz), so whatever heap-pressure percent it was set to, the run is not comparable on any percentage.
+  Its p25 (11.81) and its per-second counters still stand.
+* `BV_VFD`, `BV_SP`, `BV_UFC`, `BV_RAS`, `BV_HLSQ`, `BV_CP` were left unprogrammed in `cfg-bv`, and the
+  BV groups whose selects are shared with the ordinary group (`BV_TSE` and friends, no `select_offset`)
+  were programmed with the same counters as their twin: a cfg that asks the BV bank for *different*
+  counters than the ordinary bank has not been run, so "the BV half is a separate measurement" is shown
+  only by the label check and the value-register difference in `bvbase`, not by a counter the ordinary
+  group could not have produced.
+* Nothing here changed the ship stack: `build/out` is still `4c3cdb210082`, no file in `patches/` was
+  touched, and every 22.11 arm is the released driver with an environment variable.
+

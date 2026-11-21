@@ -13,13 +13,17 @@ or geometry/vertices" with per-block kernel counters (not `VK_KHR_performance_qu
 | `tools/fdperf/fdperf.cfg-vpc` | VPC-pressure set, written 21.11: the VPC budget (6) spent on `VS_BUSY`/`PS_BUSY`, `SP_COMPONENTS`, `NUM_VPCRAM_WRITE` and `LM_FULL_WAIT_FOR_INTP_END`, plus `PC_VERTEX_HITS` and the per-client **write**-request side. Run 21.11 as `vpcbase1`, `vpcbase2`, `hpbase`, `hpbase2`, `hp50`, `hp40`, `cb1`, `lrz2`, `fl111`, `fl121`, `nopref` (journal 40) |
 | `tools/fdperf/fdperf.cfg-vpc2` | the other half of the same VPC budget: `WORKING`, `STALL_CYCLES_VFD_WACK`, `STALL_CYCLES_SP_LM`, `STALL_CYCLES_HLSQ_PRIM_ALLOC`, `STARVE_CYCLES_SP`. Run 21.11 as `vpc2b` |
 | `tools/fdperf/fdperf.cfg-vpc3` | "is the VPC's own RAM the limit": `VPCRAM_FULL`, `WIT_FULL`, `STALL_CYCLES_VPCRAM_POS`, `STALL_CYCLES_LM_ACK`, `NUM_LM_REQ_HIT`. First runs 21.11 23:14 (`vpc3base`, `attrbuf`, queue 19) |
-| `tools/fdperf/fdperf.cfg-tse`, `tools/fdperf/fdperf.cfg-tse2`, `tools/fdperf/fdperf.cfg-tse3` | the TSE question in three cuts of one **4-counter** TSE budget plus the 2-counter VSC budget: how much geometry TSE throws away (`INPUT_PRIM`, `OUTPUT_VISIBLE_PRIM`, `ZERO_PIXEL_PRIM`), why (`TRIVAL_REJ`, `ZERO_AREA`, `FACENESS_CULLED`, `CLIPPED`), and whether a binning pass exists at all (`VSC_BUSY` + `VSC_INPUT_TILES`). They cannot be merged into one run, and each header says so |
+| `tools/fdperf/fdperf.cfg-tse`, `tools/fdperf/fdperf.cfg-tse2`, `tools/fdperf/fdperf.cfg-tse3` | the TSE question in three cuts of one **4-counter** TSE budget plus the 2-counter VSC budget: how much geometry TSE throws away (`INPUT_PRIM`, `OUTPUT_VISIBLE_PRIM`, `ZERO_PIXEL_PRIM`), why (`TRIVAL_REJ`, `ZERO_AREA`, `FACENNESS_CULLED`, `CLIPPED`), and whether a binning pass exists at all (`VSC_BUSY` + `VSC_INPUT_TILES`). They cannot be merged into one run, and each header says so. Run 21.11 as `cbbase`, `cbforce`, and 22.11 as `tse3cb2`, `tse3cb3` |
+| `tools/fdperf/fdperf.cfg-bv`, `tools/fdperf/fdperf.cfg-bv2`, `tools/fdperf/fdperf.cfg-bv3` | written 22.11 for queue 20: the first cfgs in this repository to name the `BV_*` groups (`BV_VPC`, `BV_TSE`, and in `-bv` also `BV_PC`, `BV_TP`) instead of leaving them at their defaults, so the binning/visibility thread's own counters become readable. `-bv2` (no `BV_PC`/`BV_TP`) and `-bv3` (`BV_VPC` alone) were the trim test for why the VSC tile counter read 0 in those runs - the answer was the session, not the cfg (journal 40.12). Run 22.11 as `bvbase`, `bvforce`, `bvforce2`, `bvforce3`, `bvforce4`, `bvforce5` |
 | `tools/fdperf/fdperf-windowed-delta.patch` | fix for the `-d` window in `fdperf.c` (see section Windows) |
 | `scripts/fdperf-sample.sh [sec] [window-ms] [file] [cfg]` | background sampler: loop `sudo fdperf -r <window> -d` |
-| `scripts/fdperf_sections.py` | the one loader for dumps, shared by the three ratio scripts: splits the ordinary groups from their `BV_*` twins, drops `u64`-wrapped window deltas and `[invalid]`, and reports which names came only from the BV half |
+| `scripts/fdperf_sections.py` | the one loader for dumps, shared by every script that reads one: splits the ordinary groups from their `BV_*` twins (`load_sections()`; `load()` is the same call with the BV half discarded), drops `u64`-wrapped window deltas and `[invalid]`, and reports which names came only from the BV half |
 | `scripts/fdperf-vpc-ratios.py <dump> [lo] [hi]` | the vertex-path ratios (VPC split, PC/VFD/UCHE coupling, DRAM by client); a counter the cfg did not program prints as `nan`, never as 0 |
 | `scripts/fdperf-tse-ratios.py <dump> [lo] [hi]` | the TSE-discard ratios (visible/input, the reason counters, VSC busy and tiles fed) |
 | `scripts/fdperf-vpcram-ratios.py <dump> [lo] [hi]` | the VPC's own memory system (`VPCRAM_FULL`, `WIT_FULL`, `STALL_CYCLES_VPCRAM_POS`, `LM_ACK`, `LM_REQ_HIT`) - a table for the `cfg-vpc3` half of the budget, which no other script can read |
+| `scripts/fdperf-bv-table.py [--lo] [--hi] <dump> ...` | the two halves of one dump side by side, ordinary group against its `BV_*` twin - the only reader that wants both, and the table queue 20 is read from |
+| `scripts/fdperf-arm-table.py [--lo] [--hi] [dir ...]` | one row per run: VPC busy, PC stall on VPC, UCHE arbiter stall, VFD/TP starve on UCHE, TP busy, TSE input and visible share, DRAM reads and p25 fps, over every `results/fdperf-*/fdperf-raw.txt`. Duty cycles are averaged over pinned-clock windows only (see "Reading a dump"), and the row says how many windows were dropped and what the dump's median clock was; which fps CSV belongs to which run is written in the script, not guessed |
+| `scripts/fdperf-tile-table.py [--lo] [--hi] [dir ...]` | the binning-pass indicator for the nine runs that can answer that question: tiles/s and `VSC_BUSY` cut over the steady window and over the pinned-clock window, side by side, with the cfg and `TU_DEBUG` of each run written down in the script. Journal 40.12 is read from it |
 | `scripts/fdperf-analyze.py <file> [tsv] [--freq MHz]` | per-window busy%/latencies/traffic |
 | `scripts/fdperf-align.py <tsv> <freq-track> <csv> <csv-start>` | overlay windows onto the MangoHud CSV and cur_freq |
 | `build/out/fdperf` | binary (Mesa 27, `meson -Dtools=freedreno`, build - in `docs/mesa-27-plan.md`) |
@@ -63,23 +67,62 @@ Run artifacts (RE4, Mesa 27):
 - **libconfig 1.8** (in Fedora 44): the config syntax is incompatible with the
   usual one - groups only via `NAME = { }`, comments `//`, `/* */` and `#`
   (not `;`). `fdperf.cfg` in the repository is a working example.
-- **A dump contains the block twice: the ordinary group and its `BV_*` twin.** The group list is
+- **A dump contains the block twice: the ordinary group and its `BV_*` twin** ("BV" = the
+  binning/visibility thread, i.e. the CB side of the same hardware). The group list is
   `src/freedreno/registers/adreno/a7xx_perfcntrs.json`, which defines `BV_CP`, `BV_PC`, `BV_VFD`,
-  `BV_VPC` (num 6, `select_offset` 6), `BV_TP`, `BV_SP`, `BV_UFC`, `BV_TSE` (num 4), `BV_RAS`,
-  `BV_LRZ`, `BV_HLSQ` after the ordinary groups; "BV" is the binning/visibility (CB) thread. Each twin
-  uses the *same* countable enum as its ordinary group (`"type": "a7xx_vpc_perfcounter_select"` for
-  both `VPC` and `BV_VPC`), so one sample prints `PERF_VPC_BUSY_CYCLES` twice - 621,619,685 (91.41 %)
-  ordinary and 458,806 (0.07 %) BV in `results/raw/fdperf-vpc3base.txt`. Reading rules: the ordinary
-  group's value is the first occurrence; a name that occurs *only* after the split (`VPC_WORKING_CYCLES`
-  in a `cfg-vpc3` run) is a BV counter and is not the ordinary block's number; the BV copies are
-  meaningful in their own right but small here (medians 0.02-0.08 % of the core, journal 40.8), and
-  `BV_TP` `TP_BUSY_CYCLES` reads 950-967 % of a one-second window and is not usable as a busy fraction.
-  All three ratio scripts implement the split through `scripts/fdperf_sections.py`; `scripts/fdperf-analyze.py`
-  predates it and takes the first occurrence, which is the ordinary group - fine for its own tables, not
-  for a counter the cfg did not program.
-- **A cfg can address the BV groups** - `fdperf.c`'s `config_restore()` looks up every group of
-  `fd_perfcntrs()` by name in the cfg, so `BV_VPC = { counter0 = 0; ... }` is addressable - never tried
-  here, queue 20 of `docs/plan-next-checks.md`.
+  `BV_VPC`, `BV_TP`, `BV_SP`, `BV_UFC`, `BV_TSE`, `BV_RAS`, `BV_LRZ`, `BV_HLSQ` after the ordinary
+  groups. The register map, read in that file, says how separate they are: `BV_PC`, `BV_VFD`,
+  `BV_VPC`, `BV_TP`, `BV_SP`, `BV_UFC` name the **same select register** as their ordinary twin but
+  carry a `select_offset` (8, 8, 6, 12, 24, 4 - so `VPC_PERFCTR_VPC_SEL` holds 6 ordinary slots then
+  6 BV slots), while `BV_TSE`, `BV_RAS`, `BV_LRZ`, `BV_HLSQ`, `BV_CP` have **no `select_offset`** and
+  the same select register: their selects are the ordinary group's words. The *value* registers are
+  separate anyway - in `results/raw/fdperf-bvbase.txt` the same slot of `TSE` and `BV_TSE` prints
+  different numbers - which is why the two halves of a sample must be kept apart. Each twin also uses
+  the same countable enum (`"type": "a7xx_vpc_perfcounter_select"` for both `VPC` and `BV_VPC`).
+  Reading rules, all of them implemented in `scripts/fdperf_sections.py`: the ordinary group's value
+  is the first occurrence; a name that occurs only after the split (`VPC_WORKING_CYCLES` in a
+  `cfg-vpc3` run) is a BV counter and never the ordinary block's number; `scripts/fdperf-bv-table.py`
+  is the reader that wants both halves. `scripts/fdperf-analyze.py` predates the split and takes the
+  first occurrence - fine for its own tables, not for a counter the cfg did not program.
+- **A cfg can address the BV groups, and it changes what the tool prints.** `fdperf.c`'s
+  `config_restore()` looks up every group of `fd_perfcntrs()` by name in the cfg, so a `BV_VPC = {
+  counter0 = 0; ... }` section is honoured: on an idle GPU, the BV half of a `cfg-bv` dump prints
+  `PERF_PC_IA_PRIMITIVES`, `PERF_VPC_VPCRAM_FULL_CYCLES`, `PERF_VPC_WIT_FULL_CYCLES`,
+  `PERF_TSE_INPUT_PRIM` where the same slots of a `cfg-tse3` dump print the group's first countables
+  (`PC_WORKING_CYCLES`, `VPC_STALL_*`, `TSE_CLIPPING_CYCLES`). Measured in journal 40.11, runs
+  `bvbase`/`bvforce3`, `results/fdperf-bv-*/`.
+- **An unprogrammed `BV_*` half is not a measurement, and `cfg-bv` fixes that.** In a dump whose cfg
+  names no BV group, whole groups of the BV half mirror the ordinary counter: in
+  `results/fdperf-tse3-cbforce/fdperf-raw.txt` the BV copies of `TP_BUSY` are 100.076 %, of `CP_BUSY`
+  100.076 %, of `UCHE_BUSY` 100.355 %, of `CCU_BUSY` 101.278 %, of `RB_BUSY` 100.668 % and of
+  `PC_IA_PRIMITIVES`/`TSE_INPUT_PRIM`/`TSE_OUTPUT_VISIBLE_PRIM` 100.5-100.6 %. A select word that was
+  never written keeps the previous run's value or zero, and the BV value register then reports the same
+  event as the ordinary one. With `tools/fdperf/fdperf.cfg-bv` the halves are separate and comparable,
+  and `scripts/fdperf-bv-table.py` is the reader for that. Journal 40.11.
+- **`VSC_INPUT_TILES` is a per-session switch, and `scripts/fdperf-tile-table.py` is its reader.** On
+  21.11, `cfg-tse3` fed tiles in 32 of its 40 steady windows with CB off (median 56/s) and in all 88 with
+  `TU_DEBUG=forcecb` (median 1,532/s); on 22.11 every forced arm read 0 tiles in every window, and the
+  unforced `bvbase` only in the 22 windows where the core was not at the pinned clock (median 16/s) -
+  controls with no `BV_*` section included. Where it is nonzero it says a binning pass ran in that window;
+  it cannot characterise a scene across runs, and no `BV_*` section was ever shown to affect it
+  (journal 40.12).
+- **Duty cycles are only comparable inside pinned-clock windows.** A 1 s window whose
+  `PERF_CP_ALWAYS_COUNT` is not within 1 % of the pinned core clock (680 Mc/s in the 21.11/22.11 dumps)
+  is a window where DVFS had not reached the pinned step, and averaging over it dilutes every percentage:
+  `tse3-cbbase` reads 68.95 % over its 42 steady windows and 91.73 % over its 29 pinned-clock ones, and
+  `bv-bvbase` 88.82 % over 38 against 91.68 % over 16 (journal 40.12, Correction 2). This is the
+  counter-side twin of the MangoHud rule under "Healthy vs degenerate window", and stricter than the
+  0.9 x line: a window at 649 MHz passes 0.9 x and still moves a mean by three points. Event counts
+  (primitives/s, tiles/s, GB/s) are not diluted by the clock and are quoted over the steady window.
+  `scripts/fdperf-arm-table.py` averages percentages over pinned-clock windows only, says how many
+  windows it dropped, and prints the dump's median clock so a throttled run (`vpc-hp40`, median 585 MHz,
+  no pinned window) cannot be read as a 680 MHz one.
+- **Delivery of a `TU_DEBUG` flag is proved by one driver line, not by behaviour.** Unknown keys are
+  ignored (`src/util/u_debug.c`, `debug_parse_flags_option`), so a bogus key proves nothing, and
+  `GALLIUM_PRINT_OPTIONS=1` produced no line in the game log at all (run `bvforce2`, 0 hits). What
+  works is `TU_DEBUG=startup`: the driver then logs `TU: info: TU_DEBUG=0x…`
+  (`src/freedreno/vulkan/tu_util.cc:135`) plus `Created an instance`
+  (`tu_device.cc:2133`). Use `TU_DEBUG=startup,<flag>` in any arm whose premise is a debug flag.
 
 ## Windows: why the patch and what the label interval means
 
@@ -105,6 +148,15 @@ Consequences for interpreting the sampler file:
   is the offset in `fdperf-align.py`.
 - The counters are GPU-global (CP perf): they see the whole GPU load while RE4
   is rendering. Do not run two `run-game.sh` in parallel (see README).
+- **One `=== sample` block is one `fdperf` process**, because `scripts/fdperf-sample.sh`
+  starts a fresh one per iteration - that is why every block carries its own
+  `device: FD740` banner (in every dump of this repository the count of `device:` lines equals
+  the count of sample labels). Two consequences: a block with no counters under the label is a
+  process that died (`results/raw/fdperf-cbbase.txt` has one such block in 70), and the window
+  read right after such a gap contains negative deltas imaged as unsigned - the values
+  >= 2**63 that `scripts/fdperf_sections.py` drops and counts rather than averages. That is the
+  origin of the `2**64 - 82` in journal 40.7, and the reason the sampler's stderr is not the only
+  thing worth keeping.
 
 ## Clock domains (verified on a740, vkcube 720p/4K + governor pinning)
 

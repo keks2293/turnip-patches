@@ -1003,7 +1003,7 @@
     "results/fdperf-mesa27-vertex/fdperf-raw.txt",
     "results/game-patched-algopg.log"
    ],
-   "lines": 504,
+   "lines": 772,
    "headings": [
     "## 40.1 What was run",
     "## 40.2 The discard, and what kind of discard it is",
@@ -1014,7 +1014,10 @@
     "## 40.7 Two measurement defects found while doing this",
     "## 40.8 There is a binning switch, it is off by our own configuration, and forcing it did nothing",
     "## 40.9 The VPC attribute buffer: our generation never programs it, and forcing it changes nothing",
-    "## 40.10 What this does not show"
+    "## 40.10 What this does not show",
+    "## 40.11 The binning/visibility counter groups can be programmed deliberately (queue 20)",
+    "## 40.12 The VSC tile counter is a per-session switch, and that decides what 40.11 measured",
+    "## 40.13 What the 22.11 additions do not show"
    ],
    "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
    "verdict_source": "journal 40"

@@ -42,27 +42,44 @@ ROW = re.compile(r"^(PERF_\w+):\s+(\S+)")
 WRAP_LIMIT = 1 << 63
 
 
-def load(path, section_gap=32):
-    """Returns (samples, unmeasured, dropped).
+def clean(name, raw, dropped):
+    """One printed value, filtered.  Returns an int or None; None also records why in `dropped`."""
+    if not raw.isdigit():
+        dropped[name] = dropped.get(name, 0) + 1
+        return None
+    val = int(raw)
+    if val >= WRAP_LIMIT:
+        dropped[name] = dropped.get(name, 0) + 1
+        return None
+    return val
 
-    samples     list of dicts: {'t': seconds after the first sample, name: value}
-    unmeasured  names seen only in the second section of the dump
-    dropped     {name: how many values were thrown away as wrapped or [invalid]}
+
+def load_sections(path, section_gap=32):
+    """Returns (samples, bv_samples, unmeasured, dropped, bv_dropped).
+
+    samples      list of dicts for the ordinary groups: {'t': s after the first sample, name: value}
+    bv_samples   list of dicts for the `BV_*` half of the same samples, same order and same 't'
+    unmeasured   names seen only in the BV half (so never programmed in the ordinary group)
+    dropped      {name: values thrown away as wrapped or [invalid]}, ordinary half
+    bv_dropped   the same for the BV half
+
+    `load()` is this function with the BV half discarded, and is what the ratio tables use;
+    scripts/fdperf-bv-table.py is the one reader that wants both halves (journal 40.8, queue 20).
     """
-    samples, cur, unmeasured, dropped = [], None, set(), {}
+    samples, bv_samples = [], []
+    cur, curbv = None, None
+    unmeasured, dropped, bv_dropped = set(), {}, {}
     first, split = {}, None
     pos = -1
-
-    def close():
-        nonlocal first, split, pos
-        first, split, pos = {}, None, -1
 
     with open(path, errors="replace") as f:
         for line in f:
             if line.startswith("=== sample"):
-                cur = {"t": float(line.split()[2])}
+                t = float(line.split()[2])
+                cur, curbv = {"t": t}, {"t": t}
                 samples.append(cur)
-                close()
+                bv_samples.append(curbv)
+                first, split, pos = {}, None, -1
                 continue
             if cur is None:
                 continue
@@ -76,18 +93,23 @@ def load(path, section_gap=32):
             if split is not None and pos >= split:
                 if name not in first:
                     unmeasured.add(name)
+                if name not in curbv:
+                    val = clean(name, raw, bv_dropped)
+                    if val is not None:
+                        curbv[name] = val
                 continue
             first.setdefault(name, pos)
             if name in cur:
                 continue
-            if not raw.isdigit():
-                dropped[name] = dropped.get(name, 0) + 1
-                continue
-            val = int(raw)
-            if val >= WRAP_LIMIT:
-                dropped[name] = dropped.get(name, 0) + 1
-                continue
-            cur[name] = val
+            val = clean(name, raw, dropped)
+            if val is not None:
+                cur[name] = val
+    return samples, bv_samples, unmeasured, dropped, bv_dropped
+
+
+def load(path, section_gap=32):
+    """Returns (samples, unmeasured, dropped) - the ordinary groups only, see load_sections."""
+    samples, _bv, unmeasured, dropped, _bvd = load_sections(path, section_gap)
     return samples, unmeasured, dropped
 
 

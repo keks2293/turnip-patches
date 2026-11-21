@@ -1,0 +1,134 @@
+// fdperf.cfg-bv - program the BV_* (binning/visibility) counter groups deliberately.
+//
+// Why this cfg exists.  Every dump this repository has made prints each block twice: the
+// ordinary group and its BV_* twin (a7xx_perfcntrs.json defines BV_CP, BV_PC, BV_VFD,
+// BV_VPC (num 6, select_offset 6), BV_TP, BV_SP, BV_UFC, BV_TSE (num 4), BV_RAS, BV_LRZ,
+// BV_HLSQ after the ordinary groups, each with the *same* countable enum).  Left
+// unprogrammed they print what they print: VPC/TSE/LRZ copies at 0.02-0.08 % of the core,
+// and BV_TP BUSY at 950-967 % of a one-second window, which is not a busy fraction at all
+// (journal 40.8).  So the CB question - is the visibility/binning pass doing geometry work
+// that the ordinary VPC/TSE counters do not show - has never been measured directly.
+//
+// fdperf resolves every group of fd_perfcntrs() by name in fdperf.cfg (fdperf.c,
+// config_restore(): config_setting_get_member(setting, group->group->name)), so a section
+// named BV_VPC should write the BV select registers (the group's select_offset in the JSON
+// says they are at a different offset than the ordinary group's).  Selects here are
+// deliberately unlike the defaults, because fdperf prints the label of whatever it
+// programmed (group->label[j]): a BV_TSE line printing PERF_TSE_INPUT_PRIM rather than the
+// default PERF_TSE_BUSY_CYCLES proves the section reached the BV group, and if the labels
+// do not change the section was ignored and no number from this cfg can be read.
+//
+// Budget caveat, unverified: the ordinary VPC group has a 6-counter hw budget and BV_VPC
+// also has num 6 with select_offset 6, which suggests 12 selects in that pipe; if the
+// kernel reports fewer countables, fdperf.c prints "reducing %s counters N -> M" on stderr,
+// which scripts/fdperf-sample.sh throws away (2>/dev/null), so run the first sample of this
+// cfg by hand with stderr kept before trusting a game run.
+//
+//
+// Trimmed copy: the ONLY BV section here is BV_VPC (no BV_PC, no BV_TP, no BV_TSE).  Why: in
+// the three forced cfg-bv arms of 22.11 - including the one whose TU_DEBUG delivery the driver
+// logged (tu_util.cc:135, "TU: info: TU_DEBUG=0x1000000001") - PERF_VSC_INPUT_TILES read 0 in
+// every sample, where the cfg-tse3 arms of 21.11 fed tiles in 32 of 40 steady windows with CB
+// off (median 56/s) and in all 88 with forcecb (median 1,532/s).  So a BV
+// section and the VSC counters do not coexist, and which one is the clobberer decides whether
+// the BV numbers of queue 20 can be trusted at all.  If tiles come back with this cfg, BV_PC or
+// BV_TP is the clobberer and the BV_VPC/BV_TSE halves stand; if they stay 0, BV_VPC or BV_TSE is
+// it and the BV halves of cfg-bv must be read as void.
+// Run: SAMPCFG=tools/fdperf/fdperf.cfg-bv3 /tmp/opencode/session.sh <TAG> [TU_DEBUG=startup,forcecb]
+// Reading fixed before the runs (queue 20 of docs/plan-next-checks.md):
+//   * labels in the BV lines unchanged -> the cfg cannot address the BV groups, the probe is
+//     void and the CB question stays with VSC_INPUT_TILES (journal 40.8);
+//   * BV_TSE INPUT_PRIM / BV_PC IA_PRIMITIVES near zero with CB off, clearly larger under
+//     TU_DEBUG=forcecb -> the BV thread does real geometry work only when CB is forced, and
+//     journal 40.2's discard has to be re-asked per thread;
+//   * BV_TSE INPUT_PRIM about equal to the ordinary TSE INPUT_PRIM (245-255 Mc/s) in both
+//     arms -> the BV registers mirror the ordinary ones and the numbers are not per-thread.
+//
+// What the trim test answered (arm bvforce5, journal 40.12): the tiles did NOT come back -
+// 0 in all 40 windows - so BV_VPC alone is not the clobberer either.  With cfg-bv3 the BV
+// half of PC/TSE is unprogrammed and therefore mirrors the ordinary counters; only BV_VPC's
+// own values are separate, which is why this cfg is a control and not a measurement of the
+// BV thread.
+FD740 = {
+  CP = {
+    counter0  = 0;    // reserved (ALWAYS_COUNT, frequency)
+    counter1  = 2;    // PERF_CP_BUSY_CYCLES
+    counter2  = 15;   // PERF_CP_SQE_IDLE
+    counter3  = 11;   // PERF_CP_CONTEXT_DONE
+    counter4  = 9;    // PERF_CP_MODE_SWITCH
+  }
+
+  RBBM = {
+    counter0 = 1;    // PERF_RBBM_ALWAYS_ON (divisor for the duty cycle)
+    counter1 = 9;    // PERF_RBBM_VBIF_BUSY
+    counter2 = 12;   // PERF_RBBM_UCHE_BUSY
+  }
+
+  UCHE = {
+    counter0  = 0;    // PERF_UCHE_BUSY_CYCLES
+    counter1  = 1;    // PERF_UCHE_STALL_CYCLES_ARBITER
+    counter2  = 2;    // PERF_UCHE_VBIF_LATENCY_CYCLES
+    counter3  = 3;    // PERF_UCHE_VBIF_LATENCY_SAMPLES
+    counter4  = 27;   // PERF_UCHE_VBIF_READ_BEATS_CH0
+    counter5  = 28;   // PERF_UCHE_VBIF_READ_BEATS_CH1
+    counter6  = 4;    // PERF_UCHE_VBIF_READ_BEATS_TP
+    counter7  = 9;    // PERF_UCHE_READ_REQUESTS_TP
+    counter8  = 8;    // PERF_UCHE_VBIF_READ_BEATS_SP
+    counter9  = 13;   // PERF_UCHE_READ_REQUESTS_SP
+    counter10 = 15;   // PERF_UCHE_WRITE_REQUESTS_SP
+    counter11 = 16;   // PERF_UCHE_WRITE_REQUESTS_VPC
+  }
+
+  VFD = {
+    counter0 = 0;    // PERF_VFD_BUSY_CYCLES
+    counter1 = 2;    // PERF_VFD_STALL_CYCLES_VPC_ALLOC (the VPC backpressure, 12.5% in cfg-vertex)
+    counter2 = 5;    // PERF_VFD_STARVE_CYCLES_UCHE
+    counter3 = 8;    // PERF_VFD_DECODED_ATTRIBUTE_BYTES
+    counter4 = 9;    // PERF_VFD_NUM_ATTRIBUTES
+    counter5 = 17;   // PERF_VFD_TOTAL_VERTICES
+  }
+
+  PC = {
+    counter0 = 0;    // PERF_PC_BUSY_CYCLES
+    counter1 = 2;    // PERF_PC_STALL_CYCLES_VFD
+    counter2 = 4;    // PERF_PC_STALL_CYCLES_VPC (the 63% of the 17.11 run)
+    counter3 = 19;   // PERF_PC_VERTEX_HITS (the reuse behind 2.9:1, first time measured)
+    counter4 = 20;   // PERF_PC_IA_VERTICES
+    counter5 = 21;   // PERF_PC_IA_PRIMITIVES
+    counter6 = 25;   // PERF_PC_VS_INVOCATIONS
+    counter7 = 28;   // PERF_PC_3D_DRAWCALLS
+  }
+
+  VPC = {
+    counter0 = 0;    // PERF_VPC_BUSY_CYCLES (the anchor: 90.6-92.4 % in every 21.11 run)
+    counter1 = 23;   // PERF_VPC_VPCRAM_FULL_CYCLES (51 % of busy, journal 40.9)
+  }
+
+  TSE = {
+    counter0 = 6;    // PERF_TSE_INPUT_PRIM (the anchor, 245-255 Mc/s)
+    counter1 = 14;   // PERF_TSE_OUTPUT_VISIBLE_PRIM
+  }
+
+  VSC = {
+    counter0 = 0;    // PERF_VSC_BUSY_CYCLES
+    counter1 = 4;    // PERF_VSC_INPUT_TILES
+  }
+
+
+  SP = {
+    counter0 = 0;    // PERF_SP_BUSY_CYCLES
+    counter1 = 48;   // PERF_SP_EXPORT_VPC_TRANS (SP->VPC transactions, the other
+                     // side of the varyings traffic)
+  }
+
+  // The point of this cfg: the BV_* groups, programmed on purpose.
+  BV_VPC = {
+    counter0 = 0;    // PERF_VPC_BUSY_CYCLES
+    counter1 = 1;    // PERF_VPC_WORKING_CYCLES
+    counter2 = 23;   // PERF_VPC_VPCRAM_FULL_CYCLES
+    counter3 = 22;   // PERF_VPC_WIT_FULL_CYCLES
+  }
+
+
+
+}
