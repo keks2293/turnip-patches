@@ -1,0 +1,54 @@
+# What the released driver says about VK_KHR_fragment_shading_rate on this device, 2026-11-21.
+#
+# Question: the game's inventories contain 22 R8_UINT images with the shading-rate usage bit
+#   (results/imginv-usage-bits.log). This file is the other half of the same question - what the
+#   driver exposes to the application - so that "the bit is used" is not mistaken for "the
+#   hardware can only do so much".
+#
+# Driver:   build/p14-shipped/libvulkan_freedreno.so, sha256 c17d02bcaae9a960... (released stack)
+# Tool:     vulkan-tools-1.4.341.0-1.fc44.aarch64
+# Command:  VK_DRIVER_FILES=build/p14-shipped/freedreno_icd_p14.json vulkaninfo > <log> 2>&1
+# Staging log: /tmp/opencode/vi-vrs.log (not committed; the block below is the verbatim extract)
+#
+# The surface is exposed by the same property for every a7xx: has_attachment_shading_rate is set in
+# a7xx_base (src/freedreno/common/freedreno_devices.py:783), the block a740 composes from
+# (freedreno_devices.py:1239 [a7xx_base, a7xx_gen2]). Drain of the property group follows.
+
+=== extension line (vulkaninfo, device extensions) ===
+
+	VK_KHR_fragment_shading_rate                        : extension revision 2
+
+=== VkPhysicalDeviceFragmentShadingRatePropertiesKHR ===
+
+VkPhysicalDeviceFragmentShadingRatePropertiesKHR:
+-------------------------------------------------
+	minFragmentShadingRateAttachmentTexelSize:
+		width  = 8
+		height = 8
+	maxFragmentShadingRateAttachmentTexelSize:
+		width  = 8
+		height = 8
+	maxFragmentShadingRateAttachmentTexelSizeAspectRatio = 1
+	primitiveFragmentShadingRateWithMultipleViewports    = true
+	layeredShadingRateAttachments                        = false
+	fragmentShadingRateNonTrivialCombinerOps             = true
+	maxFragmentSize:
+		width  = 4
+		height = 4
+	maxFragmentSizeAspectRatio                           = 4
+	maxFragmentShadingRateCoverageSamples                = 16
+	maxFragmentShadingRateRasterizationSamples           = SAMPLE_COUNT_4_BIT
+	fragmentShadingRateWithShaderDepthStencilWrites      = true
+	fragmentShadingRateWithSampleMask                    = true
+	fragmentShadingRateWithShaderSampleMask              = true
+	fragmentShadingRateWithConservativeRasterization     = true
+	fragmentShadingRateWithFragmentShaderInterlock       = false
+	fragmentShadingRateWithCustomSampleLocations         = true
+	fragmentShadingRateStrictMultiplyCombiner            = true
+
+=== reading ===
+
+The rate map must be R8_UINT (the driver asserts it, tu_cmd_buffer.cc:6979), its texel size can be
+8x8 only (min == max), and the largest rate is 4x4 fragments per sample group - i.e. up to 1/16 of
+the fragment work in a covered region. Layered attachments are not offered, so the app can only
+supply one map per subpass.

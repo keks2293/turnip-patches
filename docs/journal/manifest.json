@@ -823,6 +823,32 @@
    ],
    "verdict_quote": ". Four of the five options are reachable with an environment variable and no rebuild,",
    "verdict_source": "journal 34"
+  },
+  {
+   "id": "35",
+   "title": "The game creates 22 shading-rate images, no density-map image, and the VRS path has no driver knob (21.11)",
+   "question": "does this stack ever ask for a fragment density map or a shading-rate attachment, and what does the driver do with one",
+   "file": "journal/35-the-game-creates-shading-rate-images-and-no-density-map.md",
+   "date": "21.11",
+   "status": "open",
+   "decision": "",
+   "verdict_first_line": ". The header the tree builds against has it the other way round:",
+   "artifacts": [
+    "results/imginv-3variants.txt",
+    "scripts/imginv-usage-bits.py",
+    "results/imginv-usage-bits.log",
+    "results/vulkaninfo-vrs.log"
+   ],
+   "lines": 124,
+   "headings": [
+    "## 35.1 The usage census: 22 shading-rate images, zero density maps",
+    "## 35.2 What the driver exposes for that path",
+    "## 35.3 What Turnip does with an attached map",
+    "## 35.4 The bit order I got wrong first, stated so the artifact carries the correction",
+    "## What this does not show"
+   ],
+   "verdict_quote": ". The header the tree builds against has it the other way round:",
+   "verdict_source": "journal 35"
   }
  ]
 }

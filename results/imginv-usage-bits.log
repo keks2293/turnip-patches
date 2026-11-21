@@ -1,0 +1,82 @@
+# VkImageUsageFlagBits census over the three TU_IMG_INV=1 game inventories, generated 2026-11-21.
+#
+# Question: the inventories published so far counted tiling, UBWC and MUTABLE lists, never the
+#   `usage=` mask - so an application path that is announced by a usage bit and nothing else would
+#   be invisible. Fragment shading rate (VRS) and fragment density map are exactly such paths, and
+#   the FDM one gates a driconf option (journal 34.2, `tu_disable_conservative_fdm_binning`).
+#
+# Inputs (results/raw/ is gitignored: full proton stdout/stderr; curated copies live in results/):
+#   results/raw/game-patched-imginv4.log          859702 B  sha256 cde39e2971a60097...
+#   results/raw/game-patched-imginv5.log          976648 B  sha256 80d433927103ef02...
+#   results/raw/game-patched-stockflaginv.log    2229411 B  sha256 b297168ac43b30ca...
+# Builds (as in results/imginv-3variants.txt): imginv4 = ship stack without 0014 (0001..0013);
+#   imginv5 = the ship stack with 0014 (050375a18b7b); stockflaginv = stock Mesa 27 6dfa32a +
+#   exp-14 + one line ubwc_all_formats_compatible (32d20074b8a128e4). So the three logs are also
+#   a control on the UBWC patches: they must not change the usage surface, and they do not.
+#
+# Bit values checked against include/vulkan/vulkan_core.h in the mesa checkout (6dfa32a:2814-2820):
+#   FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR = 0x100, FRAGMENT_DENSITY_MAP_BIT_EXT = 0x200.
+#
+# Regenerate:
+#   python3 scripts/imginv-usage-bits.py results/raw/game-patched-imginv4.log \
+#       results/raw/game-patched-imginv5.log results/raw/game-patched-stockflaginv.log
+# Counts differ by one to nine lines from results/imginv-3variants.txt because lines cut by
+# foreign stderr are skipped here as well (the per-file note says how many).
+
+  (results/raw/game-patched-imginv4.log: 1 inventory lines cut by foreign stderr, not counted)
+=== results/raw/game-patched-imginv4.log  (3638 creates, 7740.5 MiB) ===
+  TRANSFER_SRC                       0x001   3626     7663.1 MiB
+  TRANSFER_DST                       0x002   3638     7740.5 MiB
+  SAMPLED                            0x004   3626     7663.1 MiB
+  STORAGE                            0x008   1395     2471.2 MiB
+  COLOR_ATTACHMENT                   0x010   1472     2281.1 MiB
+  DEPTH_STENCIL_ATTACHMENT           0x020    180     1658.4 MiB
+  FRAGMENT_SHADING_RATE_ATTACHMENT   0x100     21       11.8 MiB
+
+  shading rate images: 21, 11.8 MiB
+    PIPE_FORMAT_R8_UINT          1280x720x1   tile=tiled ubwc=0  x  6    5.39 MiB
+    PIPE_FORMAT_R8_UINT          1280x800x1   tile=tiled ubwc=0  x  4    3.91 MiB
+    PIPE_FORMAT_R8_UINT          853x480x1    tile=tiled ubwc=0  x  3    1.23 MiB
+    PIPE_FORMAT_R8_UINT          426x240x1    tile=tiled ubwc=0  x  6    0.75 MiB
+    PIPE_FORMAT_R8_UINT          640x400x1    tile=tiled ubwc=0  x  2    0.51 MiB
+
+  density map images: none
+
+  (results/raw/game-patched-imginv5.log: 1 inventory lines cut by foreign stderr, not counted)
+=== results/raw/game-patched-imginv5.log  (4176 creates, 8080.8 MiB) ===
+  TRANSFER_SRC                       0x001   4160     7999.5 MiB
+  TRANSFER_DST                       0x002   4176     8080.8 MiB
+  SAMPLED                            0x004   4164     8003.5 MiB
+  STORAGE                            0x008   1416     2589.8 MiB
+  COLOR_ATTACHMENT                   0x010   1516     2351.6 MiB
+  DEPTH_STENCIL_ATTACHMENT           0x020    179     1644.0 MiB
+  FRAGMENT_SHADING_RATE_ATTACHMENT   0x100     22       12.0 MiB
+
+  shading rate images: 22, 12.0 MiB
+    PIPE_FORMAT_R8_UINT          1280x720x1   tile=tiled ubwc=0  x  6    5.39 MiB
+    PIPE_FORMAT_R8_UINT          1280x800x1   tile=tiled ubwc=0  x  4    3.91 MiB
+    PIPE_FORMAT_R8_UINT          853x480x1    tile=tiled ubwc=0  x  3    1.23 MiB
+    PIPE_FORMAT_R8_UINT          640x400x1    tile=tiled ubwc=0  x  3    0.76 MiB
+    PIPE_FORMAT_R8_UINT          426x240x1    tile=tiled ubwc=0  x  6    0.75 MiB
+
+  density map images: none
+
+  (results/raw/game-patched-stockflaginv.log: 9 inventory lines cut by foreign stderr, not counted)
+=== results/raw/game-patched-stockflaginv.log  (4170 creates, 8088.0 MiB) ===
+  TRANSFER_SRC                       0x001   4158     8010.7 MiB
+  TRANSFER_DST                       0x002   4170     8088.0 MiB
+  SAMPLED                            0x004   4158     8010.7 MiB
+  STORAGE                            0x008   1415     2573.9 MiB
+  COLOR_ATTACHMENT                   0x010   1517     2356.5 MiB
+  DEPTH_STENCIL_ATTACHMENT           0x020    180     1658.4 MiB
+  FRAGMENT_SHADING_RATE_ATTACHMENT   0x100     22       12.0 MiB
+
+  shading rate images: 22, 12.0 MiB
+    PIPE_FORMAT_R8_UINT          1280x720x1   tile=tiled ubwc=0  x  6    5.39 MiB
+    PIPE_FORMAT_R8_UINT          1280x800x1   tile=tiled ubwc=0  x  4    3.91 MiB
+    PIPE_FORMAT_R8_UINT          853x480x1    tile=tiled ubwc=0  x  3    1.23 MiB
+    PIPE_FORMAT_R8_UINT          640x400x1    tile=tiled ubwc=0  x  3    0.76 MiB
+    PIPE_FORMAT_R8_UINT          426x240x1    tile=tiled ubwc=0  x  6    0.75 MiB
+
+  density map images: none
+

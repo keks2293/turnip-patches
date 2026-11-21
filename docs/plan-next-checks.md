@@ -592,17 +592,21 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
        `0005`/`0009`/`0010` after their context moves.
 
 12. **The driconf perf options the props search never covered** (journal 34; no build
-    needed, no new code). Five options are perf-relevant and off for this game; three are
-    candidates, one is a feature trade and one is unreachable on a740 (journal 34.2).
+    needed, no new code). Five options are perf-relevant and off for this game; two are
+    candidates, one is held on a precondition that fails, one is a feature trade and one is
+    unreachable on a740 (journal 34.2, and journal 35.1 for the held one).
     `TU_FORCE_PROPS` (journal 15) covers boolean device properties, and the
     env switches of journal 13/15.5 cover autotune and draw states. Neither touched Turnip's
     `perf`/`misc` driconf groups (`src/freedreno/vulkan/tu_drirc_gen.py`), which are overridden
     by an environment variable of the same name and change the command stream:
 
-    * `tu_disable_conservative_fdm_binning` - the driver's own description says "**Improves
-      performance up to 4% on A7XX.**"; it is off by default because non-identity FDM tiles can
-      leave see-through gaps in dense geometry. The first candidate: the only one with a number
-      attached, from upstream, on this generation;
+    * `tu_disable_conservative_fdm_binning` - **held, not a candidate yet** (journal 35.1): the
+      option is gated on `pass->has_fdm` at both of its sites, and a render pass can only have an
+      FDM attachment if an image was created with the density-map usage bit. The game's three
+      inventories contain 0 such images in 11 984 creates, so in the inventoried scenes the option
+      cannot fire, whatever its upstream number ("**Improves performance up to 4% on A7XX.**") is
+      worth. It returns to the queue only after a game run shows an FDM attachment, which needs a
+      one-line driver log and a build;
     * `tu_allow_concurrent_binning` - A7xx concurrent binning, disabled by default "because it
       regresses performance on desktop games", where the phrase describes an x86 discrete GPU
       rather than this SoC running a desktop game through vkd3d-proton;
@@ -622,23 +626,26 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
 
     ```sh
     source scripts/env.sh
-    TAG=fdm1 tu_disable_conservative_fdm_binning=true HUDLOG=150 scripts/run-game.sh patched 170
     TAG=cb1  tu_allow_concurrent_binning=true         HUDLOG=150 scripts/run-game.sh patched 170
     TAG=lrx1 disable_conservative_lrz=true            HUDLOG=150 scripts/run-game.sh patched 170
     # plus a base run between each, and scripts/fps-window.py for p25 over frames with fps < 30
+    # the FDM option is not in the list: journal 35.1 shows it has nothing to attach to in the
+    # inventoried scenes, so forcing it would measure an inert switch
     ```
 
     Gate order per option: a screenshot pair (`HUD=1`, the same camera position as the base
-    shot, compared with `scripts/pixelcheck.py`) **before** any fps number - the FDM option is
-    documented to change what is drawn, and LRZ invalidation is a correctness trade by
-    definition. An option that gains fps and changes the picture is a trade the operator decides
-    on, not a patch. vkmark, the second rig of journal 15, is no longer installed, so the game
-    is currently the only workload that exercises these paths.
+    shot, compared with `scripts/pixelcheck.py`) **before** any fps number - both remaining
+    options change what is drawn: LRZ invalidation is a correctness trade by definition, and
+    concurrent binning can drop primitives when a binner and a raster pass disagree (the same
+    class of risk the FDM option documents as see-through gaps). An option that gains fps and
+    changes the picture is a trade the operator decides on, not a patch. vkmark, the second rig
+    of journal 15, is no longer installed, so the game is currently the only workload that
+    exercises these paths.
 
     Expectation, said before the run rather than after: the wall is `UCHE` at 90 % busy and
     ~220 ns to `VBIF` (ADR-0008), and every lever tried so far on this game has been zero, so
-    two of the three are likely zeros. That is a reason to run them in one evening session, not
-    a reason to skip them: none has ever been asked here.
+    both remaining candidates are likely zeros. That is a reason to run them in one evening
+    session, not a reason to skip them: neither has ever been asked here.
 
 13. **What the game does when the driver reports less memory** (journal 34.4; no build, no new
     code). The other kind of option in the same surface: not the command stream but the report.
@@ -717,8 +724,9 @@ instead of against a build.
 | 13 | why does the system driver give UBWC to a `MUTABLE` image with no list, where both Mesa 27 builds refuse it | ONE ROW, journal 31: `B8G8R8A8_UNORM`, `nolist=0x102000` against `0x100000`. Not in the two refusal functions (byte-identical to refs `mesa-26.2.6` and `main`), so it is either elsewhere in 26.2 or in the distribution's own patches (`mesa-vulkan-drivers-26.2.6-1.fc44.armada`, not in this repository). Chasing it would need the downstream source; it changes no verdict, and `exp-18` does not depend on it |
 | 14 | does a `R64_UINT`/`R64_SINT` view of a UBWC image work, once `STORAGE` makes it legal | NOT MEASURED, and it is the gap `exp-18 (b)` cannot write around: journal 32 measured the two 64-bit compat labels as one cell but deliberately created its images **without** `STORAGE`, while `ubwc_possible()` refuses the `R64_*` formats for their own reasons and `tu_formats.cc` grants the 64-bit image-atomic feature under `has_64b_image_atomics`. A no-list image with `STORAGE` in its usage is viewable as `R64_UINT` whatever the class rule grants. Needs a probe shape (same image, `STORAGE` usage, `R64_UINT` view, atomics in and out), not a build |
 | 15 | is the compressor actually writing compressed bytes, or only a metadata plane | NOT MEASURED by any rig here. Every UBWC claim in this repository rests on the `+0x2000` allocation signature, which journal 22.2 says is an allocation and not a compression claim. The direct detector is a fast-clear that leaves the bytes untouched in a UBWC image and does not in a linear one; it is not written, and journal 32's verdict is stated so as not to need it |
-| 16 | does any of the three reachable driconf perf options change fps in RE4 | NOT MEASURED, queue 12 (journal 34.3 covers correctness on the rig only, and the rig has no textured depth renderpass). `tu_disable_conservative_fdm_binning` carries upstream's "Improves performance up to 4% on A7XX."; the other two are expected zeros given ADR-0008. Needs the game, so it needs most of this machine's 7.3 GiB |
+| 16 | does any of the reachable driconf perf options change fps in RE4 | NOT MEASURED, queue 12 (journal 34.3 covers correctness on the rig only, and the rig has no textured depth renderpass). Two candidates remain, `tu_allow_concurrent_binning` and `disable_conservative_lrz`, both expected zeros given ADR-0008; the third, `tu_disable_conservative_fdm_binning`, lost its precondition in journal 35.1 (0 density-map images in 11 984 creates) and is held until an FDM attachment is observed. Needs the game, so it needs most of this machine's 7.3 GiB |
 | 17 | what does the game do when the driver reports less memory than the heap it reports today | NOT MEASURED, queue 13. The report itself is measured - journal 34.4, `results/vulkaninfo-heap-report.log`, five `vulkaninfo` runs over `heap_memory_percent` - and the queue names the two values to try in the game. What vkd3d-proton does under a smaller report is not, and journal 17's 3129 MiB peak against 4.95 GiB of swap is why the question is not empty |
+| 18 | is any of the 22 shading-rate images ever attached to a render pass, and at what rates | NOT MEASURED. Journal 35.1 counts the images and journal 35.2 measures the capability, but a usage bit is a declaration: the driver has no log line for `subpass->fsr_attachment != VK_ATTACHMENT_UNUSED`, so the check needs one added `if` plus a build, then a game run. Without it, "the game uses VRS" stays an inference, and not even the driver's own per-subpass register write can be observed from a log |
 
 ## Pitfalls (reminder)
 

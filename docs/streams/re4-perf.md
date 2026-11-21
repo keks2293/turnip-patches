@@ -21,12 +21,23 @@ Believed, with the evidence:
 Open: fps A/B for mode 7 (`0013`) was never run; the expectation, given a latency bound,
 is small, and the correctness case for `0013` does not depend on it.
 
-Open, and narrower than "find a lever": three of Turnip's own driconf perf options change
+Open, and narrower than "find a lever": two of Turnip's own driconf perf options change
 the command stream, were never enabled for this device, and were never asked of it - the
 props search of journal 15 could not see them, because they are not device properties.
 They are listed with what each one costs in queue 12, and journal 34 says which fourth one
-is unreachable on a740 without a build. No fps has been taken for any of them: all three
-act in a renderpass, and the rig has none.
+is unreachable on a740 without a build. No fps has been taken for either: both act in a
+renderpass, and the rig has none. Journal 35 removed the third from that list before it was
+run: the FDM option needs an image with the density-map usage bit, and the game's
+inventories contain none, so in the inventoried scenes it cannot fire at all. What is left
+is concurrent binning and conservative LRZ, plus queue 13's report-side question below.
+
+Closed, and worth knowing it is closed: the shading-rate (VRS) path. Journal 35 measures
+that this stack declares 22 `R8_UINT` shading-rate images (12.0 MiB, tiled, no UBWC), that
+the extension is exposed for every a7xx, and that the driver's only involvement is four
+register groups and a cache invalidate per subpass - there is no driver-side knob, so no
+A/B, and the rates belong to the application. What is not measured is whether any of those
+images is ever attached; the check is one driver log line and a game run, blocked on memory
+with the rig.
 
 Open in the same surface but a different kind - the report rather than the command stream:
 what the game does when the driver tells it there is less memory than the heap it reports
