@@ -79,13 +79,17 @@ and have no file - the queue owns those numbers), full discussion in
 | `scripts/sweep-8bpp-grid.sh` | runs `tp8bpp` over metadata grids through `TU_8BPP_UBWC` (works only on the exp-17 build) |
 | `scripts/run-test.sh`, `scripts/run-b2i-matrix.sh`, `scripts/run-game.sh`, `scripts/fps-window.py`, `scripts/curate-game-log.sh` | running the test, the mode matrix, the game, the fps window |
 | `scripts/fdperf-sample.sh`, `scripts/fdperf-analyze.py`, `scripts/fdperf-align.py`, `tools/fdperf/fdperf-windowed-delta.patch` | profiling (see `docs/fdperf-a7xx.md`) |
-| `tools/fdperf/fdperf.cfg`, `tools/fdperf/fdperf.cfg-vertex`, `tools/fdperf/fdperf.cfg-vpc` | the three counter sets: "who owns the wall", "who owns DRAM and the vertex fetch", and "what is the vertex path busy with" (the last one **NOT RUN**; each header names its hw budget use and what had to be left out) |
+| `scripts/fdperf-vpc-ratios.py`, `scripts/fdperf-tse-ratios.py`, `scripts/fdperf-vpcram-ratios.py` | the steady-window ratio tables for the three cuts of the vertex path: the vertex-path ratios (VPC split, PC/VFD/UCHE coupling, DRAM by client), the TSE-discard ratios (visible/input, the reason counters, VSC busy and tiles fed), and the VPC's own memory system (`VPCRAM_FULL`, `WIT_FULL`, `LM_*`). Each prints a counter it cannot see as missing rather than as 0 |
+| `scripts/fdperf_sections.py` | the one dump loader behind those three: separates the ordinary counter groups from their `BV_*` twins (`a7xx_perfcntrs.json`) so a BV-only name is never read as the block's own, and drops `u64`-wrapped window deltas (`2**64-82` seen in `fdperf-cbbase`) instead of averaging them |
+| `tools/fdperf/fdperf.cfg`, `tools/fdperf/fdperf.cfg-vertex`, `tools/fdperf/fdperf.cfg-vpc`, `…-vpc2`, `…-vpc3`, `…-cfg-tse`, `…-cfg-tse2`, `…-cfg-tse3` | the counter sets: "who owns the wall", "who owns DRAM and the vertex fetch", "what is the vertex path busy with", "why the VPC is busy" (the `WORKING`/cross-block-wait half of the same budget), "is the VPC's own RAM the limit", "how many primitives does TSE throw away", "why", and "is anything binned at all" (`VSC_BUSY` + `VSC_INPUT_TILES`). The TSE cuts and the VPC cuts split hardware budgets of 4 and 6 and cannot be merged into one run; each header names its budget use and what had to be left out |
+| `results/fdperf-<cfg>-<tag>/` | one directory per 21.11 game run (`fdperf-raw.txt` + `fdperf-per-window.tsv`), the artifacts every ratio table in journal 40 is re-cut from; `results/fps-<tag>.csv` is the matching MangoHud file |
 | `scripts/build-turnip*.sh`, `scripts/build-test.sh`, `container/` | building the driver and the test (there is no compiler on the device). `build-test.sh` installs the toolchain only if the image lacks it - on 20.11 a failed Fedora mirror download broke the build although the image had gcc and the headers |
 
 ## Logs that are cited as evidence
 
 | log | what it proves |
 |---|---|
+| `results/game-patched.log` | journals 8 and 9: the patched driver failing `vkCreateInstance`, and the same run after rebuilding with WSI. Care, learned 21.11: `scripts/run-game.sh` without `TAG=` writes here, so a bare run overwrites a cited artifact - always pass `TAG=`, and re-cut this file from git if it was clobbered |
 | `results/test-b2isync-{0..15}.log` | the exp-15 mode matrix |
 | `results/test-BCcopy-i2b*.log` | 91/91 for i2b |
 | `results/test-BCcopy-0013cand*.log` | 91/91 for b2i (both forms) |
@@ -134,6 +138,10 @@ contains X in a form that applies to Mesa 27.0-devel". Owned by journal 30.
 | `results/external/sherft2607-turnip-adreno722-duo/repo-tree.txt` | the file list with byte sizes and which files that builder applies, from the GitHub tree API (`766b5ef7034f`), plus the stack grouped by kind |
 | `…/30-tu-z-mutable.py`, `…/33-tu-z-bgra-swap.py.off`, `…/34-tu-z-mutable-swap.py.off`, `…/35-tu-z-mutable-safe.py.off`, `…/37-tu-z-bgra-companion.py.off` | the five mutable/BGRA-related scripts, captured byte-for-byte with `curl`; the sizes match the ones the API reports |
 | `…/apply-check.txt` | the dry run of those five against six source files of `../mesa27-src`: which anchors land, which do not, with the command to regenerate |
+| `results/external/winnative-emu-drivers/tree.txt`, `…/size-check.txt`, `…/capture.txt` | the Drivers tree pinned at `c71f600a2977` (35 blobs / 331161 B) with the byte sizes the API reports, the list of which of those files were captured (20, all matching their size) and the commands to redo the capture |
+| `…/winnative-emu-drivers/{README.md,MAINTENANCE.md,verify_patches.sh,build_turnip.sh,build_wn_turnip.sh,build_linux_turnip.sh,build-linux-turnip.yml,release_notes.py}` | the stack's own description: variants, per-patch upstream status, the CI assertion that every patch landed, the Android and Linux build recipes |
+| `…/winnative-emu-drivers/patches/{apply_a7xx_gen2_ubwc_hint.py,apply_a7xx_gen1_quirks.py,apply_balance_variant.py,apply_perf_variant.py,disable_64b_image_atomics.py,add_ubwc_swapchain_usage.py,apply_a8xx_gpus.py,fix_a8xx_dev_info.py}`, `…/linux/{README.md,patch_mesa.py,package.py,verify_patches.py,verify_packages.py}` | the patch scripts themselves, byte-for-byte, as the input to journal 30's mapping table |
+| `results/external/winnative-emu-components/{tree.txt,size-check.txt,capture.txt,README.md,VKD3D/README.md,DXVK/README.md,Proton/README.md,contents.json,default.json}` | the Components tree at `3b7c0efdb9c4` (23 blobs / 669318 B) and its catalog: the layers above the driver (box64, DXVK, vkd3d-proton x86 and ARM64EC, FEXCore, Proton); the `.wcp` packages are release assets, not repository files |
 
 ## Key numbers and where they are owned
 

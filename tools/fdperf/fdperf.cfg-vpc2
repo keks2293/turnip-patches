@@ -1,0 +1,106 @@
+// fdperf.cfg-vpc2 - the second half of the VPC budget: WHY the VPC is busy, not what it produced.
+//
+// fdperf.cfg-vpc spends six VPC slots on BUSY/VS_BUSY/PS_BUSY/SP_COMPONENTS/
+// NUM_VPCRAM_WRITE/LM_FULL_WAIT and answered on 21.11 (results/fdperf-vpc-vpcbase*/,
+// scripts/fdperf-vpc-ratios.py):
+//   * VPC_BUSY 90.3-91.0% of 680 MHz, VS_BUSY/VPC_BUSY 92.7-96.8%, PS_BUSY/VPC_BUSY
+//     91.8-92.1% - the two sides overlap, they are not a partition of BUSY;
+//   * NUM_VPCRAM_WRITE 2.62 per PC_VS_INVOCATIONS, SP_COMPONENTS 0.89 per invocation;
+//   * UCHE_WRITE_REQUESTS_VPC = 0.0 M/s in all three base runs, and the XML gives the VPC
+//     client no read counter at all (`UCHE_WRITE_REQUESTS_VPC' is value 16; the fetch
+//     client is VFD, values 5 and 10) - so "VPC traffic through L2" is not a question
+//     these counters can ask, and cfg-vpc2 does not spend a slot trying;
+//   * LM_FULL_WAIT_FOR_INTP_END/VPC_BUSY 1.07-1.19% - interpolation is not waiting;
+//   * the other side of the coupling, measured in the same sample sets: PC_STALL_CYCLES_VPC/
+//     PC_BUSY 68.1-69.0%, VFD_STALL_CYCLES_VPC_ALLOC/VFD_BUSY 12.4-12.6%,
+//     VFD_STARVE_CYCLES_UCHE/VFD_BUSY 55.9-56.1%, UCHE VBIF latency 147-161 cycles/access.
+//
+// What is still open, and what this cfg asks: the 17.11 observation
+// VPC_WORKING/VPC_BUSY = 66.9-69.9%, i.e. about a third of "busy" is not "working".  The
+// XML describes neither counter (both are `value="N"' entries with no unit), so the pair is
+// a question, not a finding.  Slot 0/1 put WORKING back next to BUSY; slots 2-5 name the
+// four waits that point at another block - VFD write-ack (3), HLSQ primitive allocation (4),
+// SP local memory (6), SP starve (7).  PC/VFD/UCHE/SP/TSE blocks are copied unchanged from
+// cfg-vpc so the two runs land in one table.
+//
+// Not here (budget, another run = cfg-vpc3): VPC_VPCRAM_FULL_CYCLES (23),
+// VPC_WIT_FULL_CYCLES (22), VPC_STALL_CYCLES_VPCRAM_POS (11), VPC_NUM_VPCRAM_READ_POS (21),
+// VPC_NUM_LM_REQ_HIT (38), VPC_STALL_CYCLES_LM_ACK (40) - the "is VPC RAM itself the limit"
+// question.  If VFD_WACK/SP_LM/HLSQ_PRIM_ALLOC come back ~0 and WORKING stays at ~68%,
+// cfg-vpc3 is the only place left inside the block.
+//
+// Run:
+//   scripts/fdperf-sample.sh <sec> <window-ms> <file> tools/fdperf/fdperf.cfg-vpc2
+// then scripts/fdperf-analyze.py <file> <tsv>; the VPC/PC/UCHE columns named below
+// are in the analyzer's TRAFFIC table (added with this cfg) and come out per
+// second; busy% comes from the BUSY table as usual.
+
+FD740 = {
+  CP = {
+    counter0  = 0;    // reserved (ALWAYS_COUNT, frequency)
+    counter1  = 2;    // PERF_CP_BUSY_CYCLES
+    counter2  = 15;   // PERF_CP_SQE_IDLE
+    counter3  = 11;   // PERF_CP_CONTEXT_DONE
+    counter4  = 9;    // PERF_CP_MODE_SWITCH
+  }
+
+  RBBM = {
+    counter0 = 1;    // PERF_RBBM_ALWAYS_ON (divisor for the duty cycle)
+    counter1 = 9;    // PERF_RBBM_VBIF_BUSY
+    counter2 = 12;   // PERF_RBBM_UCHE_BUSY
+  }
+
+  UCHE = {
+    counter0  = 0;    // PERF_UCHE_BUSY_CYCLES
+    counter1  = 1;    // PERF_UCHE_STALL_CYCLES_ARBITER
+    counter2  = 2;    // PERF_UCHE_VBIF_LATENCY_CYCLES
+    counter3  = 3;    // PERF_UCHE_VBIF_LATENCY_SAMPLES
+    counter4  = 27;   // PERF_UCHE_VBIF_READ_BEATS_CH0
+    counter5  = 28;   // PERF_UCHE_VBIF_READ_BEATS_CH1
+    counter6  = 4;    // PERF_UCHE_VBIF_READ_BEATS_TP
+    counter7  = 9;    // PERF_UCHE_READ_REQUESTS_TP
+    counter8  = 8;    // PERF_UCHE_VBIF_READ_BEATS_SP
+    counter9  = 13;   // PERF_UCHE_READ_REQUESTS_SP
+    counter10 = 15;   // PERF_UCHE_WRITE_REQUESTS_SP
+    counter11 = 16;   // PERF_UCHE_WRITE_REQUESTS_VPC
+  }
+
+  VFD = {
+    counter0 = 0;    // PERF_VFD_BUSY_CYCLES
+    counter1 = 2;    // PERF_VFD_STALL_CYCLES_VPC_ALLOC (the VPC backpressure, 12.5% in cfg-vertex)
+    counter2 = 5;    // PERF_VFD_STARVE_CYCLES_UCHE
+    counter3 = 8;    // PERF_VFD_DECODED_ATTRIBUTE_BYTES
+    counter4 = 9;    // PERF_VFD_NUM_ATTRIBUTES
+    counter5 = 17;   // PERF_VFD_TOTAL_VERTICES
+  }
+
+  PC = {
+    counter0 = 0;    // PERF_PC_BUSY_CYCLES
+    counter1 = 2;    // PERF_PC_STALL_CYCLES_VFD
+    counter2 = 4;    // PERF_PC_STALL_CYCLES_VPC (the 63% of the 17.11 run)
+    counter3 = 19;   // PERF_PC_VERTEX_HITS (the reuse behind 2.9:1, first time measured)
+    counter4 = 20;   // PERF_PC_IA_VERTICES
+    counter5 = 21;   // PERF_PC_IA_PRIMITIVES
+    counter6 = 25;   // PERF_PC_VS_INVOCATIONS
+    counter7 = 28;   // PERF_PC_3D_DRAWCALLS
+  }
+
+  VPC = {
+    counter0 = 0;    // PERF_VPC_BUSY_CYCLES
+    counter1 = 1;    // PERF_VPC_WORKING_CYCLES  <- the 66.9-69.9% of 17.11, re-measured
+    counter2 = 3;    // PERF_VPC_STALL_CYCLES_VFD_WACK
+    counter3 = 4;    // PERF_VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC
+    counter4 = 6;    // PERF_VPC_STALL_CYCLES_SP_LM
+    counter5 = 7;    // PERF_VPC_STARVE_CYCLES_SP
+  }
+
+  TSE = {
+    counter0 = 6;    // PERF_TSE_INPUT_PRIM (the denominator of vertices/primitive)
+  }
+
+  SP = {
+    counter0 = 0;    // PERF_SP_BUSY_CYCLES
+    counter1 = 48;   // PERF_SP_EXPORT_VPC_TRANS (SP->VPC transactions, the other
+                     // side of the varyings traffic)
+  }
+}

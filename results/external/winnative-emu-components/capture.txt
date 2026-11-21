@@ -1,0 +1,9 @@
+# How this folder was captured (21.11.2026)
+#
+#   curl -sS "https://api.github.com/repos/WinNative-Emu/Components/git/trees/HEAD?recursive=1" -o tree.json
+#   for f in README.md VKD3D/README.md DXVK/README.md Proton/README.md contents.json default.json; do
+#       curl -sS "https://raw.githubusercontent.com/WinNative-Emu/Components/3b7c0efdb9c4/$f" -o "$f"; done
+#
+# Not captured: .github/workflows/nightly-{box64,dxvk,fexcore,vkd3d}.yml (the build recipes),
+# patch/*.patch, tools/*.py - the tree listing with sizes is in tree.txt.
+# The .wcp component packages are GitHub release assets, not files in the repository.

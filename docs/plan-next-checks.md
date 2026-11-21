@@ -767,6 +767,20 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     12 and 13 on the same thing: the memory wall of this machine (7.32 GiB, the browser has to be
     closed before `scripts/run-game.sh`).
 
+**Closed 21.11, journal 40.6** - the game cannot be put on DX11 by any route tried here. The command line
+carries no DX-flavoured flag: `grep -a -o -E '.{0,18}-[a-zA-Z_]*dx[12][12]?.{0,18}'` over the
+233690016-byte `re4.exe` prints nothing, and `via.render.RenderDeviceAPI` / `DirectX11` / `DirectX12`
+appear only as the reflection enum. Launching with `GAMEARGS="-dx11"`, with `GAMEARGS="-forceDX11"`, and
+with `WINEDLLOVERRIDES='d3d12='` (the dll disabled, so neither vkd3d-proton nor a wine builtin can be
+loaded) left all three runs on D3D12: `results/game-patched-dx11dx11.log`, `…-dx11forceDX11.log` and
+`…-d3doff.log` each still contain `d3d12_device_create_vkd3d_queues`, and the game rewrites
+`Capability=DirectX12` into `local_config.ini`. Renaming the prefix's `d3d12.dll`/`d3d12core.dll` was
+rejected without running it: that would route the game to wine's own D3D12-on-wined3d, which answers
+nothing about DXVK. `VKD3D_FEATURE_LEVEL` is closed as a lever separately (journal 40.6): vkd3d-proton
+v3.1's `d3d12_device_caps_override` only raises capabilities and assigns `max_feature_level`, and `11_1`
+against `12_1` measured identical to 0.1 point on every block ratio. The API-isolation check stays closed
+until a title that can choose its API is on this machine.
+
 15. **The VPC/varyings question, and the counters that can actually ask it** (cfg written 21.11;
     one game session, shared with 12/13/14). Two claims were put forward as the next lever: ir3
     leaving non-position work in the *binning* vertex shader (so VFD and VPC pay per mesh twice),
@@ -852,6 +866,109 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     queue 15 is the only vertex question left. If fps moves, the number belongs in `docs/release.md` as
     the first measured gain of a shipped patch - and the run is invalid unless the inventory of that
     same build still reports the same 2450.3 MiB tiled, checked with the script above.
+
+17. **The autotune cost model, nudged the way an outside build nudges it** (journal 30's
+    addition; one line, one build, and a probe first that needs neither).
+    `WinNative-Emu/Drivers` ships a "-b (balance)" variant whose only Turnip change left over from
+    upstream restructurings is the GMEM bandwidth multiplier: `apply_balance_variant.py` rewrites
+    ```c
+    gmem_bandwidth = (gmem_bandwidth * 11 + total_draw_call_bandwidth) / 10;
+    ```
+    (`../mesa27-src/src/freedreno/vulkan/tu_autotune.cc:1065`, whose own comment says "The magic
+    numbers of 11 and 10 are randomly chosen") to `* 10`. That is not a bandwidth change: it moves
+    the estimate from `1.1g + 0.1d` to `g + 0.1d`, so the `select_sysmem = sysmem_bandwidth <=
+    gmem_bandwidth` decision at `:1066` shifts by 10 % of the pass' GMEM bandwidth **towards GMEM**.
+    Their other tweak, `drawcall_count > 5`, does not exist in this tree - the gate is now
+    `mod_flag::BIG_GMEM && rp_state->drawcall_count >= 10` (`:1881`) with the old `< 5` living in
+    `ignore_small_rp` (`:1862`) - which is also their own MAINTENANCE.md note, verified here.
+
+    Step 0, before any build of the tweak: does RE4 ever select SYSMEM at all? The decision is
+    printed only by `at_log_bandwidth_h`, and that is behind the compile-time
+    `TU_AUTOTUNE_DEBUG_LOG_BANDWIDTH 0` (`tu_autotune.cc:25-30`), so there is no env way to see it -
+    it needs an `exp-24` hook (flip that one constant, NOT FOR SHIP) and one session, then count the
+    `autotune-bw <hash>: selecting SYSMEM|GMEM` lines per render-pass hash. If the game never picks
+    SYSMEM, the tweak is inert for RE4 by construction and this item closes without a second build.
+
+    Pre-registered reading if step 0 does show SYSMEM passes: only decisions inside that 10 % band
+    can flip, so a zero is the likely answer - and the direction is one this machine has already
+    paid for: journal 15.5 measured `TU_AUTOTUNE_FLAGS=big_gmem` at -1.5 fps (about -12 %) on this
+    game, i.e. "more GMEM" is the harmful side, not the neutral one. A gain would be the first
+    measured fps gain from an autotune change here, and would need the opposite nudge (`* 12`) to
+    show that the direction is the mechanism rather than run noise.
+
+18. **The TSE discard: 71.9 % of the primitives die after the vertex path, so where can a reject move?**
+    (journal 40.2; two cheap runs and one decision, no build). Measured on the ship stack: TSE input
+    255.19 Mc/s, visible 71.62 Mc/s (28.06 %), and the discard is 21.1 % trivial-reject, 17.7 %
+    face-culled, 27.0 % zero-pixel, 0.33 % zero-area, 0.14 % clipped. Three sub-steps, in order of cost:
+
+    a. **Is the equality real or tautological?** In four dumps `PERF_TSE_INPUT_PRIM` and
+       `PERF_PC_IA_PRIMITIVES` are identical to the sample (ratio 1.0000), which is read as "nothing is
+       discarded between the IA and TSE". It could also be the same counter exposed twice. One run with a
+       cfg that samples only one of them and a known-different second one settles it; until then journal
+       40.2's wording ("two readings, not decided") is the wording to repeat.
+    b. **Repeat `TU_AUTOTUNE_ALGO=prefer_gmem`** (1-2 runs, `fdperf.cfg-tse`, `fdperf-tse-ratios.py`) so
+       that 13.72 against the 15.15-15.24 cluster becomes a number of record instead of a single run -
+       journal 40.4 already shows it does not touch the discard ratio (73.8 % against 71.9 %), so this is
+       about the frame-rate cost, not about the lever.
+    c. **Only then decide where a reject could move.** The driver writes no reject state before TSE that we
+       control: `PC_PRIM_VTX_CNTL` (whose degenerate bits would do it) is not emitted anywhere in
+       `src/freedreno/vulkan/` - `grep -rn PC_PRIM_VTX_CNTL src/freedreno/vulkan/` gives nothing, the state
+       comes from CP microcode - and the degenerate population it would remove does not exist (0.33 %
+       zero-area). The face-cull 17.7 % needs projected area, i.e. post-VS by construction. What is left
+       is the 21.1 % trivial reject (outside the viewport) and the 27.0 % zero-pixel: the first is the only
+       one a driver could in principle move earlier, the second is a property of the mesh, and the honest
+       first experiment for it is a game-settings A/B (mesh quality / LOD bias), not a Mesa patch.
+
+**Closed by measurement and by the source, 21.11, journal 40.2/40.8.** The three sub-steps came back
+this way: (a) the `TSE_INPUT_PRIM == PC_IA_PRIMITIVES` equality holds in four dumps of different cfgs,
+which is either "nothing is discarded before TSE" or the same counter exposed twice - the wording stays
+undecided, but the discard itself is measured (71.9 %, with the reason breakdown of 40.2). (b) The
+`TU_AUTOTUNE_ALGO` arms and the `TU_DEBUG=forcecb` arm all leave `VSC_BUSY` at 0.21-0.65 % of the core
+and the discard at 71.8-73.8 %, and the driconf default in this tree is `tu_allow_concurrent_binning =
+False` (`tu_drirc_gen.py:31`, "the CB is disabled by default because it regresses performance on
+desktop games"), with nothing in `/usr/share/drirc.d/00-turnip-defaults.conf` turning it on: there is no
+binning pass in this workload to hand the geometry to. (c) The varyings question is answered by the
+mechanism, not by a counter: `ir3_link_shaders` (`ir3_shader.h:1387`, called at `tu_pipeline.cc:802`)
+walks the **fragment shader's** inputs and derives `varmask` and `max_loc` ("the size required for each
+vertex in the VPC in DWORD's") from them, so a VS output the FS does not read is neither fetched nor
+counted in the per-vertex size; and the measured payload is small (`VPC_NUM_VPCRAM_WRITE` 2.62 per
+invocation, `VFD_NUM_ATTRIBUTES` 5.08 per vertex). What remains open in this queue item is only the
+semantics of `VPC_PS_BUSY` (no `desc=` in the XML); `fdperf.cfg-vpc3` was run as part of queue 19 below.
+
+19. **Closed 21.11, journal 40.9: the VPC attribute buffer is not a lever.** The premise was that on
+    A740 the sysmem attribute buffer is a too-small 0x20000; in this tree the answer is that our
+    generation never programs one at all. `emit_vpc_attr_buf` (`tu_cmd_buffer.cc:647-652`) returns
+    immediately unless `props.has_gmem_vpc_attr_buf`, and that property with
+    `sysmem_vpc_attr_buf_size = 0x20000` / `gmem_vpc_attr_buf_size = 0xc000` exists only in `a7xx_gen3`
+    (`freedreno_devices.py:854-856`), not in `a7xx_base`/`a7xx_gen2`. Upstream's own probe
+    `TU_FORCE_PROPS=has_gmem_vpc_attr_buf` substitutes those sizes and logs
+    `TU_FORCE_PROPS: vpc_attr_buf_size sysmem=0x20000 gmem=0xc000` (`tu_device.cc:1799-1806`), and the
+    log of `results/fdperf-vpc3-attrbuf/` carries 9 such lines against 0 in the control, so delivery is
+    proved. Measured with `tools/fdperf/fdperf.cfg-vpc3` (`vpc3base` against `attrbuf`,
+    `scripts/fdperf-vpcram-ratios.py`): VPC busy 91.70 % against 90.86 %, `VPCRAM_FULL` 50.84 % against
+    50.82 % of busy, `WIT_FULL` 1.25 % against 1.25 %, `STALL_CYCLES_VPCRAM_POS` 0.44 % against 0.42 %,
+    p25 14.71 against 14.73 fps. Nothing moved, so no `a7xx_gen2` device-props change is proposed. The
+    one number worth keeping from this pair is `VPC_VPCRAM_FULL_CYCLES` at ~51 % of the VPC's busy time:
+    the largest single named component of the wall found so far, and it does not respond to the
+    attribute buffer. `STALL_CYCLES_LM_ACK` and `NUM_LM_REQ_HIT` read exactly 0 in both arms, so the LM
+    hit rate is `NOT MEASURED` rather than 0 %.
+
+20. **Program the `BV_*` counter groups explicitly** (one cfg and two runs, no build; journal 40.8
+    found the question). The dump's second half is the `BV_*` group set of
+    `src/freedreno/registers/adreno/a7xx_perfcntrs.json` - `BV_VPC` (num 6, `select_offset` 6), `BV_TSE`
+    (num 4), `BV_PC`, `BV_VFD`, `BV_TP`, `BV_SP`, `BV_UFC`, `BV_RAS`, `BV_LRZ`, `BV_HLSQ`, `BV_CP` - and
+    each twin's countable list is the same enum as the ordinary group's. Left unprogrammed they print
+    what they print: medians of 0.02-0.08 % of the core for `BV_VPC`/`BV_TSE`/`BV_LRZ`, and
+    `BV_TP_BUSY_CYCLES` at 950-967 % of a one-second window, which is not a usable busy fraction and is
+    not decided. `fdperf.c`'s `config_restore()` resolves every group of `fd_perfcntrs()` by name in the
+    cfg, so a `BV_VPC = { ... }` / `BV_TSE = { ... }` section should program the BV select registers
+    directly. Arms: that cfg with the default drirc (CB off) and with `TU_DEBUG=forcecb`. Reading fixed
+    now: if the BV counters stay ~0 in the `forcecb` arm too, the CB direction is closed at counter level
+    with a direct measurement instead of the VSC-tile proxy; if they become real numbers, the BV thread
+    is doing geometry work that the ordinary VPC/TSE counters do not show, and the discard question of
+    journal 40.2 has to be re-asked per thread. Budget caveat to check first: the BV groups may or may
+    not share the ordinary group's hw budget - `select_offset` 6 for VPC suggests they do not, and a set
+    that exceeds a budget is silently ignored (docs/fdperf-a7xx.md, "silent-ignore").
 
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2

@@ -1,0 +1,17 @@
+# How this folder was captured (21.11.2026, from a machine with network access to api.github.com)
+#
+#   SHA=$(curl -sS https://api.github.com/repos/WinNative-Emu/Drivers/git/trees/main | python3 -c \
+#         'import json,sys;print(json.load(sys.stdin)["sha"])')      # c71f600a2977a141f21a922c9ed2e14fb09b13d3
+#   curl -sS "https://api.github.com/repos/WinNative-Emu/Drivers/git/trees/$SHA?recursive=1" -o tree.json
+#   python3 <inline: tree.json -> repo-tree listing>                 # tree.txt, "size path" per blob
+#   for f in <the files listed in size-check.txt>; do
+#       curl -sS "https://raw.githubusercontent.com/WinNative-Emu/Drivers/$SHA/$f" -o "$f"; done
+#
+# Two paths are only in the tree listing, not fetched: linux/patches/*.patch (105 KB + 4 small),
+# patches/aimapper/u_gralloc_aimapper.c, .github/workflows/build.yml.
+# `patches/verify_patches.sh` does not exist: the root-level `verify_patches.sh` does (2812 B in the
+# tree, 2812 B captured). The 14-byte file first written there was the raw server's "404: Not Found".
+#
+# Releases at capture time (https://api.github.com/repos/WinNative-Emu/Drivers/releases):
+#   v1.19            2026-09-30  WN-Turnip-1.19-{b,p}_Axxx.zip            (Android/bionic, Adrenotools)
+#   linux-v0.1.2     2026-09-29  WN-Linux-Turnip-0.1.2-{b,p}_Axxx.zip     (glibc, aarch64, Wayland/X11)

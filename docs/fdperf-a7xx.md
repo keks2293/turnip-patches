@@ -10,9 +10,16 @@ or geometry/vertices" with per-block kernel counters (not `VK_KHR_performance_qu
 |---|---|
 | `tools/fdperf/fdperf.cfg` | main counter set (libconfig 1.8, see below) |
 | `tools/fdperf/fdperf.cfg-vertex` | vertex set: per-client UCHE (VFD/TP/SP/PC) + full hw budget VFD/PC |
-| `tools/fdperf/fdperf.cfg-vpc` | VPC-pressure set, written 21.11: the VPC budget (6) spent on `VS_BUSY`/`PS_BUSY`, `SP_COMPONENTS`, `NUM_VPCRAM_WRITE` and `LM_FULL_WAIT_FOR_INTP_END`, plus `PC_VERTEX_HITS` and the per-client **write**-request side. **NOT RUN** - queue 15 pre-registers how it is to be read |
+| `tools/fdperf/fdperf.cfg-vpc` | VPC-pressure set, written 21.11: the VPC budget (6) spent on `VS_BUSY`/`PS_BUSY`, `SP_COMPONENTS`, `NUM_VPCRAM_WRITE` and `LM_FULL_WAIT_FOR_INTP_END`, plus `PC_VERTEX_HITS` and the per-client **write**-request side. Run 21.11 as `vpcbase1`, `vpcbase2`, `hpbase`, `hpbase2`, `hp50`, `hp40`, `cb1`, `lrz2`, `fl111`, `fl121`, `nopref` (journal 40) |
+| `tools/fdperf/fdperf.cfg-vpc2` | the other half of the same VPC budget: `WORKING`, `STALL_CYCLES_VFD_WACK`, `STALL_CYCLES_SP_LM`, `STALL_CYCLES_HLSQ_PRIM_ALLOC`, `STARVE_CYCLES_SP`. Run 21.11 as `vpc2b` |
+| `tools/fdperf/fdperf.cfg-vpc3` | "is the VPC's own RAM the limit": `VPCRAM_FULL`, `WIT_FULL`, `STALL_CYCLES_VPCRAM_POS`, `STALL_CYCLES_LM_ACK`, `NUM_LM_REQ_HIT`. First runs 21.11 23:14 (`vpc3base`, `attrbuf`, queue 19) |
+| `tools/fdperf/fdperf.cfg-tse`, `tools/fdperf/fdperf.cfg-tse2`, `tools/fdperf/fdperf.cfg-tse3` | the TSE question in three cuts of one **4-counter** TSE budget plus the 2-counter VSC budget: how much geometry TSE throws away (`INPUT_PRIM`, `OUTPUT_VISIBLE_PRIM`, `ZERO_PIXEL_PRIM`), why (`TRIVAL_REJ`, `ZERO_AREA`, `FACENESS_CULLED`, `CLIPPED`), and whether a binning pass exists at all (`VSC_BUSY` + `VSC_INPUT_TILES`). They cannot be merged into one run, and each header says so |
 | `tools/fdperf/fdperf-windowed-delta.patch` | fix for the `-d` window in `fdperf.c` (see section Windows) |
 | `scripts/fdperf-sample.sh [sec] [window-ms] [file] [cfg]` | background sampler: loop `sudo fdperf -r <window> -d` |
+| `scripts/fdperf_sections.py` | the one loader for dumps, shared by the three ratio scripts: splits the ordinary groups from their `BV_*` twins, drops `u64`-wrapped window deltas and `[invalid]`, and reports which names came only from the BV half |
+| `scripts/fdperf-vpc-ratios.py <dump> [lo] [hi]` | the vertex-path ratios (VPC split, PC/VFD/UCHE coupling, DRAM by client); a counter the cfg did not program prints as `nan`, never as 0 |
+| `scripts/fdperf-tse-ratios.py <dump> [lo] [hi]` | the TSE-discard ratios (visible/input, the reason counters, VSC busy and tiles fed) |
+| `scripts/fdperf-vpcram-ratios.py <dump> [lo] [hi]` | the VPC's own memory system (`VPCRAM_FULL`, `WIT_FULL`, `STALL_CYCLES_VPCRAM_POS`, `LM_ACK`, `LM_REQ_HIT`) - a table for the `cfg-vpc3` half of the budget, which no other script can read |
 | `scripts/fdperf-analyze.py <file> [tsv] [--freq MHz]` | per-window busy%/latencies/traffic |
 | `scripts/fdperf-align.py <tsv> <freq-track> <csv> <csv-start>` | overlay windows onto the MangoHud CSV and cur_freq |
 | `build/out/fdperf` | binary (Mesa 27, `meson -Dtools=freedreno`, build - in `docs/mesa-27-plan.md`) |
@@ -22,12 +29,29 @@ Run artifacts (RE4, Mesa 27):
   `fdperf-per-window.tsv`, `freq-trace.txt`, `fps.csv`, `steady-state.txt`;
 - `results/fdperf-mesa27-vertex/` (17.11 18:01, cfg-vertex, per-client):
   the same + `aligned.txt`; `steady-state.txt` - DRAM split by client.
-- Nothing has been measured with `fdperf.cfg-vpc` yet. What the two runs above already answer
-  without a new session - `VPC_VS_BUSY/VPC_BUSY` at 92.8-96.4 % with `PS_BUSY` never measured,
-  1.03 vertices fetched per input primitive against 3 submitted, `VPC_NUM_ATTR_REQ_LM` at 0.50 per
-  vertex - is journal 38, which also records that the window filter written in
-  `steady-state.txt` is not exactly reproducible (35 windows selected, 33 recorded) and that only
-  ratios inside one sample set travel between runs.
+- `results/fdperf-vpc-vpcbase1/` and the other `results/fdperf-{vpc,vpc2,vpc3,tse,tse2,tse3,tse-algo}-*/`
+  directories (21.11, one per run, `fdperf-raw.txt` + `fdperf-per-window.tsv`): what they answer is
+  journal 40 - the vertex-path split, the TSE discard, the CB/VSC question and the VPC's own RAM.
+- What the 17.11 pair already answered without a new session - `VPC_VS_BUSY/VPC_BUSY` at 92.8-96.4 %
+  with `PS_BUSY` never measured, 1.03 vertices fetched per input primitive against 3 submitted,
+  `VPC_NUM_ATTR_REQ_LM` at 0.50 per vertex - is journal 38, which also records that the window filter
+  written in `steady-state.txt` is not exactly reproducible (35 windows selected, 33 recorded) and that
+  only ratios inside one sample set travel between runs. Journal 40 adds the second half of that
+  warning: the game start is not content-synchronised, so two runs can be in different content at the
+  same `t_rel`. The `cbbase`/`cbforce` pair of 21.11 is the example - VPC busy 68.9 % and 81.8 % there
+  against 90.6-92.4 % in every other run of the day - and its absolute values are not comparable with
+  the rest even though its within-pair comparison is.
+- Two `PERF_VSC_*` selectors need care. `VSC_EOT_NUM` (value 3) reads 0.0/s over all 40 windows of a
+  run where `VSC_BUSY` in the same windows is 2.57 Mc/s (`results/fdperf-tse2-tse2/`) - no signal.
+  `VSC_INPUT_TILES` (value 4) works and is the counter that answers "is anything being binned at all":
+  medians 56/s with CB off against 1,532/s under `TU_DEBUG=forcecb` (`results/fdperf-tse3-cbbase/`,
+  `-cbforce`, journal 40.8), but it is an *event* counter (print it per second, never as a share of the
+  core) and one window in 70 of `cbbase` came back as `18446744073709551290` = 2**64 - 82, a negative
+  delta imaged as unsigned; averaged as printed it turns a few hundred into 4.5e11, which is how a
+  working selector got written up as a broken one on 21.11. `scripts/fdperf_sections.py` drops such
+  values and counts them. `VSC_BUSY_CYCLES` (0) and `VSC_STALL_CYCLES_UCHE` (2) respond normally. The
+  same "exactly 0" behaviour was seen for `VPC_STALL_CYCLES_LM_ACK` (40) and `VPC_NUM_LM_REQ_HIT` (38)
+  in both arms of journal 40.9.
 
 ## Requirements and pitfalls
 
@@ -39,10 +63,23 @@ Run artifacts (RE4, Mesa 27):
 - **libconfig 1.8** (in Fedora 44): the config syntax is incompatible with the
   usual one - groups only via `NAME = { }`, comments `//`, `/* */` and `#`
   (not `;`). `fdperf.cfg` in the repository is a working example.
-- **The second block of lines in the fdperf dump is the BV groups** (BV_SP_*,
-  BV_TP_* - "countable by default", Mesa prints them separately). The analyzer
-  resolves duplicate names as "first occurrence" - the BV lines do not get in
-  the way.
+- **A dump contains the block twice: the ordinary group and its `BV_*` twin.** The group list is
+  `src/freedreno/registers/adreno/a7xx_perfcntrs.json`, which defines `BV_CP`, `BV_PC`, `BV_VFD`,
+  `BV_VPC` (num 6, `select_offset` 6), `BV_TP`, `BV_SP`, `BV_UFC`, `BV_TSE` (num 4), `BV_RAS`,
+  `BV_LRZ`, `BV_HLSQ` after the ordinary groups; "BV" is the binning/visibility (CB) thread. Each twin
+  uses the *same* countable enum as its ordinary group (`"type": "a7xx_vpc_perfcounter_select"` for
+  both `VPC` and `BV_VPC`), so one sample prints `PERF_VPC_BUSY_CYCLES` twice - 621,619,685 (91.41 %)
+  ordinary and 458,806 (0.07 %) BV in `results/raw/fdperf-vpc3base.txt`. Reading rules: the ordinary
+  group's value is the first occurrence; a name that occurs *only* after the split (`VPC_WORKING_CYCLES`
+  in a `cfg-vpc3` run) is a BV counter and is not the ordinary block's number; the BV copies are
+  meaningful in their own right but small here (medians 0.02-0.08 % of the core, journal 40.8), and
+  `BV_TP` `TP_BUSY_CYCLES` reads 950-967 % of a one-second window and is not usable as a busy fraction.
+  All three ratio scripts implement the split through `scripts/fdperf_sections.py`; `scripts/fdperf-analyze.py`
+  predates it and takes the first occurrence, which is the ordinary group - fine for its own tables, not
+  for a counter the cfg did not program.
+- **A cfg can address the BV groups** - `fdperf.c`'s `config_restore()` looks up every group of
+  `fd_perfcntrs()` by name in the cfg, so `BV_VPC = { counter0 = 0; ... }` is addressable - never tried
+  here, queue 20 of `docs/plan-next-checks.md`.
 
 ## Windows: why the patch and what the label interval means
 

@@ -1,0 +1,10 @@
+# captured files vs the GitHub tree API sizes (winnative-emu-components, sha 3b7c0efdb9c49ec289367b325db2dc79785acd87)
+
+OK          881 DXVK/README.md
+OK          633 Proton/README.md
+OK         4275 README.md
+OK          652 VKD3D/README.md
+OK        24035 contents.json
+OK         2043 default.json
+
+captured and matching: 6, size mismatch: 0, not captured: 17

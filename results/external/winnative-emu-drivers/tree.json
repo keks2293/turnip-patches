@@ -1,0 +1,329 @@
+{
+  "sha": "c71f600a2977a141f21a922c9ed2e14fb09b13d3",
+  "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/trees/c71f600a2977a141f21a922c9ed2e14fb09b13d3",
+  "tree": [
+    {
+      "path": ".github",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "708822ef19c282d5e0493a766941ae7be3db1370",
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/trees/708822ef19c282d5e0493a766941ae7be3db1370"
+    },
+    {
+      "path": ".github/workflows",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "994d255cc507c487adda8ef2e7767060b7e5e00f",
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/trees/994d255cc507c487adda8ef2e7767060b7e5e00f"
+    },
+    {
+      "path": ".github/workflows/build-linux-turnip.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fd3ccb4b37ab0bee617cf39ef8a45de29894469d",
+      "size": 5873,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/fd3ccb4b37ab0bee617cf39ef8a45de29894469d"
+    },
+    {
+      "path": ".github/workflows/build.yml",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "aefdc28d71c634386fc1838c75c6a8dcf8b68568",
+      "size": 12474,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/aefdc28d71c634386fc1838c75c6a8dcf8b68568"
+    },
+    {
+      "path": ".gitignore",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "daec8513573f0e7dcfaf499efc7cbb46b46db820",
+      "size": 332,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/daec8513573f0e7dcfaf499efc7cbb46b46db820"
+    },
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+      "size": 35149,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/f288702d2fa16d3cdf0035b15a9fcbc552cd88e7"
+    },
+    {
+      "path": "MAINTENANCE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9967860f34177b0623a4640a361c5955ad9f5b6e",
+      "size": 10236,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/9967860f34177b0623a4640a361c5955ad9f5b6e"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9a454647b82817924d70c5ff509d76878aa09914",
+      "size": 11102,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/9a454647b82817924d70c5ff509d76878aa09914"
+    },
+    {
+      "path": "build_linux_turnip.sh",
+      "mode": "100755",
+      "type": "blob",
+      "sha": "bb8f090ef4bba7c1aac0db0df98d5884b8d9efc1",
+      "size": 3509,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/bb8f090ef4bba7c1aac0db0df98d5884b8d9efc1"
+    },
+    {
+      "path": "build_turnip.sh",
+      "mode": "100755",
+      "type": "blob",
+      "sha": "4bddc8234294e459d8e766ad5d614bef805f85d1",
+      "size": 9050,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/4bddc8234294e459d8e766ad5d614bef805f85d1"
+    },
+    {
+      "path": "build_wn_turnip.sh",
+      "mode": "100755",
+      "type": "blob",
+      "sha": "fc62ceb2fc205ba05a49be492ea11aa69f206bd0",
+      "size": 2687,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/fc62ceb2fc205ba05a49be492ea11aa69f206bd0"
+    },
+    {
+      "path": "linux",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "15e2e2d831e5d7e0c950fb761b3c60f8ea117d5b",
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/trees/15e2e2d831e5d7e0c950fb761b3c60f8ea117d5b"
+    },
+    {
+      "path": "linux/README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4038b530bed6f826ea3a3af13961eeafaa4e4678",
+      "size": 7685,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/4038b530bed6f826ea3a3af13961eeafaa4e4678"
+    },
+    {
+      "path": "linux/package.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5090730eb64fb123367bbba4a56da74b28c48fed",
+      "size": 955,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/5090730eb64fb123367bbba4a56da74b28c48fed"
+    },
+    {
+      "path": "linux/patch_mesa.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9528726184cd64d7a730cdd67e64d3a0117c30e6",
+      "size": 2358,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/9528726184cd64d7a730cdd67e64d3a0117c30e6"
+    },
+    {
+      "path": "linux/patches",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "6de210d65be42aad92e5cc040bc3284ae0a74650",
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/trees/6de210d65be42aad92e5cc040bc3284ae0a74650"
+    },
+    {
+      "path": "linux/patches/0001-tu-Emulate-VK_EXT_mesh_shader-with-compute.patch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "846d568e88884b1011c454fd74e1cfc987df79c1",
+      "size": 105680,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/846d568e88884b1011c454fd74e1cfc987df79c1"
+    },
+    {
+      "path": "linux/patches/0002-tu-ir3-Support-a-required-subgroup-size-of-half-a-wa.patch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6026807829eacd3ea8d676e6d09c91f62fd7efef",
+      "size": 19099,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/6026807829eacd3ea8d676e6d09c91f62fd7efef"
+    },
+    {
+      "path": "linux/patches/0003-ir3-Sanitize-cube-map-directions-on-A8XX.patch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8224bf9a7897b353915b75250ed98143825b9b60",
+      "size": 4813,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/8224bf9a7897b353915b75250ed98143825b9b60"
+    },
+    {
+      "path": "linux/patches/0004-tu-Invalidate-bindless-descriptors-through-the-A8XX-.patch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d398e612a2f8e5d4564eb25ecf528c0f82000f3b",
+      "size": 4244,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/d398e612a2f8e5d4564eb25ecf528c0f82000f3b"
+    },
+    {
+      "path": "linux/patches/0005-tu-kgsl-Fetch-A8XX-command-streams-through-a-virtual.patch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "84af0e15e2587865abad81f33889876981abbdad",
+      "size": 4803,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/84af0e15e2587865abad81f33889876981abbdad"
+    },
+    {
+      "path": "linux/patches/0006-tu-kgsl-Cache-retired-A8XX-IB-storage.patch",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a02b786fd196a3b838b6aa8fa87dc6711812737c",
+      "size": 7346,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/a02b786fd196a3b838b6aa8fa87dc6711812737c"
+    },
+    {
+      "path": "linux/release_version.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3ca4d18bae32a5652e166c2e1134b0c585ebd8e8",
+      "size": 622,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/3ca4d18bae32a5652e166c2e1134b0c585ebd8e8"
+    },
+    {
+      "path": "linux/test_release_version.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "45f5b77802dd535d30954cc3c9b1085870b6ddcd",
+      "size": 991,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/45f5b77802dd535d30954cc3c9b1085870b6ddcd"
+    },
+    {
+      "path": "linux/verify_packages.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3dc63269055a545228ce9f5839dea4dd24ac2ef1",
+      "size": 1967,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/3dc63269055a545228ce9f5839dea4dd24ac2ef1"
+    },
+    {
+      "path": "linux/verify_patches.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "953826a7033036a702bf01d1659356099568f9f5",
+      "size": 2147,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/953826a7033036a702bf01d1659356099568f9f5"
+    },
+    {
+      "path": "patches",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "4d63c2c3c4a2698c85849e86dee7ba8b32c63884",
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/trees/4d63c2c3c4a2698c85849e86dee7ba8b32c63884"
+    },
+    {
+      "path": "patches/add_aimapper_gralloc.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3077e2686526ed54230348ee72535c94ba202e63",
+      "size": 4233,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/3077e2686526ed54230348ee72535c94ba202e63"
+    },
+    {
+      "path": "patches/add_ubwc_swapchain_usage.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c805eff5851e89a899b29b1fd4564b12f5ce70d2",
+      "size": 9074,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/c805eff5851e89a899b29b1fd4564b12f5ce70d2"
+    },
+    {
+      "path": "patches/aimapper",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "f4ce759cd918d0defc7c19d29185c2faab4af48d",
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/trees/f4ce759cd918d0defc7c19d29185c2faab4af48d"
+    },
+    {
+      "path": "patches/aimapper/u_gralloc_aimapper.c",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "339aea8602b85c7567080bafaa4cc126b8d35869",
+      "size": 19730,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/339aea8602b85c7567080bafaa4cc126b8d35869"
+    },
+    {
+      "path": "patches/apply_a7xx_gen1_quirks.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "408f7af1294d7e94018c7531eb1f0e52ad04c289",
+      "size": 1931,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/408f7af1294d7e94018c7531eb1f0e52ad04c289"
+    },
+    {
+      "path": "patches/apply_a7xx_gen2_ubwc_hint.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0299892fd1780e84018228dfd0ff505fae1292ae",
+      "size": 1590,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/0299892fd1780e84018228dfd0ff505fae1292ae"
+    },
+    {
+      "path": "patches/apply_a8xx_gpus.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c2f30df539f1eb96706867477bf1b77182d16666",
+      "size": 8007,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/c2f30df539f1eb96706867477bf1b77182d16666"
+    },
+    {
+      "path": "patches/apply_balance_variant.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "652f1350bca36737d38812653d531dbe67a706ae",
+      "size": 1700,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/652f1350bca36737d38812653d531dbe67a706ae"
+    },
+    {
+      "path": "patches/apply_perf_variant.py",
+      "mode": "100755",
+      "type": "blob",
+      "sha": "b825d074a52b47ad016441d1ba4ef179537cf43a",
+      "size": 13274,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/b825d074a52b47ad016441d1ba4ef179537cf43a"
+    },
+    {
+      "path": "patches/disable_64b_image_atomics.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "770b4b8b58fe479978d9ad35dbb7d1aeb91bc04f",
+      "size": 1588,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/770b4b8b58fe479978d9ad35dbb7d1aeb91bc04f"
+    },
+    {
+      "path": "patches/fix_a8xx_dev_info.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2ef4486734ea7435a2e9b7b62d808e48d93d3c2b",
+      "size": 4574,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/2ef4486734ea7435a2e9b7b62d808e48d93d3c2b"
+    },
+    {
+      "path": "patches/fix_gralloc_flushall.py",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fb6b03d80c86b678f785ada87203c46ab9705b73",
+      "size": 1643,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/fb6b03d80c86b678f785ada87203c46ab9705b73"
+    },
+    {
+      "path": "release_notes.py",
+      "mode": "100755",
+      "type": "blob",
+      "sha": "f7898ef3856d22676d5192c4e64a96a09d606570",
+      "size": 7883,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/f7898ef3856d22676d5192c4e64a96a09d606570"
+    },
+    {
+      "path": "verify_patches.sh",
+      "mode": "100755",
+      "type": "blob",
+      "sha": "33c757c7c32b93ffedab632a6edc5928017175a5",
+      "size": 2812,
+      "url": "https://api.github.com/repos/WinNative-Emu/Drivers/git/blobs/33c757c7c32b93ffedab632a6edc5928017175a5"
+    }
+  ],
+  "truncated": false
+}

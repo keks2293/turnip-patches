@@ -697,9 +697,15 @@
    "artifacts": [
     "results/external/sherft2607-turnip-adreno722-duo/repo-tree.txt",
     "results/external/sherft2607-turnip-adreno722-duo/apply-check.txt",
-    "tests/vk-fmt-classes.json"
+    "tests/vk-fmt-classes.json",
+    "patches/apply_a7xx_gen2_ubwc_hint.py",
+    "patches/disable_64b_image_atomics.py",
+    "patches/apply_a7xx_gen1_quirks.py",
+    "patches/apply_balance_variant.py",
+    "patches/0001",
+    "scripts/build-turnip-mesa27.sh"
    ],
-   "lines": 84,
+   "lines": 124,
    "headings": [],
    "verdict_quote": ". Nothing to merge, and no queue item changes. The specific rule the operator",
    "verdict_source": "journal 30"
@@ -973,6 +979,45 @@
    ],
    "verdict_quote": "the compatibility class of an uncompressed colour format is its texel block, the",
    "verdict_source": "journal 39"
+  },
+  {
+   "id": "40",
+   "title": "71.9 % of the primitives the VPC shades are thrown away by TSE, and it is not a GMEM/SYSMEM mode choice (21.11)",
+   "question": "71.9 % of the primitives the VPC shades are thrown away by TSE, and it is not a GMEM/SYSMEM mode choice (21.11)",
+   "file": "journal/40-the-vpc-wall-71-9-of-the-primitives-that.md",
+   "date": "21.11",
+   "status": "open",
+   "decision": "",
+   "verdict_first_line": "on the ship stack, in the same 1 s sample, `PERF_TSE_INPUT_PRIM` equals",
+   "artifacts": [
+    "tools/fdperf/fdperf.cfg-tse",
+    "results/fdperf-tse-tse1/fdperf-raw.txt",
+    "tools/fdperf/fdperf.cfg-tse2",
+    "results/fdperf-tse2-tse2/fdperf-raw.txt",
+    "results/fdperf-tse-algo-prefer-gmem/fdperf-raw.txt",
+    "results/fdperf-tse-algo-bandwidth/fdperf-raw.txt",
+    "results/fdperf-tse-forcecb/fdperf-raw.txt",
+    "scripts/fdperf-tse-ratios.py",
+    "results/fdperf-mesa27/steady-state.txt",
+    "results/fdperf-mesa27/fdperf-raw.txt",
+    "results/fdperf-mesa27-vertex/fdperf-raw.txt",
+    "results/game-patched-algopg.log"
+   ],
+   "lines": 504,
+   "headings": [
+    "## 40.1 What was run",
+    "## 40.2 The discard, and what kind of discard it is",
+    "## 40.3 The VSC group cannot ask the question it was proposed for",
+    "## 40.4 Why there is no visibility stream to begin with, and the switch that was worth trying",
+    "## 40.5 Texture prefetch is already on, and turning it off is a no-op",
+    "## 40.6 Two closed threads: the feature level, and the DX11 route",
+    "## 40.7 Two measurement defects found while doing this",
+    "## 40.8 There is a binning switch, it is off by our own configuration, and forcing it did nothing",
+    "## 40.9 The VPC attribute buffer: our generation never programs it, and forcing it changes nothing",
+    "## 40.10 What this does not show"
+   ],
+   "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
+   "verdict_source": "journal 40"
   }
  ]
 }

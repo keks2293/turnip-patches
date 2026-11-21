@@ -81,3 +81,43 @@ driver levers, which is a reason not to spend a build on it, not a measurement o
 `37-tu-z-bgra-companion.py.off` 11818 B). They are evidence about somebody else's work, not
 artifacts of a measurement: no build hash and no device is involved. Nothing under
 `patches/`, `experiments/` or `build/` changed, and `../mesa27-src` was not written to.
+
+### Addition (21.11): the WinNative-Emu repositories themselves, captured and mapped
+
+**Why.** The entry above reviewed a downstream port and named its origin only in passing: the
+sentence "the `WinNative-Emu/Drivers` scripts they are ports of ... were not captured" is now
+out of date for those two repositories, and this paragraph replaces it. The operator pointed at
+the origin's own repositories, so the same question - is there anything here that this machine
+does not already have measured - is asked of them directly.
+
+**What they are.** Three repositories, all pinned by commit before anything is quoted:
+
+| repository | what it is, in its own words | at capture |
+|---|---|---|
+| `WinNative-Emu/Drivers` (tree `c71f600a2977a141f21a922c9ed2e14fb09b13d3`, 35 blobs / 331161 B) | "Turnip Drivers built by WinNative Development Team": upstream Mesa main + idempotent Python patch scripts, released as Android Adrenotools zips (`v1.19`, 30.09.2026) and as a separate Linux glibc/aarch64 series (`linux-v0.1.2`, 29.09.2026) | 20 files captured byte-for-byte, sizes verified against the API (`size-check.txt`); 15 left as listings |
+| `WinNative-Emu/Components` (tree `3b7c0efdb9c49ec289367b325db2dc79785acd87`, 23 blobs / 669318 B) | nightly builds of the layers that sit above the driver: box64, DXVK, vkd3d-proton (x86/x86_64 and ARM64EC), FEXCore, Proton, plus the `.wcp` catalog (`contents.json`) | 6 files captured, 17 listings only |
+| `WinNative-Emu/WinNative` | the Android app that runs Windows Steam/Epic/GOG builds on top of the two above | not captured, nothing Turnip-side in it |
+
+**Mapping, against what is already measured here.**
+
+| their file | their claim | state here |
+|---|---|---|
+| `patches/apply_a7xx_gen2_ubwc_hint.py` (1590 B) | "A7xx_gen2 inherits a7xx_base, which does not set `enable_tp_ubwc_flag_hint`. Without this hint, certain Vulkan UI / compositor passes show vertical-line corruption on FD740 (SD8 Gen 2) and X1-85 silicon" - appends `GPUProps(enable_tp_ubwc_flag_hint = True)` to the `[a7xx_base, a7xx_gen2]` block anchored on the X1-85/FD740 `add_gpus` list | the same prop, measured here the other way. Our tree keeps it `False` in `a7xx_gen2` (`freedreno_devices.py:821`, comment "Most devices with a740 have blob v6xx which doesn't have this hint set"), and upstream sets `True` only in two other gen2 blocks - X1-45/FD735/A735 (`:1177`) and FD740v3 / Quest 3 (`:1320`) - while our chip's block (`GPUId(chip_id=0x43050a01, name="FD740")`, `:1235`) keeps the `False`. Forcing it `True` on this machine gives vkmark noise and **artifacts in RE4** (journal 15.4, `results/test-props2-*`), which is why `docs/a7xx-gen-props.md` says the prop "must not be enabled". Not carried; the prop is closed here |
+| `patches/disable_64b_image_atomics.py` (1588 B) + `MAINTENANCE.md` "Retired patches" | cleared `has_64b_image_atomics` on gen2 and gen3 because an upstream 64-bit image-atomic path hung the GPU after the first submit on A8xx in UE5/vkd3d SM6.6 titles; retired in 1.12 because turning it off makes vkd3d-proton report `AtomicInt64OnTypedResourceSupported = FALSE` | nothing to do here: `has_64b_image_atomics = True` on gen2 (`freedreno_devices.py:828`) and RE4 runs. Kept as the name of a fallback if a SM6.6 title ever hangs on this GPU after submit - NOT MEASURED here, and the hang they describe was on A8xx, not gen2 |
+| `patches/apply_a7xx_gen1_quirks.py` (1931 B) | forces `has_early_preamble`/`has_scalar_predicates` `False` in `a7xx_gen1` (A720/A725/A730) | not this chip: this machine is gen2 (`docs/release.md`: `FD740`, a7xx gen2, chip_id `0x43050a01`) |
+| `patches/apply_balance_variant.py` (1700 B) | the "-b" variant nudges the autotune cost model: GMEM bandwidth multiplier `11 -> 10`; its other tweak (`drawcall_count > 5`) is reported as "removed upstream (now `>= 10`)" | the only lever in the whole stack that is not already covered here, and its anchors check out in our tree: `gmem_bandwidth = (gmem_bandwidth * 11 + total_draw_call_bandwidth) / 10;` at `tu_autotune.cc:1065` (upstream's own comment on that line calls 11 and 10 "randomly chosen"), and the restructured gate at `:1881` (`mod_flag::BIG_GMEM && rp_state->drawcall_count >= 10`) with `< 5` now in `ignore_small_rp` (`:1862`). `11 -> 10` makes the GMEM estimate `g + d/10` instead of `1.1g + 0.1d`, i.e. it moves the SYSMEM/GMEM decision by 10 % of the pass' GMEM bandwidth **towards GMEM** - the direction that already cost 1.5 frames in journal 15.5 (`TU_AUTOTUNE_FLAGS=big_gmem`). NOT MEASURED; it is queue 17 of `docs/plan-next-checks.md`, and the cheap discriminator comes first: if RE4 never selects SYSMEM, the tweak cannot do anything, and that answer needs a build only because the decision is logged by `at_log_bandwidth_h` behind the compile-time `TU_AUTOTUNE_DEBUG_LOG_BANDWIDTH 0` (`tu_autotune.cc:25-30`) |
+| `linux/patches/0001` (105680 B, `VK_EXT_mesh_shader` emulated as compute) and `0002`-`0006` (subgroup size 32 on A8XX 64-wide waves, cube-map directions, bindless invalidation, KGSL command-stream lifetimes) | "needed by DX12 Ultimate games such as FINAL FANTASY VII REBIRTH" | a different chip (`0002`-`0006` are A8XX) and a subject RE4 does not raise: our tree exposes no mesh-shader feature at all (`grep -c 'EXT_shader_meshlet\|meshShader\|taskShader' src/freedreno/vulkan/tu_device.cc` = 0, no `shader_meshlet` under `src/freedreno/`). Kept as a named source if a mesh-shader title is ever put on this GPU; nothing was built |
+| `build_linux_turnip.sh` (the Linux/aarch64 recipe) | `--buildtype release -Dvulkan-drivers=freedreno -Dfreedreno-kmds=msm,kgsl -Dgallium-drivers= -Dplatforms=wayland,x11 -Dopengl=false -Dgbm=disabled -Dglx=disabled -Degl=disabled -Dllvm=disabled -Dvulkan-layers= -Dtools= -Dvideo-codecs= -Dxmlconfig=disabled` | a cross-check of our own recipe, `scripts/build-turnip-mesa27.sh:44-59`. Same in everything that can move a measurement (release buildtype, freedreno-only, gallium empty, llvm disabled, both WSIs); two deliberate differences: they build both KMDs (`msm,kgsl`) while we build `msm` only and fail the build if the `.so` does not import `drmGetVersion` (`:62-70`), and they set `-Dxmlconfig=disabled` while we leave drirc reading on, which is how the driconf options of queue 13 are reachable without a patch |
+| `MAINTENANCE.md` + `verify_patches.sh` (2812 B, root, not `patches/`) | their three-state rule for every patch script - "already applied / anchor present / anchor absent" - and a CI assertion, because "a patch script whose anchor drifted against upstream Mesa logs a warning and continues, so the archive still builds and installs - it is simply missing the fix" | the same failure mode this entry found in the ported stack (34/35 of that stack anchor on a line their own 30 no longer writes). Their answer is a CI assertion over the build log; ours is the applied-patch inventory and the matrix signature rather than the `.so` hash (journal 39.7). It supports the rule already in `AGENTS.md` and changes no queue item |
+
+**Verdict.** Nothing to merge, and no shipped row changes. One new queue item (17, the GMEM
+cost-model nudge) and one named fallback (the 64-bit image-atomic switch, only if an SM6.6
+title hangs after submit on this GPU). The A740-related patch of that stack, the UBWC hint, is
+the inverse of a measurement this repository already owns, so it stays closed.
+
+**What this does not show.** Nothing from either repository was built, installed or run: no
+driver was downloaded, and `.wcp` release assets are not in the repositories. The claims about
+their patches are about what the scripts edit and what their own MAINTENANCE/README say, and the
+"device-confirmed" results quoted in those files (the RedMagic green-screen fix, the A8xx
+image-atomic hang) are theirs, not ours. The two tree listings and the size check are regenerable
+with the commands in `capture.txt` of each folder.

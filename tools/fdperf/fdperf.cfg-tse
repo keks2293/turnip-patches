@@ -1,0 +1,120 @@
+// fdperf.cfg-tse - the only counters that can price the "micro-triangles pay for VPC"
+// hypothesis: of the primitives the VPC shaded, how many does TSE throw away?
+//
+// Why this is the question at all (measured, docs/fdperf-a7xx.md and the 21.11 runs):
+// the VPC is busy 90.3-91.6% of the locked 680 MHz and PC waits on it in 68.05-69.01% of
+// its busy cycles (scripts/fdperf-vpc-ratios.py), and in the same 1 s sample
+// TSE_INPUT_PRIM = PC_IA_PRIMITIVES to within 0.001% (238602 vs 238599,
+// results/raw/fdperf-vpcbase1.txt): nothing between IA and TSE drops a primitive, so
+// every primitive the IA feeds pays for VS/VPC work and the only culling left is at TSE.
+//
+// What the committed 17.11 runs already give for this group (results/fdperf-mesa27/
+// fdperf-raw.txt, results/fdperf-mesa27-vertex/fdperf-raw.txt, windows t_rel>=35s):
+//   TSE_BUSY 447.0/445.5 Mc/s = 65.7/65.5% of 680 MHz (79.6% with the saturated-window
+//   filter of steady-state.txt), TSE_STARVE_CYCLES_PC/BUSY 41.9/39.8% (TSE waits for
+//   primitives from upstream), TSE_CLIPPING_CYCLES/BUSY 3.5/3.7%, INPUT_PRIM 202.5/211.9 Mc/s.
+//   VSC_BUSY 3.7/3.9 Mc/s = 0.54/0.57% of the core, 85.1/85.6% of it stalled on UCHE.
+// What is missing, and all four slots go here: the drop counters.  TSE busy 65-80% does
+// not by itself say whether the VPC's 91% is spent on geometry that survives.
+//
+// HW BUDGET (docs/fdperf-a7xx.md "hw counter budgets"): TSE=4, VSC=2 - a fifth TSE line
+// is silently ignored, so the drop breakdown needs a second run.  Names are the
+// `value="N"' of a7xx_perfcntrs.xml (`grep name="A7XX_PERF_TSE_' there); the XML has no
+// descriptions at all (0 desc= attributes), so "ZERO_PIXEL_PRIM = sub-pixel reject" is our
+// reading of the name, not a manual quote.
+//
+// Deliberately not here: ZERO_AREA_PRIM (10), TRIVAL_REJ_PRIM (8), FACENESS_CULLED_PRIM
+// (11), CLIPPED_PRIM (9), INPUT_NULL_PRIM (7), OUTPUT_NULL_PRIM (13) - the reason
+// breakdown, cfg-tse2, only worth running if OUTPUT_VISIBLE comes back far below INPUT_PRIM.
+//
+// Pre-registered reading: wasted VPC share <= 1 - OUTPUT_VISIBLE_PRIM/INPUT_PRIM.  If that
+// is under 10%, the micro-triangle direction closes without a Mesa change; if it is over
+// ~30%, the next question is whether any of it is rejectable before VS (PC_PRIM_VTX_CNTL's
+// degenerate bits are set by CP microcode, not by turnip - grep PC_PRIM_VTX_CNTL in
+// src/freedreno/vulkan/ gives nothing), i.e. a driver change would have to move the cull
+// earlier than TSE, which on this hardware means VFD/PC state we do not currently write.
+//
+// Run:
+//   scripts/fdperf-sample.sh <sec> <window-ms> <file> tools/fdperf/fdperf.cfg-vpc
+// then scripts/fdperf-analyze.py <file> <tsv>; the VPC/PC/UCHE columns named below
+// are in the analyzer's TRAFFIC table (added with this cfg) and come out per
+// second; busy% comes from the BUSY table as usual.
+
+FD740 = {
+  CP = {
+    counter0  = 0;    // reserved (ALWAYS_COUNT, frequency)
+    counter1  = 2;    // PERF_CP_BUSY_CYCLES
+    counter2  = 15;   // PERF_CP_SQE_IDLE
+    counter3  = 11;   // PERF_CP_CONTEXT_DONE
+    counter4  = 9;    // PERF_CP_MODE_SWITCH
+  }
+
+  RBBM = {
+    counter0 = 1;    // PERF_RBBM_ALWAYS_ON (divisor for the duty cycle)
+    counter1 = 9;    // PERF_RBBM_VBIF_BUSY
+    counter2 = 12;   // PERF_RBBM_UCHE_BUSY
+  }
+
+  UCHE = {
+    counter0  = 0;    // PERF_UCHE_BUSY_CYCLES
+    counter1  = 1;    // PERF_UCHE_STALL_CYCLES_ARBITER
+    counter2  = 2;    // PERF_UCHE_VBIF_LATENCY_CYCLES
+    counter3  = 3;    // PERF_UCHE_VBIF_LATENCY_SAMPLES
+    counter4  = 27;   // PERF_UCHE_VBIF_READ_BEATS_CH0
+    counter5  = 28;   // PERF_UCHE_VBIF_READ_BEATS_CH1
+    counter6  = 4;    // PERF_UCHE_VBIF_READ_BEATS_TP
+    counter7  = 9;    // PERF_UCHE_READ_REQUESTS_TP
+    counter8  = 8;    // PERF_UCHE_VBIF_READ_BEATS_SP
+    counter9  = 13;   // PERF_UCHE_READ_REQUESTS_SP
+    counter10 = 15;   // PERF_UCHE_WRITE_REQUESTS_SP
+    counter11 = 16;   // PERF_UCHE_WRITE_REQUESTS_VPC
+  }
+
+  VFD = {
+    counter0 = 0;    // PERF_VFD_BUSY_CYCLES
+    counter1 = 2;    // PERF_VFD_STALL_CYCLES_VPC_ALLOC (the VPC backpressure, 12.5% in cfg-vertex)
+    counter2 = 5;    // PERF_VFD_STARVE_CYCLES_UCHE
+    counter3 = 8;    // PERF_VFD_DECODED_ATTRIBUTE_BYTES
+    counter4 = 9;    // PERF_VFD_NUM_ATTRIBUTES
+    counter5 = 17;   // PERF_VFD_TOTAL_VERTICES
+  }
+
+  PC = {
+    counter0 = 0;    // PERF_PC_BUSY_CYCLES
+    counter1 = 2;    // PERF_PC_STALL_CYCLES_VFD
+    counter2 = 4;    // PERF_PC_STALL_CYCLES_VPC (the 63% of the 17.11 run)
+    counter3 = 19;   // PERF_PC_VERTEX_HITS (the reuse behind 2.9:1, first time measured)
+    counter4 = 20;   // PERF_PC_IA_VERTICES
+    counter5 = 21;   // PERF_PC_IA_PRIMITIVES
+    counter6 = 25;   // PERF_PC_VS_INVOCATIONS
+    counter7 = 28;   // PERF_PC_3D_DRAWCALLS
+  }
+
+  VPC = {
+    counter0 = 0;    // PERF_VPC_BUSY_CYCLES
+    counter1 = 16;   // PERF_VPC_VS_BUSY_CYCLES
+    counter2 = 17;   // PERF_VPC_PS_BUSY_CYCLES   <- new: the other side of the split
+    counter3 = 10;   // PERF_VPC_SP_COMPONENTS    <- new: components handed to the FS
+    counter4 = 25;   // PERF_VPC_NUM_VPCRAM_WRITE <- new: writes into VPC RAM
+    counter5 = 24;   // PERF_VPC_LM_FULL_WAIT_FOR_INTP_END <- new: interpolate waiting
+  }
+
+  TSE = {
+    counter0 = 0;    // PERF_TSE_BUSY_CYCLES
+    counter1 = 6;    // PERF_TSE_INPUT_PRIM
+    counter2 = 14;   // PERF_TSE_OUTPUT_VISIBLE_PRIM
+    counter3 = 12;   // PERF_TSE_ZERO_PIXEL_PRIM
+  }
+
+  VSC = {
+    counter0 = 0;    // PERF_VSC_BUSY_CYCLES
+    counter1 = 2;    // PERF_VSC_STALL_CYCLES_UCHE
+  }
+
+
+  SP = {
+    counter0 = 0;    // PERF_SP_BUSY_CYCLES
+    counter1 = 48;   // PERF_SP_EXPORT_VPC_TRANS (SP->VPC transactions, the other
+                     // side of the varyings traffic)
+  }
+}

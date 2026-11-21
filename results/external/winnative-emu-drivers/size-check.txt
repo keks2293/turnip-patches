@@ -1,0 +1,24 @@
+# captured files vs the GitHub tree API sizes (winnative-emu-drivers, sha c71f600a2977a141f21a922c9ed2e14fb09b13d3)
+
+OK        10236 MAINTENANCE.md
+OK        11102 README.md
+OK         3509 build_linux_turnip.sh
+OK         9050 build_turnip.sh
+OK         2687 build_wn_turnip.sh
+OK         7685 linux/README.md
+OK          955 linux/package.py
+OK         2358 linux/patch_mesa.py
+OK         1967 linux/verify_packages.py
+OK         2147 linux/verify_patches.py
+OK         9074 patches/add_ubwc_swapchain_usage.py
+OK         1931 patches/apply_a7xx_gen1_quirks.py
+OK         1590 patches/apply_a7xx_gen2_ubwc_hint.py
+OK         8007 patches/apply_a8xx_gpus.py
+OK         1700 patches/apply_balance_variant.py
+OK        13274 patches/apply_perf_variant.py
+OK         1588 patches/disable_64b_image_atomics.py
+OK         4574 patches/fix_a8xx_dev_info.py
+OK         7883 release_notes.py
+OK         2812 verify_patches.sh
+
+captured and matching: 20, size mismatch: 0, not captured: 15
