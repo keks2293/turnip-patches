@@ -1,0 +1,76 @@
+# The linear residue of MUTABLE images created without a format list, per base format.
+# Generated 2026-11-21 by `python3 scripts/nolist-residue.py results/raw/game-patched-imginv5.log`
+#   (re-run that command to reproduce every number below).
+#
+# Input: results/raw/game-patched-imginv5.log (976648 B, sha256 80d433927103ef02...), the TU_IMG_INV=1
+#   inventory of the RE4 game run on the ship stack `0001..0014` (p14 form of 0014 included, build
+#   050375a18b7b as recorded in results/imginv-3variants.txt). `vkfmt=`/`fmt=` in that log are both
+#   pipe-level names: exp-14's inventory prints util_format_name() twice (base layout format and the
+#   create format converted through vk_format_to_pipe_format), so the Vulkan enum itself is not in the
+#   log. That is enough here: the R- and B-spelled Vulkan formats of a pair are different pipe formats
+#   (PIPE_FORMAT_R8G8B8A8_* vs PIPE_FORMAT_B8G8R8A8_*, PIPE_FORMAT_R10G10B10A2_UNORM vs
+#   PIPE_FORMAT_B10G10B10A2_UNORM), and the one pipe format in this table with a single Vulkan spelling
+#   is PIPE_FORMAT_R11G11B10_FLOAT, which only VK_FORMAT_B10G11R11_UFLOAT_PACK32 maps to.
+#
+# What this table is for: it sizes the residue that a wider no-list tiling rule would have to move -
+# the largest number any such rule could ever be worth. It does not say whether moving them is legal:
+# journal 39 answers that half (it is not - the Vulkan compatibility class of every one of these bases
+# contains a member the A740 tiled path cannot express, `python3 scripts/class-order-check.py`).
+#
+# Split of the residue, from the same log (journal 39.3):
+#   971 creates / 1630.2 MiB  16-bit- and 32-bit-class bases: linear because their own class contains a
+#                             member the tiled store cannot express. The only part a rule could argue
+#                             about, and closed by the spec's own class rule.
+#    53 creates /   0.65 MiB  BC, 64-bit and 8-bit bases whose class scripts/class-order-check.py
+#                             reports homogeneous. All 53 are in the `small` column: level 0 below the
+#                             driver's width0 < 16 * blockwidth fallback (fd6_layout.c:155-161), a stock
+#                             rule that fires for every image shape, list or no list.
+#   In total 84 of the 1024 residue creates (0.9 MiB) are `small`; the other 31 of them are also
+#   class-required linear, so nothing here is a rule that a layout patch could re-argue.
+#
+# MUTABLE_FORMAT is create-flag bit 0x8 (include/vulkan/vulkan_core.h:2764 at 6dfa32a); usage bits are
+# SAMPLED 0x4, STORAGE 0x8, TRANSFER_SRC 0x1, TRANSFER_DST 0x2.
+
+  (results/raw/game-patched-imginv5.log: 1 inventory lines cut by foreign stderr, not counted)
+=== results/raw/game-patched-imginv5.log ===
+  MUTABLE without a list : 2474 creates, 4081.1 MiB
+  tiled by 0014 v1       : 1450 creates, 2450.3 MiB
+  linear residue         : 1024 creates, 1630.8 MiB
+
+  base vkfmt                         n      MiB   SAMPLED   STORAGE     xfer  small  smallMiB
+  PIPE_FORMAT_R8G8_UNORM           306    587.2     587.2      15.7    587.2      0       0.0
+  PIPE_FORMAT_R11G11B10_FLOAT      185    374.7     374.7     374.7    374.7      0       0.0
+  PIPE_FORMAT_R32_UINT             174    358.4     358.4     358.4    358.4     10       0.0
+  PIPE_FORMAT_R32_FLOAT             52     79.0      79.0      79.0     79.0      0       0.0
+  PIPE_FORMAT_R8G8B8A8_SNORM        36     67.9      67.9      67.9     67.9      0       0.0
+  PIPE_FORMAT_R16G16_FLOAT          30     62.7      62.7      62.7     62.7      0       0.0
+  PIPE_FORMAT_R8G8B8A8_SRGB        105     45.9      45.9       0.0     45.9      0       0.0
+  PIPE_FORMAT_R8G8B8A8_UNORM        39     32.0      32.0      31.4     32.0     21       0.2
+  PIPE_FORMAT_R16_UNORM              6     12.4      12.4      12.4     12.4      0       0.0
+  PIPE_FORMAT_R16_FLOAT             20      7.1       7.1       7.1      7.1      0       0.0
+  PIPE_FORMAT_R10G10B10A2_UNORM      3      3.0       3.0       3.0      3.0      0       0.0
+  PIPE_FORMAT_RGTC1_UNORM            3      0.4       0.4       0.0      0.4      3       0.4
+  PIPE_FORMAT_R16G16B16A16_FLOAT     6      0.1       0.1       0.0      0.1      6       0.1
+  PIPE_FORMAT_R16_SNORM             15      0.1       0.1       0.0      0.1      0       0.0
+  PIPE_FORMAT_BPTC_RGBA_UNORM       12      0.0       0.0       0.0      0.0     12       0.0
+  PIPE_FORMAT_R32G32_FLOAT          11      0.0       0.0       0.0      0.0     11       0.0
+  PIPE_FORMAT_DXT1_SRGBA             9      0.0       0.0       0.0      0.0      9       0.0
+  PIPE_FORMAT_DXT1_RGBA              6      0.0       0.0       0.0      0.0      6       0.0
+  PIPE_FORMAT_R8_UNORM               3      0.0       0.0       0.0      0.0      3       0.0
+  PIPE_FORMAT_BPTC_SRGBA             3      0.0       0.0       0.0      0.0      3       0.0
+  TOTAL                           1024   1630.8    1630.8    1012.1   1630.8     84       0.9
+
+  `small` / `smallMiB` count the residue creates that are linear by a stock rule that has
+  nothing to do with MUTABLE or with a format list: fd6_layout.c:155-161
+    if (!params->force_ubwc && layout->width0 < linear_fallback_threshold_texels) ->
+       ubwc = false, tile_mode = TILE6_LINEAR
+  with the threshold 16 * blockwidth on a7xx (`FDL_LINEAR_FALLBACK_THRESHOLD` in
+  freedreno_layout.h:251, scaled by supports_linear_mipmap_threshold_in_blocks at :254-261,
+  which a7xx_base sets True at freedreno_devices.py:785).  Block widths come from vk.xml via
+  tests/vk-fmt-classes.json (155 pipe formats, default 1).  Visible in the log by
+  one format on both sides of its threshold:
+    PIPE_FORMAT_R16G16B16A16_FLOAT 8x8x8 ... tile=linear ... size=32768   (8 < 16)
+    PIPE_FORMAT_R16G16B16A16_FLOAT 32x32x16 ... tile=tiled ... size=262144 (32 >= 16)
+    PIPE_FORMAT_RGTC1_UNORM 32x32x32 ... tile=linear ... size=131072      (32 < 16*4)
+    PIPE_FORMAT_RGTC1_UNORM 256x256x1 ... tile=tiled ... size=32768       (256 >= 16*4)
+

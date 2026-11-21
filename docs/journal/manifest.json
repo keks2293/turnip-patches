@@ -937,6 +937,42 @@
    ],
    "verdict_quote": "",
    "verdict_source": ""
+  },
+  {
+   "id": "39",
+   "title": "The 1630.8 MiB no-list residue is required linear by the spec, not by our predicates (21.11)",
+   "question": "is the 1630.8 MiB no-list residue linear because our predicates are conservative, or because the Vulkan compatibility class forces it",
+   "file": "journal/39-the-16308-mib-no-list-residue-is-required-linear.md",
+   "date": "21.11",
+   "status": "closed",
+   "decision": "",
+   "verdict_first_line": "the compatibility class of an uncompressed colour format is its texel block, the",
+   "artifacts": [
+    "results/nolist-residue-p14.log",
+    "experiments/exp-14-image-inventory.patch",
+    "results/raw/game-patched-imginv5.log",
+    "tests/rp6-vkd3d-sparse-test.c",
+    "results/test-0014v2-matrix.log",
+    "results/test-p14-base.log",
+    "patches/DROPPED.md",
+    "scripts/nolist-residue.py",
+    "results/fdperf-mesa27-vertex/steady-state.txt",
+    "scripts/class-order-check.py",
+    "tests/vk-fmt-classes.json",
+    "scripts/gen-vk-fmt-classes.py"
+   ],
+   "lines": 412,
+   "headings": [
+    "## 39.1 The proposal, and the spec sentence that closes it",
+    "## 39.2 Why that makes linear mandatory on this chip, and what dropping v2 actually said",
+    "## 39.3 The residue counted, and closed without a build",
+    "## 39.4 What is still unmeasured, and it is a different number",
+    "## 39.5 Corrections, kept visible",
+    "## 39.6 The class check, offline and re-runnable",
+    "## 39.7 The committed `0014` patch file does not revert the tree it is supposed to describe"
+   ],
+   "verdict_quote": "the compatibility class of an uncompressed colour format is its texel block, the",
+   "verdict_source": "journal 39"
   }
  ]
 }

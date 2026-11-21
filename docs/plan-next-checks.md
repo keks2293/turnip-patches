@@ -805,10 +805,62 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     worth proposing, and ADR-0008 (no driver-side fps lever found for this game) is the prior it
     has to beat.
 
+16. **The value of what `0014` v1 already shipped - 2450.3 MiB of no-list textures, never measured**
+    (no new patch: one hand-made build without `0014` in a copy of the tree, one game session with the
+    sampler; shares the machine with 12/13/14/15 and with the 7.32 GiB memory wall).
+
+    Journal 39 closed the half of the no-list question that wanted *more*: the 1024 creates /
+    1630.8 MiB left in linear are required linear by the Vulkan compatibility-class rule (the class of
+    an uncompressed colour format is its texel block, `src/vulkan/registry/vk.xml` `class=` rows quoted
+    in 39.1) plus the fact that the A740 tiled path cannot express a reinterpreting view's order
+    (`fd6_pipe2swap()`, `fd6_format_table.c:399-404`, with `is_mutable` false on this path). No
+    predicate - `!is_swapped_format(base)`, an `is_r8g8` subclass, anything - can narrow a set that is
+    defined by the block size, so there is no v3 to write and no value question to ask about those
+    bytes. What is left is the half that is already in the release: v1 moved 1450 creates /
+    **2450.3 MiB** from linear to tiled (`results/nolist-residue-p14.log`, regenerate with
+    `python3 scripts/nolist-residue.py results/raw/game-patched-imginv5.log`), and that has never been
+    measured for traffic or fps - journal 21.12 says as much about its own run ("fps is not what this
+    run measures - the inventory is"), and the 17.11 fdperf runs predate `0014` (entries 21.11 and
+    21.12 are both dated 18.11), so the committed profile - TP 12.0 GB/s of 14.8, 81 % of DRAM reads,
+    `results/fdperf-mesa27-vertex/steady-state.txt` - is a baseline with those images in linear.
+
+    ```sh
+    # A = the ship stack as released.  B = the same stack without 0014, in a COPY of the tree:
+    #   `git apply -R patches/0014-*.patch` does not work (journal 39.7 measured it: the tree's 0014
+    #   text and the committed patch file are different texts), so B is made by hand in a copy.
+    cp -a ../mesa27-src ../mesa27-src-no0014          # 370 MB, 23 GB free
+    # in the copy, put the NULL back where 0014 substituted the class - tu_formats.cc:351
+    #   mutable_views(): return fmt_list unchanged, and drop the fmt_list==NULL branch at :409
+    #   (that is the state the stock predicates were written for; the added functions become dead)
+    # build B from the copy (container, -j2, docs/howto-measure.md), record its .so hash
+    # ACCEPT B only if exp-14's inventory shows the pre-0014 signature: MUTABLE with listn=0 and
+    # 0 MiB tiled, the imginv4 row of results/imginv-3variants.txt.  Never the .so hash.
+    # one session per build, base run between them, sampler on the steady stretch:
+    scripts/fdperf-sample.sh 130 1000 results/fdperf-0014ab/A.txt tools/fdperf/fdperf.cfg-vertex
+    python3 scripts/fdperf-analyze.py results/fdperf-0014ab/A.txt
+    HUDLOG=150 scripts/run-game.sh patched 170
+    # the ship tree is never touched by this: B lives in ../mesa27-src-no0014 and is deleted after
+    ```
+
+    Compare ratios inside one sample set, never levels (journal 38: the two 17.11 runs are 14.7 against
+    mean 23.5 fps of different content, and only within-run ratios travel). The quantities: TP's GB/s
+    and its share of DRAM reads, `UCHE` busy and its arbiter stall, the TP starve counters, fps.
+    Pre-registered reading: if 2450.3 MiB of linear-to-tiled changes neither TP's 81 % share nor its
+    GB/s measurably, then the largest layout change in this stack is worth no traffic, ADR-0008 gains a
+    second and much bigger instance, layout closes as a lever and `0014` stays only because it is
+    correct and free. If TP traffic falls and fps does not move, the wall is confirmed elsewhere and
+    queue 15 is the only vertex question left. If fps moves, the number belongs in `docs/release.md` as
+    the first measured gain of a shipped patch - and the run is invalid unless the inventory of that
+    same build still reports the same 2450.3 MiB tiled, checked with the script above.
+
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
 (ADR-0010), BC + UBWC (ADR-0004), any 8bpp UBWC patch (ADR-0007), removing any shipped patch
-(`patches/DROPPED.md`). Driver-side fps levers are closed too (ADR-0008), with one exception:
+(`patches/DROPPED.md`), and tiling the no-list residue by splitting the class on the base format -
+built and measured wrong as `0014` v2 (`patches/DROPPED.md`, the `XV` rows of
+`results/test-0014v2-matrix.log`), and closed again on the spec's own class rule in journal 39, so
+the "which sub-split is safe" question does not need re-asking. Driver-side fps levers are closed
+too (ADR-0008), with one exception:
 the driconf `perf`/`misc` options of queue 12 are not among the switches that record measured,
 so three of them are asked for once instead of assumed. Outside patch stacks keep
 proposing versions of the ideas closed above: `journal 30` maps four files from one such
@@ -837,6 +889,8 @@ instead of against a build.
 | 16 | does any of the reachable driconf perf options change fps in RE4 | NOT MEASURED, queue 12 (journal 34.3 covers correctness on the rig only, and the rig has no textured depth renderpass). Two candidates remain, `tu_allow_concurrent_binning` and `disable_conservative_lrz`, both expected zeros given ADR-0008; the third, `tu_disable_conservative_fdm_binning`, lost its precondition in journal 35.1 (0 density-map images in 11 984 creates) and is held until an FDM attachment is observed. Needs the game, so it needs most of this machine's 7.3 GiB |
 | 17 | what does the game do when the driver reports less memory than the heap it reports today | NOT MEASURED, queue 13. The report itself is measured - journal 34.4, `results/vulkaninfo-heap-report.log`, five `vulkaninfo` runs over `heap_memory_percent` - and the queue names the two values to try in the game. What vkd3d-proton does under a smaller report is not, and journal 17's 3129 MiB peak against 4.95 GiB of swap is why the question is not empty |
 | 18 | is any of the 22 shading-rate images ever attached to a render pass, and at what rates | NOT MEASURED. Journal 35.1 counts the images and journal 35.2 measures the capability, but a usage bit is a declaration: the driver has no log line for `subpass->fsr_attachment != VK_ATTACHMENT_UNUSED`, so the check needs one added `if` plus a build, then a game run. Without it, "the game uses VRS" stays an inference, and not even the driver's own per-subpass register write can be observed from a log |
+| 19 | what did the 2450.3 MiB that `0014` v1 moved out of linear buy in traffic or fps | NOT MEASURED, queue 16 (no new patch: a B build without `0014` made in a copy of the tree - `git apply -R` does not work, open question 20 - then one A/B session). Journal 39 sizes what no rule can move (the 1630.8 MiB residue, required linear by the Vulkan class rule plus `fd6_pipe2swap()`), so this is the only no-list number left. The committed profile that looks like an answer - `results/fdperf-mesa27-vertex/steady-state.txt`, TP 12.0 GB/s and 81 % of DRAM reads - was sampled 17.11, and `0014` is journal 21.12, dated 18.11: that run is a with-everything-linear baseline, not a before/after |
+| 20 | does the committed `patches/0014-turnip-mutable-no-list-tiling.patch` describe the tree that built the shipped `c17d02bcaae9…` | NOT SETTLED. Journal 39.7: `git apply -R --check` of that file fails on the recorded ship-stack tree at `tu_formats.cc:261`, and the texts differ by function names (`tu6_mutable_compat_class` vs the tree's static `mutable_compat_class`/`mutable_views`) and by comment wording. The difference cannot change a result, so no verdict in journal 39 depends on it - but it decides how queue 16 makes its B build, and a shipped patch file that is not the built text is a reference-table error worth fixing once, by regenerating the file from the tree and recording in `docs/release.md` which hash it belongs to |
 
 ## Pitfalls (reminder)
 

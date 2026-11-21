@@ -35,8 +35,16 @@ non-UBWC class members (`E5B9G9R9`, `R64_*`) written down, and a `perf_debug` co
 (c) probe no-list casts before any claim about volume. Gate: matrix 94 EXACT, and the
 `UBR`/`XV` rows unchanged. Blocked on restoring `0003..0014` in `../mesa27-src`.
 
+Closed on the tiling side, 21.11: the no-list question ("grant the tiled layout to the rest of the
+no-list `MUTABLE` images") is not a conservatism to relax - the Vulkan compatibility class of those bases
+contains a member the A740 tiled path cannot express, and the driver says the same thing about the view
+set in its own predicates (journal 39, with `scripts/class-order-check.py` as the offline check). What is
+left in this stream is the value of what `0014` already shipped (queue 16) and the artifact mismatch that
+queue starts from (journal 39.7, open question 20).
+
 Decisions: ADR-0006, ADR-0004, ADR-0007, ADR-0008. Artifacts:
 `patches/0014-turnip-mutable-no-list-tiling.patch`,
 `experiments/exp-14-image-inventory.patch`, `scripts/imginv-stats.py`,
-`scripts/imginv-classes.py`, `results/imginv-3variants.txt`,
+`scripts/imginv-classes.py`, `scripts/nolist-residue.py`, `scripts/class-order-check.py`,
+`results/imginv-3variants.txt`, `results/nolist-residue-p14.log`,
 `results/test-0014-*.log`, `results/vulkaninfo-heap-report.log`.
