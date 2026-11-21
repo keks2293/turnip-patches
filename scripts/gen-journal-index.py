@@ -35,7 +35,7 @@ STATUS = {
     "21.10": "shipped", "21.11": "shipped", "21.12": "shipped",
     "22": "closed", "23": "closed", "24": "closed", "25": "reference", "26": "closed",
     "27": "closed", "28": "open", "29": "reference", "30": "closed", "31": "open",
-    "32": "open", "33": "open", "34": "open", "35": "open",
+    "32": "open", "33": "open", "34": "open", "35": "open", "36": "closed",
 }
 # where the verdict lives when the entry is not the owning document
 DECISIONS = {
@@ -73,6 +73,7 @@ QUESTION = {
     "19": "why the build image produced a driver that would not load",
     "34": "which perf-relevant options exist outside TU_FORCE_PROPS, and which of them a740 has never run with",
     "35": "does this stack ever ask for a fragment density map or a shading-rate attachment, and what does the driver do with one",
+    "36": "does exp-21 make the same tiling decision as the shipped 0014 on the game's own creates",
 }
 
 DECISION_DIR = "docs/decisions"
