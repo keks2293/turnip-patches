@@ -93,6 +93,11 @@ TRAFFIC = [
     ('UCHE_REQ_TP', 'PERF_UCHE_READ_REQUESTS_TP', None),
     ('UCHE_REQ_SP', 'PERF_UCHE_READ_REQUESTS_SP', None),
     ('UCHE_REQ_PC', 'PERF_UCHE_READ_REQUESTS_PC', None),
+    # SP/VPC write requests: only in fdperf.cfg-vpc (the per-client READ side is
+    # already above, from cfg-vertex).  This is the client pair a 64-bit storage
+    # image would show up in.
+    ('UCHE_WR_REQ_SP', 'PERF_UCHE_WRITE_REQUESTS_SP', None),
+    ('UCHE_WR_REQ_VPC', 'PERF_UCHE_WRITE_REQUESTS_VPC', None),
     ('UCHE_GMEM_RD', 'PERF_UCHE_GMEM_READ_BEATS', None),
     ('UCHE_GMEM_WR', 'PERF_UCHE_GMEM_WRITE_BEATS', None),
     ('UBWC_RD', 'PERF_UCHE_UBWC_READ_BEATS', None),
@@ -105,6 +110,19 @@ TRAFFIC = [
     ('PIXELS', 'PERF_SP_PIXELS', None),
     ('FS_INSTR', 'PERF_SP_FS_INSTRUCTIONS', None),
     ('PRIM_IN', 'PERF_TSE_INPUT_PRIM', None),
+    # vertex/VPC pressure (fdperf.cfg-vpc; also present in the older dumps where
+    # the VPC group carried them): cycles and requests per second, ratios are made
+    # from the TSV (VS_BUSY/BUSY, ATTR_REQ_LM/VERTS, VERTS/PRIM_IN).
+    ('VPC_WORK', 'PERF_VPC_WORKING_CYCLES', None),
+    ('VPC_VS_BUSY', 'PERF_VPC_VS_BUSY_CYCLES', None),
+    ('VPC_PS_BUSY', 'PERF_VPC_PS_BUSY_CYCLES', None),
+    ('VPC_SP_COMP', 'PERF_VPC_SP_COMPONENTS', None),
+    ('VPC_VPCRAM_WR', 'PERF_VPC_NUM_VPCRAM_WRITE', None),
+    ('VPC_LM_WAIT', 'PERF_VPC_LM_FULL_WAIT_FOR_INTP_END', None),
+    ('VPC_ATTR_LM', 'PERF_VPC_NUM_ATTR_REQ_LM', None),
+    ('VERT_HITS', 'PERF_PC_VERTEX_HITS', None),
+    ('PRIM_IA', 'PERF_PC_IA_PRIMITIVES', None),
+    ('SP_VPC_TRANS', 'PERF_SP_EXPORT_VPC_TRANS', None),
 ]
 
 

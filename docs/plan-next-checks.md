@@ -447,6 +447,30 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    **reverted from the tree** the same day - it is a measurement hook, its header says NOT
    FOR SHIP, and nothing is queued on it beyond being there so journal 32 can be repeated.
    `fold_64()` in `scripts/fmt-list-gate-check.py` is its mirror in the model.
+
+   **State 21.11, later the same day - open question 14 is measured, so the last avoidance in
+   this item is gone.** Probe `XR64` (new in `tests/rp6-vkd3d-sparse-test.c`: fill by a
+   buffer-to-image copy in the base format, read every 64-bit word through an `r64ui` storage
+   image, then `imageAtomicAdd(+1)` per word and read again) ran against the released stack and
+   against a build of `experiments/exp-23-ubwc-nolist-64-knob.patch`
+   (`build/out-exp23/libvulkan_freedreno.so`, `2b61554b26ba…`) with the knob off and on. A 64-bit
+   image created **without** a list, with `STORAGE` in the usage and with UBWC kept, stays tiled,
+   carries the `+0x2000` tail, and reads byte-exact through `R64_UINT` - including after
+   `imageAtomicAdd(+1)` per word, where every word comes back exactly +1. A list that *names*
+   `R64_UINT` is refused compression with the knob on and off, which is the code's
+   `FD6_UBWC_UNKNOWN_COMPAT` path and confirms the question could not have been asked through a
+   list at all. Artifact [`../results/test-xr64-nolist-64-ubwc.log`](../results/test-xr64-nolist-64-ubwc.log),
+   journal 37; the hook was taken out with `git apply -R` naming one file and `git diff --stat` in
+   `../mesa27-src` is back to the recorded 8 files, +663/-80. What that buys: the rule can be
+   written without an unmeasured hardware assumption about the member the rig used to avoid. What
+   it does not buy: it is not a compression claim (open question 15), it is one geometry,
+   `sparseImageInt64Atomics=0`, and the write paths into such an image (`clear`, `blit`, `r2d`)
+   are not exercised. Added by journal 38, and it changes what this item is *for*: the per-client
+   DRAM split in `results/fdperf-mesa27-vertex/steady-state.txt` puts SP at 0.05 GB/s of 14.8
+   (0.3 % of reads) against TP at 81 %, and a class whose only reader is a storage image is an
+   SP-side client - so no fps argument can be made for this grant on this workload. The case for
+   it is coverage of a legal create, which is a weaker reason to spend a build than the volume
+   number this item used to lead with.
 2. **exp-19 - who is wrong about R8, the writer or the reader**. Probe AB (the same
    `R8_UNORM` + UBWC image, filled by `vkCmdCopyBufferToImage`) read by `i2b` in a fresh
    process, both at the base grid and at `{32,8}`. Cheaper than one build. If AB ever
@@ -702,6 +726,85 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     report and the branch closes too, in the other direction - and in that case the honest artifact
     is the failure, kept in `results/`.
 
+14. **DX11 against DX12 on the same scene - the API-isolation check** (no code, one game
+    session, and a decision first). The inference to be tested is the operator's: if the block
+    profile of the wall (VPC ~91 %, PC waiting on VPC 63 %, UCHE 90 % with ~39 % arbiter stall,
+    TP and VFD starving on UCHE ~48-51 %) comes back the same through the DX11 branch (DXVK) as
+    through the DX12 branch (vkd3d-proton), the wall is not in the translation layer and not in
+    `sparseResidencyImage2D`, but in what the RE Engine asks of this GPU and of turnip - and the
+    levers that remain would act on both branches at once.
+
+    Status of the premise: **never established.** Journal 11.2 records one attempt, via
+    `[Render] Capability` in `local_config.ini`, and it failed for a known reason - the game
+    rewrites the key, it is an output, not an input. The route that was never tried is the command
+    line: `re4.exe` carries `via.render.RenderDeviceAPI` with the strings `DirectX11` /
+    `DirectX12` / `OpenGL` / `Vulkan`, and `scripts/run-game.sh` takes `GAMEARGS=` for exactly
+    this. So step 0 is getting a DX11 launch at all, and its discriminator is in the game log:
+    the vkd3d markers (`d3d12_device_create`, the SM 6.6 feature block) must **disappear**, and the
+    game must write `DirectX11` into `[Render] Capability` of the prefix's `local_config.ini`
+    (reading that file is how the API is verified, per the script header - it cannot be told by
+    eye). If the vkd3d markers are still there, the game is still on DX12 and no measurement was
+    taken.
+
+    Then measure the same thing twice, with `tools/fdperf/fdperf.cfg-vertex`:
+    `scripts/fdperf-sample.sh <sec> <window-ms> <file> tools/fdperf/fdperf.cfg-vertex`, and compare
+    **ratios, not levels**: per-client DRAM reads (the TP/VFD/PC/SP split), UCHE busy and its
+    arbiter stall, `VFD_STARVE_CYCLES_UCHE`, vertices per primitive, draws per frame. Levels are
+    not comparable: the two DX12 runs of 17.11 already differ by content (14.7 fps against mean
+    23.5, both recorded in their `steady-state.txt`), and a DX11 branch changes content further
+    (no ray tracing, different preset). Journal 38's window rule applies: only quantities that are
+    ratios inside one sample set travel between runs.
+
+    Said in advance, what each outcome would mean: the same ratios on both branches excludes the
+    translation layer and D3D11-vs-D3D12 sparse residency as the cause of the wall, and moves the
+    lever search to the vertex/geometry side (queue 15) and to the game's own settings, both of
+    which act on both branches; a different split - e.g. the TP share of DRAM reads collapses -
+    means part of the wall has an API-side cause, and the DXVK branch becomes the ground for
+    measuring that part. Two caveats to carry into the run, both from journal 11.2: a DXVK run
+    verifies nothing the vkd3d patch stack was made for (no `12_0`, no SM 6.6 there), it speaks
+    about the driver and about the wall; and if the DX11 branch does not render on this driver,
+    the honest artifact is the failure log in `results/`, not an inference. Blocked with queues
+    12 and 13 on the same thing: the memory wall of this machine (7.32 GiB, the browser has to be
+    closed before `scripts/run-game.sh`).
+
+15. **The VPC/varyings question, and the counters that can actually ask it** (cfg written 21.11;
+    one game session, shared with 12/13/14). Two claims were put forward as the next lever: ir3
+    leaving non-position work in the *binning* vertex shader (so VFD and VPC pay per mesh twice),
+    and excess or unpacked varyings saturating the VPC. Journal 38 worked out what is already
+    answered, from the committed dumps of the two 17.11 runs - and it is more than expected:
+    `VPC_VS_BUSY/VPC_BUSY` 92.8-96.4 %, `VPC_WORKING/VPC_BUSY` 66.9-69.3 %, VPC stall on UCHE
+    0.00 %, 1.03 vertices fetched per input primitive against 3 submitted (reuse ~2.9:1), and
+    `VPC_NUM_ATTR_REQ_LM` at 0.50 per vertex against ~5 attributes per vertex. The binning half is
+    closed by the compiler source: `lower_binning()` deletes every binning-variant output that is
+    not position/psize/clip/viewport/layer (`ir3_nir.c:1204-1233`), and the attribute loads are
+    kept deliberately ("binning and draw pass VS use same VBO state", `ir3_compiler_nir.c:6007-6030`)
+    - so the residue of double vertex work is fetch-side, not varying math; `tu_pipeline.cc:690`
+    also records that "varyings are packed" already (`tu_pipeline.cc:685`). And no a7xx counter names binning at all, so
+    the two passes cannot be separated by counters.
+
+    What still needs the run, and is the only reason to spend it: `VPC_PS_BUSY_CYCLES` (17) - never
+    measured, and until it is, "the interpolate side is idle" is not supported, only unmeasured;
+    `VPC_SP_COMPONENTS` (10) and `VPC_NUM_VPCRAM_WRITE` (25) - the first quantities that say what
+    flows through the VPC per vertex; `VPC_LM_FULL_WAIT_FOR_INTP_END` (24) - the interpolate-wait
+    signature; `PC_VERTEX_HITS` (19) - the direct measure of the 2.9:1 reuse; and
+    `UCHE_WRITE_REQUESTS_SP` (15) / `UCHE_WRITE_REQUESTS_VPC` (16), the per-client **write** side
+    that no cfg has ever carried. All of them are in `tools/fdperf/fdperf.cfg-vpc` inside the group
+    hw budgets (VPC 6/6, PC 8/8, UCHE 12/12), with the selectors read out of
+    `a7xx_perfcntrs.xml` as its header records; `scripts/fdperf-analyze.py` gained the rows.
+
+    Pre-register the reading so the run cannot be talked into a conclusion afterwards: if
+    `SP_COMPONENTS / VS_INVOCATIONS` is large and moves with `NUM_VPCRAM_WRITE`, while `PS_BUSY` is
+    a real share of `BUSY`, the VPC pressure is varying-side, and the only driver-side knob of that
+    kind is the per-varying mode table `tu6_vpc_varying_mode()` / `tu6_emit_vpc_varying_modes()`
+    (`tu_pipeline.cc:677-730` and `734-776`, interp mode and `PS_REPL_*`) - name the change after
+    the number, not before it. If instead `PS_BUSY` stays a small share and `LM_FULL_WAIT_FOR_INTP_END` stays near
+    zero while `VFD_STALL_CYCLES_VPC_ALLOC` (12.5 % in the 17.11 vertex run) does not move, the
+    "varyings are choking the VPC" branch closes with a measurement and the remaining vertex
+    question is the fetch side, where the measured facts already say ~1 vertex per primitive and
+    5 attributes per vertex. This item produces no patch by itself; it says whether a patch is
+    worth proposing, and ADR-0008 (no driver-side fps lever found for this game) is the prior it
+    has to beat.
+
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
 (ADR-0010), BC + UBWC (ADR-0004), any 8bpp UBWC patch (ADR-0007), removing any shipped patch
@@ -729,7 +832,7 @@ instead of against a build.
 | 11 | does vkd3d view a mutable RE4 image through another format of the same class | NOT MEASURED, exp-20 (queue 10): the inventories record creates, not views |
 | 12 | is a `VkImageFormatListCreateInfo` with `viewFormatCount == 0` the same as passing no list | NOT MEASURED, and `exp-21` deliberately keeps `0014`'s answer (an empty list is forwarded, and the predicates answer it as the worst case). The spec's wording makes them equal, but the inventories cannot tell the two apart - both are `listn=0` - so this is not a question a replay answers |
 | 13 | why does the system driver give UBWC to a `MUTABLE` image with no list, where both Mesa 27 builds refuse it | ONE ROW, journal 31: `B8G8R8A8_UNORM`, `nolist=0x102000` against `0x100000`. Not in the two refusal functions (byte-identical to refs `mesa-26.2.6` and `main`), so it is either elsewhere in 26.2 or in the distribution's own patches (`mesa-vulkan-drivers-26.2.6-1.fc44.armada`, not in this repository). Chasing it would need the downstream source; it changes no verdict, and `exp-18` does not depend on it |
-| 14 | does a `R64_UINT`/`R64_SINT` view of a UBWC image work, once `STORAGE` makes it legal | NOT MEASURED, and it is the gap `exp-18 (b)` cannot write around: journal 32 measured the two 64-bit compat labels as one cell but deliberately created its images **without** `STORAGE`, while `ubwc_possible()` refuses the `R64_*` formats for their own reasons and `tu_formats.cc` grants the 64-bit image-atomic feature under `has_64b_image_atomics`. A no-list image with `STORAGE` in its usage is viewable as `R64_UINT` whatever the class rule grants. Needs a probe shape (same image, `STORAGE` usage, `R64_UINT` view, atomics in and out), not a build |
+| 14 | does a `R64_UINT`/`R64_SINT` view of a UBWC image work, once `STORAGE` makes it legal | ANSWERED 21.11, journal 37: probe `XR64` built the shape and ran it - a no-list `MUTABLE` image with `STORAGE` in the usage, UBWC kept by the `TU_UBWC_NOLIST_64` knob of `experiments/exp-23-ubwc-nolist-64-knob.patch`, stays tiled with the `+0x2000` tail and reads `0/262144` wrong through an `r64ui` storage image, including after `imageAtomicAdd(+1)` per word. It also settled the shape question: a list that *names* `R64_*` is refused compression by `FD6_UBWC_UNKNOWN_COMPAT` with the knob on and off, so the no-list create was the only place the question could be asked at all. `results/test-xr64-nolist-64-ubwc.log`. Still open inside the answer: `sparseImageInt64Atomics=0` on this device, so the sparse corner is unmeasured, and journal 38 puts the class on the SP client, which is 0.3 % of measured DRAM reads |
 | 15 | is the compressor actually writing compressed bytes, or only a metadata plane | NOT MEASURED by any rig here. Every UBWC claim in this repository rests on the `+0x2000` allocation signature, which journal 22.2 says is an allocation and not a compression claim. The direct detector is a fast-clear that leaves the bytes untouched in a UBWC image and does not in a linear one; it is not written, and journal 32's verdict is stated so as not to need it |
 | 16 | does any of the reachable driconf perf options change fps in RE4 | NOT MEASURED, queue 12 (journal 34.3 covers correctness on the rig only, and the rig has no textured depth renderpass). Two candidates remain, `tu_allow_concurrent_binning` and `disable_conservative_lrz`, both expected zeros given ADR-0008; the third, `tu_disable_conservative_fdm_binning`, lost its precondition in journal 35.1 (0 density-map images in 11 984 creates) and is held until an FDM attachment is observed. Needs the game, so it needs most of this machine's 7.3 GiB |
 | 17 | what does the game do when the driver reports less memory than the heap it reports today | NOT MEASURED, queue 13. The report itself is measured - journal 34.4, `results/vulkaninfo-heap-report.log`, five `vulkaninfo` runs over `heap_memory_percent` - and the queue names the two values to try in the game. What vkd3d-proton does under a smaller report is not, and journal 17's 3129 MiB peak against 4.95 GiB of swap is why the question is not empty |

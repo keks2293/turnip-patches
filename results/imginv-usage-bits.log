@@ -17,6 +17,11 @@
 # Bit values checked against include/vulkan/vulkan_core.h in the mesa checkout (6dfa32a:2814-2820):
 #   FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR = 0x100, FRAGMENT_DENSITY_MAP_BIT_EXT = 0x200.
 #
+# Added 21.11 with journal 37.4(b): HOST_TRANSFER (0x400000, vulkan_core.h:2815 at 6dfa32a) is
+#   now counted too, because the driver's own swap TODO (tu_image.cc:516-521, 'TODO: should we add
+#   a fast path for BGRA8 and allow tiling for it?') is gated on that bit - the census is what says
+#   whether that TODO is reachable at all in this workload.
+#
 # Regenerate:
 #   python3 scripts/imginv-usage-bits.py results/raw/game-patched-imginv4.log \
 #       results/raw/game-patched-imginv5.log results/raw/game-patched-stockflaginv.log
@@ -42,6 +47,8 @@
 
   density map images: none
 
+  host-transfer (HIC) images: none
+
   (results/raw/game-patched-imginv5.log: 1 inventory lines cut by foreign stderr, not counted)
 === results/raw/game-patched-imginv5.log  (4176 creates, 8080.8 MiB) ===
   TRANSFER_SRC                       0x001   4160     7999.5 MiB
@@ -61,6 +68,8 @@
 
   density map images: none
 
+  host-transfer (HIC) images: none
+
   (results/raw/game-patched-stockflaginv.log: 9 inventory lines cut by foreign stderr, not counted)
 === results/raw/game-patched-stockflaginv.log  (4170 creates, 8088.0 MiB) ===
   TRANSFER_SRC                       0x001   4158     8010.7 MiB
@@ -79,4 +88,6 @@
     PIPE_FORMAT_R8_UINT          426x240x1    tile=tiled ubwc=0  x  6    0.75 MiB
 
   density map images: none
+
+  host-transfer (HIC) images: none
 

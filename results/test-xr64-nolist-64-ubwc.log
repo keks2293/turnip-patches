@@ -1,0 +1,131 @@
+XR64 - R64_UINT over the no-list 64-bit class, with and without UBWC (exp-23)
+Date of runs: 2026-11-21. Curated; raw logs: results/raw/xr64-p14.log,
+results/raw/xr64-exp23-knoboff.log, results/raw/xr64-exp23-knobon.log.
+
+QUESTION (open question 14 in docs/plan-next-checks.md)
+    The 64-bit compatibility class is the last class whose UBWC was never asked,
+    and its member R64_UINT has no texture and no colour path, so the only
+    reader it has is a storage image. A list that NAMES R64_UINT can never be
+    compressed (fd6_ubwc_compat_mode() answers FD6_UBWC_UNKNOWN_COMPAT and a list
+    with an UNKNOWN member is refused before labels are compared), so the only
+    create where an R64_UINT view is legal AND the image could be compressed is
+    one made without a list. Probe XR64 asks it: fill by buffer->image copy in
+    the base format, read every 64-bit word through a r64ui storage image, then
+    imageAtomicAdd(+1) per word and read again.
+
+DRIVERS (three runs of ONE test binary, sha256 96e6167dcad6dc1e692e101215789418
+         8ee79709c0723dfd827fe867ee7ab31f - rebuilt for this probe, the XR64
+         readers and the two 64-bit features enabled at vkCreateDevice)
+  A  build/p14-shipped/libvulkan_freedreno.so  c17d02bcaae9a960a1350d98b81786dd
+     75f1b5149cc79cb52b0409b59c345815   the released stack, no knob in it
+  B  build/out-exp23/libvulkan_freedreno.so    2b61554b26ba63c054dfcfa8ee0b47dd
+     ac1f940823323930925b6078f23a7081 = 0001..0013 + exp-14 + exp-21 + exp-23
+     (experiments/exp-23-ubwc-nolist-64-knob.patch), run with the knob OFF, then
+     with TU_UBWC_NOLIST_64=1
+  Tree after the run: exp-23 taken out with `git apply -R`, ../mesa27-src back to
+  the recorded 8 files +663/-80 (verified with git diff --stat).
+
+FEATURES THE PROBE NEEDS (printed by the test before the device is created)
+    xr64 features: shaderInt64=1, shaderImageInt64Atomics=1,
+                   sparseImageInt64Atomics=0
+    - the two it uses are there (props.has_64b_image_atomics); the third is not,
+      so a sparse image with 64-bit atomics is not covered by any run here.
+
+HOW TO READ THE XR64/XMC ROWS (they are easy to misread later)
+    "N/M wrong" counts disagreement with the EXPECTED pattern; "N would be the
+    swapped halves" / "would be the reversed word" counts disagreement with the
+    ALTERNATIVE pattern, so a row that says `0/262144 wrong, 262144 would be the
+    swapped halves` is a clean read, not a problem. tail=0x2000 means a UBWC
+    metadata plane is allocated; that is the layout claim, not proof that the
+    compressor ran (journal 22.2) - on a740 no counter can show that
+    (UCHE_GMEM_* read 0, the UBWC counters do not fit the UCHE budget of 12).
+
+SECTION, RUN A - released stack (control from outside)
+    XR64[NOL64 ] base R16G16B16A16_UINT list 0 (STORAGE in usage): opt=0x200000
+      lin=0x200000 raw=0x200000 tail=0x0 sparse=yes -> tiled (only a tiled image
+      can be sparse)
+    XR64[NOL64 ] R64_UINT storage imageLoad: 0/262144 wrong, 262144 would be the
+      swapped halves, 0 all zero -> EXACT
+    XR64[NOL64 ] R64_UINT storage after imageAtomicAdd(+1): 0/262144 wrong,
+      262144 would be the swapped halves, 0 all zero -> EXACT
+    XR64[LST64 ] base ... list 3 (STORAGE in usage): opt=0x200000 ... tail=0x0
+      -> tiled; R64_UINT storage imageLoad EXACT
+    XR64[SGL64 ] base ... list 1 (STORAGE in usage): opt=0x202000 ... tail=0x2000
+      -> tiled (size); R64_UINT storage imageLoad EXACT; after imageAtomicAdd(+1)
+      EXACT; R32G32_UINT "is not in the list -> the view would be illegal"
+
+SECTION, RUN B knob OFF (control for the knob)
+    XR64[NOL64 ] ... tail=0x0 ... -> tiled (only a tiled image can be sparse)
+      x4 EXACT, g32 EXACT, R64 load EXACT, R64 after atomic EXACT
+    XR64[LST64 ] list 3: tail=0x0 -> tiled, R64 load EXACT (no atomic pass: the
+      create is refused compression, so the write half would say nothing)
+    XR64[SGL64 ] list 1: tail=0x2000 -> tiled (size), R64 load EXACT,
+      R64 after atomic EXACT
+
+SECTION, RUN B knob ON (TU_UBWC_NOLIST_64=1)
+    XR64[NOL64 ] base R16G16B16A16_UINT list 0 (STORAGE in usage): opt=0x202000
+      lin=0x200000 raw=0x200000 tail=0x2000 sparse=yes -> tiled (size)
+    XMC[NOL64 /x4 ] R16G16B16A16_UINT view: 0/262144 wrong ... -> EXACT
+    XMC[NOL64 /g32] R32G32_UINT  view: 0/262144 wrong ... -> EXACT
+    XR64[NOL64 ] R64_UINT storage imageLoad: 0/262144 wrong, 262144 would be the
+      swapped halves, 0 all zero -> EXACT
+    XR64[NOL64 ] R64_UINT storage after imageAtomicAdd(+1): 0/262144 wrong,
+      262144 would be the swapped halves, 0 all zero -> EXACT
+    XR64[LST64 ] list 3: opt=0x200000 tail=0x0  -> UNCHANGED by the knob, the
+      refusal the model predicts, and the knob cannot widen a list it was not
+      asked about
+    XR64[SGL64 ] list 1: opt=0x202000 tail=0x2000 -> UNCHANGED (keeps UBWC
+      without any knob): R64 load EXACT, R64 after atomic EXACT
+
+WHAT THE HOOK MOVED - the whole diff of the two runs of one binary is 9 lines,
+all of them 8-byte no-list mutable images, nothing else in the 134 EXACT-bearing
+lines changed:
+    NL[R16G16B16A16_FLOAT]  opt=0x00200000 -> 0x00202000
+    NL[R32G32_FLOAT]        opt=0x00200000 -> 0x00202000
+    XMC[NOL]                tail=0x0       -> 0x2000 (stays tiled)
+    XMC[DETECT]             tail=0x0       -> 0x2000 (the deliberate-bad-fill row,
+                            still EXACT-MISMATCH as designed: the comparison can
+                            see wrong data)
+    XR64[NOL64]             tail=0x0       -> 0x2000 (stays tiled)
+    CEIL[R16G16B16A16_TYPELESS/_UNORM/_SNORM, R32G32_TYPELESS]
+                            "no-list: NO UBWC" -> "no-list: has UBWC"
+
+VERDICT
+    1. The knob does what its header says and nothing more: it declines the UBWC
+       demotion for no-list images whose base block is 8 bytes, and the image
+       stays tiled (it does not touch the layout decision, and LST64/SGL64 do not
+       move).
+    2. A 64-bit image created WITHOUT a list, carrying UBWC, reads through an
+       R64_UINT storage image byte-exactly, and survives imageAtomicAdd(+1) per
+       64-bit word with every word exactly +1. Same answer with the knob off, so
+       the read is not the thing the compression changes.
+    3. SGL64 says the same about a compressed 64-bit image WITHOUT any knob (a
+       single-member list keeps UBWC today), so the reader and the atomic path
+       were already good on a compressed 64-bit image; what the hook adds is the
+       no-list shape - the one a class rule would grant.
+    4. LST64 confirms the structural claim from the code: naming R64_UINT in the
+       list refuses compression whatever the knob does. The question could not
+       have been asked through a list.
+    So: of the three branches written in the patch header, the run lands on the
+    first - "load EXACT and atomic+load EXACT". exp-18(b) has a form that is
+    narrow AND backed by a measurement. That is a licence to spend a build on a
+    ship candidate and a game run, not a result in itself.
+
+WHAT THIS DOES NOT SAY
+    - It is not a compression claim. tail=0x2000 is an allocated metadata plane;
+      whether the compressor wrote anything is unmeasurable on this chip with
+      counters (see above). A byte-exact read is consistent with compressed and
+      with uncompressed storage alike.
+    - One shape: 512x512, 1 mip, 1 layer, base R16G16B16A16_UINT, usage with
+      STORAGE, filled by buffer->image copy. Clear, blit, r2d and render writes
+      into such an image are not exercised; neither is a mip chain, an array, or
+      a second view read after the atomic.
+    - Nothing about the game: 650.8 MiB is journal 28's byte count of no-list
+      64-bit images in the inventory, not a measured traffic share, and the DRAM
+      wall in docs/fdperf-a7xx.md is 81 % texture reads. Whether compressing this
+      class moves fps is unmeasured, and ADR-0004 (BC + UBWC was not a perf lever)
+      and ADR-0008 (no driver-side fps lever for this game) are the prior.
+    - sparseImageInt64Atomics=0, so a sparse image with 64-bit atomics is outside
+      the coverage of these runs.
+    - The tree no longer carries the hook; the binary does (2b61554b26ba...), and
+      that hash is the only thing that can reproduce these rows.

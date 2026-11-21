@@ -1,0 +1,165 @@
+exp-23: compress the no-list 64-bit class and read it through R64_UINT
+
+Experiment rig.  NOT FOR SHIP: it is a measurement hook with an environment
+switch, it has no business in a released driver, and the tree is reverted with
+`git apply -R` and explicit file names after the run (AGENTS.md: never
+git checkout/restore in ../mesa27-src).
+
+The question.  The 64-bit compatibility class is the last class whose UBWC has
+never been asked, and the member still missing from every measurement is
+R64_UINT.  It is missing for a structural reason, and that reason decides the
+shape of the question:
+
+  - a format list that NAMES R64_UINT can never be compressed.
+    fd6_ubwc_compat_mode() has no case for R64_UINT/R64_SINT, so the member
+    answers FD6_UBWC_UNKNOWN_COMPAT, and
+    tu6_mutable_format_list_ubwc_compatible() refuses any list holding an
+    UNKNOWN member before it compares labels (tu_formats.cc).  No knob that
+    folds two known labels changes that - which is why exp-22 could not ask it
+    either, and why probe XR64's LST64 row is expected to print a refusal;
+  - R64_UINT has no texture and no colour path.  tu_formats.cc grants it
+    STORAGE_IMAGE, STORAGE_IMAGE_ATOMIC and the transfer features under
+    props.has_64b_image_atomics (true for a7xx_gen2) and asserts that it has no
+    vertex, colour or texture entry, so the only reader it has is a storage
+    image;
+  - an image created WITHOUT a list is viewable as R64_UINT as soon as its usage
+    carries STORAGE, and that is the only create where the view is legal and the
+    image could be compressed.
+
+So the question has to be asked of a no-list create with STORAGE usage, by a
+storage reader, and nothing else.  That is what probe XR64 is
+(tests/rp6-vkd3d-sparse-test.c, probe_xr64/xr64_storage): fill by a
+buffer->image copy through the base format, read every 64-bit word through a
+r64ui storage image (xr64_load_spv), then imageAtomicAdd(+1) per word
+(xr64_atomic_spv) and read again - so a wrong answer is a wrong value, not a
+lost write, and XMC's own DETECT row stays the check that the comparison can
+see wrong data at all.
+
+The knob.  TU_UBWC_NOLIST_64=1 stops the no-list mutable branch of
+tu_image_init() from dropping UBWC, and nothing else.  It cannot widen a shape
+nobody asked about: an image that carries a format list, or whose base texel
+block is not 8 bytes, or one where ubwc_possible() already said no, is
+untouched - the hook declines a demotion, it never grants compression a base
+format cannot have.  The layout decision
+(tu6_mutable_format_list_forces_linear) is left alone, so the hook cannot move
+an image between tiled and linear: with the knob off the same create is the
+control for the same create with the knob on, in one driver binary.  is_mutable
+stays false, which is the point of the shape: the compressor is asked about an
+image the application is still free to reinterpret through a 64-bit view - the
+same asymmetry that makes the no-list classes interesting and that 0014
+deliberately does not touch ("UBWC is deliberately not touched").
+
+How it is run.  One driver binary, three runs of the same test:
+
+    source scripts/env.sh
+    export RP6_TEST_BIN=$WORK/rp6-vkd3d-sparse-test
+    scripts/run-test.sh build/p14-shipped/freedreno_icd_p14.json \
+        results/raw/xr64-p14.log
+    scripts/run-test.sh build/out-exp23/freedreno_icd_exp23.json \
+        results/raw/xr64-exp23-knoboff.log
+    TU_UBWC_NOLIST_64=1 scripts/run-test.sh \
+        build/out-exp23/freedreno_icd_exp23.json results/raw/xr64-exp23-knobon.log
+
+The released stack is the outside reference (no knob in it); the knob-off run of
+the experiment binary is the control for the knob-on run.  Rows: NOL64 (no list,
+STORAGE in usage - the create the hook grants), SGL64 (single-member list, which
+keeps UBWC today without any knob, so it says whether a compressed 64-bit image
+survives this fill and this reader at all), LST64 (a list that NAMES R64_UINT -
+the refusal, as a check on the model rather than as a question).
+
+Reading the answer.  On the knob-on run NOL64 must first show the metadata tail
+(tail=0x2000, the signature UBR, CEIL and XMC use) or it says nothing about
+compression at all: a reserved plane is not a compression claim either way
+(journal 22.2), and that warning is the whole reason XMC's rows are quoted as
+EXACT rather than as MATCH.  Then, for the same create:
+
+  load EXACT and atomic+load EXACT  -> a UBWC-compressed 64-bit image is readable
+                         and writable through the one view no other reader can
+                         provide.  exp-18 (b) gains a form that is both narrow
+                         and backed by a measurement, and the 650.8 MiB of
+                         no-list 64-bit bytes journal 28 counts become a question
+                         worth a ship patch and a game run.
+  load EXACT, atomic MISMATCH       -> the read path agrees and the write path
+                         does not; that is a UBWC coherency/atomic question on
+                         gen2, not a compat-table question, and it is a stop.
+  load MISMATCH                     -> compression changes what the storage read
+                         sees.  The no-list grant is unsafe for this class, and
+                         the direction closes with a measurement instead of a
+                         prediction (the way 0014 v2 and exp-10 closed theirs).
+
+Neither result is a ship rule and neither says anything about the game's fps:
+the write paths into such an image (clear, blit, r2d) are not what this probe
+runs, and the value of the class in this workload is journal 28's byte count,
+not a measurement of traffic.
+
+Applies on top of exp-21 (the tree carries 0001..0013 + exp-14 + exp-21; 0014 is
+deliberately not applied, results/test-exp21-equiv-p14.log shows why that is the
+right base).  Touches one file, src/freedreno/vulkan/tu_image.cc.
+
+--- a/src/freedreno/vulkan/tu_image.cc
++++ b/src/freedreno/vulkan/tu_image.cc
+@@ -467,6 +467,52 @@
+    return true;
+ }
+ 
++/* exp-23 (turnip-patches experiments): measurement hook, NOT FOR SHIP.  Take it
++ * out with `git apply -R` naming this file after the run.
++ *
++ * The question is open question 14 of docs/plan-next-checks.md: the 64-bit
++ * compatibility class is the last one whose UBWC has never been asked, and the
++ * member left in it is R64_UINT - the one with no texture and no colour path at
++ * all (tu_formats.cc grants it STORAGE_IMAGE, STORAGE_IMAGE_ATOMIC and the
++ * transfer features under has_64b_image_atomics and asserts that it has no
++ * vertex, colour or texture entry), so the only reader it has is a storage
++ * image.  A format list that NAMES R64_UINT can never be compressed either:
++ * fd6_ubwc_compat_mode() has no case for R64_*, and a list holding an UNKNOWN
++ * member is refused before any labels are compared.  So the only create where
++ * an R64_UINT view is legal and the image could be compressed is one made
++ * WITHOUT a list - which is exactly the create this hook compresses.
++ *
++ * TU_UBWC_NOLIST_64=1 stops the no-list mutable branch from dropping UBWC, and
++ * nothing else: an image that carries a list, or whose base block is not 8
++ * bytes, or one where ubwc_possible() already said no, is untouched.  The hook
++ * declines a demotion, it does not grant a compression the base format cannot
++ * have, and it leaves the layout decision
++ * (tu6_mutable_format_list_forces_linear) alone.  is_mutable stays false, which
++ * is the point of the shape: the compressor is then asked about an image the
++ * application is still free to reinterpret through a 64-bit view.
++ *
++ * The reader is probe XR64 in tests/rp6-vkd3d-sparse-test.c: fill by a
++ * buffer->image copy through the base format, read every word through a r64ui
++ * storage image, then imageAtomicAdd(+1) per 64-bit word and read again, so a
++ * wrong answer is a wrong value and not a lost write.  Surviving that is not a
++ * ship rule either: what such a grant would be worth in the game is journal 28's
++ * 650.8 MiB of no-list 64-bit bytes, and the write paths into such an image
++ * (clear, blit, r2d) are not what this probe runs.
++ */
++static bool
++tu_image_exp23_nolist_64bit(const VkImageCreateInfo *pCreateInfo,
++                            const VkImageFormatListCreateInfo *fmt_list)
++{
++   if (!getenv("TU_UBWC_NOLIST_64"))
++      return false;
++
++   if (fmt_list && fmt_list->viewFormatCount)
++      return false;
++
++   return util_format_get_blocksize(
++             vk_format_to_pipe_format(pCreateInfo->format)) == 8;
++}
++
+ template <chip CHIP>
+ VkResult
+ tu_image_init(struct tu_device *device, struct tu_image *image,
+@@ -579,7 +625,10 @@
+             }
+             ubwc_enabled = false;
+          } else if (!mutable_ubwc_fc) {
+-            if (ubwc_enabled) {
++            const bool exp23_nolist_64 =
++               tu_image_exp23_nolist_64bit(pCreateInfo, fmt_list);
++
++            if (ubwc_enabled && !exp23_nolist_64) {
+                if (fmt_list && fmt_list->viewFormatCount == 2) {
+                   perf_debug(
+                      device,

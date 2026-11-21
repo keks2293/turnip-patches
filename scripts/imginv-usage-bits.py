@@ -6,15 +6,15 @@
 The inventory line carries the usage mask the application passed to vkCreateImage
 (`usage=0x...`).  The existing stats script never looked at that field, so paths
 that are advertised by a usage bit and not by anything else - fragment shading
-rate and fragment density map in particular - were invisible in every inventory
-published so far.
+rate, fragment density map and host-transfer (HIC) in particular - were invisible
+in every inventory published so far.
 
 Bit values are the Vulkan ones, checked against the header the tree builds with
 (include/vulkan/vulkan_core.h in the mesa checkout, 6dfa32a): core bits end at
-INPUT_ATTACHMENT 0x80, FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR is 0x100 and
-FRAGMENT_DENSITY_MAP_BIT_EXT is 0x200.  The last two are the point of the script;
-they are also the two whose order is easy to get wrong from memory, so they are
-printed side by side rather than summed.
+INPUT_ATTACHMENT 0x80, FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR is 0x100,
+FRAGMENT_DENSITY_MAP_BIT_EXT is 0x200 and HOST_TRANSFER is 0x400000.  Those three
+are the point of the script; they are also the ones whose order is easy to get
+wrong from memory, so they are printed side by side rather than summed.
 """
 import re
 import sys
@@ -38,10 +38,15 @@ BITS = [
     (0x800, 'VIDEO_DECODE_SRC'),
     (0x1000, 'VIDEO_ENCODE_DST'),
     (0x2000, 'VIDEO_ENCODE_SRC'),
+    # VK_IMAGE_USAGE_HOST_TRANSFER_BIT = 0x00400000 (vulkan_core.h:2815 in 6dfa32a); the
+    # _EXT alias at 2833 is the same value.  Not from memory: the value gates the driver's
+    # "force linear for HIC with swapped formats" branch (tu_image.cc), see journal 37.4(b).
+    (0x400000, 'HOST_TRANSFER'),
 ]
 
 FSR = 0x100
 FDM = 0x200
+HIC = 0x400000
 
 
 def parse(path):
@@ -82,7 +87,8 @@ def report(path, rows):
     if rest:
         print(f'  unknown bits: {dict(rest)}')
 
-    for bit, name in ((FSR, 'shading rate'), (FDM, 'density map')):
+    for bit, name in ((FSR, 'shading rate'), (FDM, 'density map'),
+                      (HIC, 'host-transfer (HIC)')):
         hit = [r for r in rows if r['usage'] & bit]
         if not hit:
             print(f'\n  {name} images: none')

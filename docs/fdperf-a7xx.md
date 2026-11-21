@@ -10,6 +10,7 @@ or geometry/vertices" with per-block kernel counters (not `VK_KHR_performance_qu
 |---|---|
 | `tools/fdperf/fdperf.cfg` | main counter set (libconfig 1.8, see below) |
 | `tools/fdperf/fdperf.cfg-vertex` | vertex set: per-client UCHE (VFD/TP/SP/PC) + full hw budget VFD/PC |
+| `tools/fdperf/fdperf.cfg-vpc` | VPC-pressure set, written 21.11: the VPC budget (6) spent on `VS_BUSY`/`PS_BUSY`, `SP_COMPONENTS`, `NUM_VPCRAM_WRITE` and `LM_FULL_WAIT_FOR_INTP_END`, plus `PC_VERTEX_HITS` and the per-client **write**-request side. **NOT RUN** - queue 15 pre-registers how it is to be read |
 | `tools/fdperf/fdperf-windowed-delta.patch` | fix for the `-d` window in `fdperf.c` (see section Windows) |
 | `scripts/fdperf-sample.sh [sec] [window-ms] [file] [cfg]` | background sampler: loop `sudo fdperf -r <window> -d` |
 | `scripts/fdperf-analyze.py <file> [tsv] [--freq MHz]` | per-window busy%/latencies/traffic |
@@ -21,6 +22,12 @@ Run artifacts (RE4, Mesa 27):
   `fdperf-per-window.tsv`, `freq-trace.txt`, `fps.csv`, `steady-state.txt`;
 - `results/fdperf-mesa27-vertex/` (17.11 18:01, cfg-vertex, per-client):
   the same + `aligned.txt`; `steady-state.txt` - DRAM split by client.
+- Nothing has been measured with `fdperf.cfg-vpc` yet. What the two runs above already answer
+  without a new session - `VPC_VS_BUSY/VPC_BUSY` at 92.8-96.4 % with `PS_BUSY` never measured,
+  1.03 vertices fetched per input primitive against 3 submitted, `VPC_NUM_ATTR_REQ_LM` at 0.50 per
+  vertex - is journal 38, which also records that the window filter written in
+  `steady-state.txt` is not exactly reproducible (35 windows selected, 33 recorded) and that only
+  ratios inside one sample set travel between runs.
 
 ## Requirements and pitfalls
 

@@ -34,7 +34,7 @@ here), the verdict is an ADR in `docs/decisions/`, the measurement is a journal 
 
 ## Experiments (`experiments/`, never for commit)
 
-`exp-1`..`exp-22` (there is no `exp-12`; `exp-18`, `exp-19` and `exp-20` are queued
+`exp-1`..`exp-23` (there is no `exp-12`; `exp-18`, `exp-19` and `exp-20` are queued
 and have no file - the queue owns those numbers), full discussion in
 `experiments/README.md` and in the journal entry named below.
 
@@ -59,6 +59,7 @@ and have no file - the queue owns those numbers), full discussion in
 | 21 | can `0014`'s rule be written once: one function decides the mutable layout, the create calls it, the class reaches the layout predicates only | candidate that replaces `0014` (graduation number `0016`); applies clean on `0001..0013`; **built** 21.11 (`build/out-exp21`, `d49d094a8d6e…`) and **measured indistinguishable** from the released stack on every probe of that run - `results/test-exp21-equiv-p14.log`; the game inventory column is what is left of its gate | 21.12, 33 |
 | 21b | with the create path no longer comparing predicates, do the three predicates (`0004`'s two and `0005`'s) go back to `static` | tail of 21, kept as its own gate because it lands on the definitions `0005`/`0010` wrote; **NOT BUILT** | 21.12 |
 | 22 | do `FD6_UBWC_R16G16B16A16_INT` and `FD6_UBWC_R32G32_INT` describe one cell of the compressor on this chip (`TU_UBWC_64B_MIX`, folds that one pair and nothing else) | one cell in the paths probed: with the knob on, the mixed `{R16G16B16A16_UINT, R32G32_UINT}` create carries the metadata tail and reads `0/262144` wrong through a view of either family; the knob moves two lines of a 621-line log. Reverted from the tree after the run | 32 |
+| 23 | does a UBWC 64-bit image made **without** a format list read and write correctly through an `R64_UINT` storage image (`TU_UBWC_NOLIST_64`: declines the no-list UBWC demotion for 8-byte base blocks, nothing else) | in the probed shape yes: the create keeps the metadata tail (`+0x2000`), stays tiled, reads `0/262144` wrong through `r64ui` and comes back exactly +1 per word after `imageAtomicAdd(+1)`; a list that *names* `R64_UINT` is refused compression with the knob on and off, which is why the question had to be asked without a list. Reverted with `git apply -R` after the run | 37 |
 
 ## Tools
 
@@ -76,6 +77,7 @@ and have no file - the queue owns those numbers), full discussion in
 | `scripts/sweep-8bpp-grid.sh` | runs `tp8bpp` over metadata grids through `TU_8BPP_UBWC` (works only on the exp-17 build) |
 | `scripts/run-test.sh`, `scripts/run-b2i-matrix.sh`, `scripts/run-game.sh`, `scripts/fps-window.py`, `scripts/curate-game-log.sh` | running the test, the mode matrix, the game, the fps window |
 | `scripts/fdperf-sample.sh`, `scripts/fdperf-analyze.py`, `scripts/fdperf-align.py`, `tools/fdperf/fdperf-windowed-delta.patch` | profiling (see `docs/fdperf-a7xx.md`) |
+| `tools/fdperf/fdperf.cfg`, `tools/fdperf/fdperf.cfg-vertex`, `tools/fdperf/fdperf.cfg-vpc` | the three counter sets: "who owns the wall", "who owns DRAM and the vertex fetch", and "what is the vertex path busy with" (the last one **NOT RUN**; each header names its hw budget use and what had to be left out) |
 | `scripts/build-turnip*.sh`, `scripts/build-test.sh`, `container/` | building the driver and the test (there is no compiler on the device). `build-test.sh` installs the toolchain only if the image lacks it - on 20.11 a failed Fedora mirror download broke the build although the image had gcc and the headers |
 
 ## Logs that are cited as evidence
@@ -110,6 +112,7 @@ and have no file - the queue owns those numbers), full discussion in
 | `results/test-stock-mesa27-matrix.log`, `results/test-stock-flag-matrix.log` | stock 76 EXACT against 73 with the prop: the prop alone breaks `MUTABLE+SPARSE` creates |
 | `results/imginv-3variants.txt` | the counters for the three inventories (no 0014 / with 0014 / stock + prop); the tables in journal entry 27 reproduce from this file, the raw game logs are not in git |
 | `results/fdperf-mesa27*/steady-state.txt` | the memory wall |
+| `results/test-xr64-nolist-64-ubwc.log` | the `R64_UINT` storage read and `imageAtomicAdd` round trip over a UBWC 64-bit image made without a format list, on three drivers: the released stack, the `exp-23` hook off, the hook on |
 | `results/fps-gov-*.csv` | the governor is noise |
 | `results/fps-ctrl100{,b}.csv` | the "1.86 fps" artefact |
 
@@ -165,3 +168,6 @@ not a source.
 | which usage bits the game's images carry - shading rate, density map | 21 / 22 / 22 shading-rate images (`R8_UINT`, tiled, no UBWC, 12.0 MiB) and **0** density-map images in the three inventories | `results/imginv-usage-bits.log`, journal 35.1 |
 | what the driver exposes for `VK_KHR_fragment_shading_rate` on a740 | extension revision 2; texel size 8x8 min == max; largest `maxFragmentSize` 4x4; 16 coverage samples; no layered attachments, no interlock | `results/vulkaninfo-vrs.log`, journal 35.2 |
 | `exp-21` against the shipped `0014`, read per create in the game | 784 create signatures present in both inventories, **0** with a different `tile=`/`ubwc=` verdict, 0 present in only one; no-list tiled 2438.6 MiB against the reference 2450.3 | `results/test-exp21-inventory-ab.log`, journal 36 |
+| `R64_UINT` view of a UBWC 64-bit image made without a list (`TU_UBWC_NOLIST_64`) | load 0 wrong of 262144 and exactly +1 per word after `imageAtomicAdd(+1)`; a list that names `R64_*` keeps `tail=0x0` with the knob on and off | `results/test-xr64-nolist-64-ubwc.log`, journal 37 |
+| host-transfer (`VK_IMAGE_USAGE_HOST_TRANSFER_BIT = 0x400000`) images in the game - the only precondition of the driver's own BGRA8 swap TODO | **0** in all three inventories (3638 / 4176 / 4170 creates); largest usage mask seen is `0x117` | `results/imginv-usage-bits.log`, journal 37.4(c) |
+| the vertex path, recomputed from the committed 17.11 dumps with no new run | `VPC_VS_BUSY/VPC_BUSY` 92.8-96.4 % (`PS_BUSY` never measured); `VPC_WORKING/VPC_BUSY` 66.9-69.3 %; 1.03 vertices fetched per input primitive against 3 submitted (reuse 2.9:1); `VPC_NUM_ATTR_REQ_LM` 0.50 per vertex against ~5 attributes; VPC stall on UCHE 0.00 % | `results/fdperf-mesa27/fdperf-raw.txt`, `results/fdperf-mesa27-vertex/fdperf-raw.txt`, journal 38 |

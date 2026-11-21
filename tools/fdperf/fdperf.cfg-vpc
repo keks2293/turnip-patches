@@ -1,0 +1,129 @@
+// fdperf.cfg-vpc - the vertex/VPC pressure question on Adreno 740 (a7xx).
+//
+// Why a third cfg: the two existing ones answer "who owns the wall" (fdperf.cfg)
+// and "who owns DRAM and the vertex fetch" (fdperf.cfg-vertex).  The remaining
+// vertex question is inside the vertex path - is the VPC busy because of what the
+// game exports per vertex (varyings/interpolators) or because of the VS-side work
+// it does anyway - and the group hw budget of VPC is 6, so the two halves of that
+// question cannot be asked in a cfg that also carries BUSY/WORKING/STALL_UCHE as
+// the 17.11 runs did.  This cfg spends the VPC budget on the split instead.
+//
+// WHAT THE 17.11 RUNS ALREADY ANSWERED, from the raw dumps of both runs
+// (results/fdperf-mesa27/fdperf-raw.txt, results/fdperf-mesa27-vertex/fdperf-raw.txt;
+// the VPC group was already 6/6 there and carried VS_BUSY/VS_WORKING/ATTR_REQ_LM):
+//   * VPC_VS_BUSY / VPC_BUSY = 92.8-96.4% - almost all VPC busy cycles are on the
+//     VS side.  VPC_PS_BUSY was not in either cfg, so the other side is NOT known
+//     to be small: VS and PS may overlap and the 4-7% remainder is not a PS share.
+//     (counter 17 here is what closes that.)
+//   * VPC_WORKING / VPC_BUSY = 66.9-69.9% - about a third of "busy" is not
+//     "working".  The XML gives no description of the pair, so this is a question
+//     to chase, not a finding.
+//   * VFD vertices / TSE INPUT_PRIM = 1.032-1.035 and PC_IA_VERTICES / VFD
+//     TOTAL_VERTICES = 2.90-2.91 in both runs: the app submits 3 vertices per
+//     primitive and the vertex path delivers ~1.03, i.e. the post-transform reuse
+//     is already 2.9:1.  "VFD re-fetches every triangle" is not what the counters
+//     show; PC_VERTEX_HITS (19, here) is what quantifies the reuse directly.
+//   * VPC_NUM_ATTR_REQ_LM / VFD_TOTAL_VERTICES = 0.497-0.503: about one LM
+//     attribute request per two vertices, while VFD decodes 5.00 attributes per
+//     vertex.  The counter therefore counts something coarser than
+//     per-attribute-per-vertex and cannot be read as "interpolators per vertex"
+//     without documentation - which is why this cfg asks for SP_COMPONENTS and
+//     NUM_VPCRAM_WRITE instead of trying to interpret LM requests.
+//   * VPC_STALL_CYCLES_UCHE / VPC_BUSY = 0.00% in both runs, so the VPC is not
+//     waiting on L2; the recorded "stall UCHE ~0% (чистое вычисление)" holds.
+//
+// HW BUDGETS (a7xx, see the header of fdperf.cfg-vertex and
+// docs/fdperf-a7xx.md "hw budgets and silent-ignore"): UCHE=12, CP=13, PC=8,
+// VFD=8, VPC=6, TSE=4, SP=24, RB=8, CCU=5, LRZ=4, UFC=4, CMP=4, RBBM=4, VSC=2.
+// fdperf reads only counter0..num_counters-1 of each group and SILENTLY IGNORES
+// the rest - no error, no line in the dump.  Every block below is within budget
+// (UCHE 12/12, PC 8/8, VFD 8/8, VPC 6/6, TSE 1/4, SP 2/24).
+//
+// Selectors are the registration numbers of the countable from
+// a7xx_perfcntrs.json.h; each one here was read out of
+// src/freedreno/registers/adreno/a7xx_perfcntrs.xml as `value="N"` of the counter
+// name, e.g.
+//   grep 'name="A7XX_PERF_VPC_PS_BUSY_CYCLES"' src/freedreno/registers/adreno/a7xx_perfcntrs.xml
+// CP counter0 is reserved by fdperf for the GPU frequency (ALWAYS_COUNT).
+//
+// What is NOT here (budget, another run): TSE_OUTPUT_PRIM and
+// TSE_INSTANCE_PRIM do not exist as a7xx counter names at all (checked against the
+// XML), so "primitives after TSE" cannot be asked; VPC_VPCRAM_FULL_CYCLES (23),
+// VPC_LM_REQ_HIT (38) and VPC_STALL_CYCLES_SP_LM (6) would be the next candidates
+// and each costs a line someone else has to drop.
+//
+// Run:
+//   scripts/fdperf-sample.sh <sec> <window-ms> <file> tools/fdperf/fdperf.cfg-vpc
+// then scripts/fdperf-analyze.py <file> <tsv>; the VPC/PC/UCHE columns named below
+// are in the analyzer's TRAFFIC table (added with this cfg) and come out per
+// second; busy% comes from the BUSY table as usual.
+
+FD740 = {
+  CP = {
+    counter0  = 0;    // reserved (ALWAYS_COUNT, frequency)
+    counter1  = 2;    // PERF_CP_BUSY_CYCLES
+    counter2  = 15;   // PERF_CP_SQE_IDLE
+    counter3  = 11;   // PERF_CP_CONTEXT_DONE
+    counter4  = 9;    // PERF_CP_MODE_SWITCH
+  }
+
+  RBBM = {
+    counter0 = 1;    // PERF_RBBM_ALWAYS_ON (divisor for the duty cycle)
+    counter1 = 9;    // PERF_RBBM_VBIF_BUSY
+    counter2 = 12;   // PERF_RBBM_UCHE_BUSY
+  }
+
+  UCHE = {
+    counter0  = 0;    // PERF_UCHE_BUSY_CYCLES
+    counter1  = 1;    // PERF_UCHE_STALL_CYCLES_ARBITER
+    counter2  = 2;    // PERF_UCHE_VBIF_LATENCY_CYCLES
+    counter3  = 3;    // PERF_UCHE_VBIF_LATENCY_SAMPLES
+    counter4  = 27;   // PERF_UCHE_VBIF_READ_BEATS_CH0
+    counter5  = 28;   // PERF_UCHE_VBIF_READ_BEATS_CH1
+    counter6  = 4;    // PERF_UCHE_VBIF_READ_BEATS_TP
+    counter7  = 9;    // PERF_UCHE_READ_REQUESTS_TP
+    counter8  = 8;    // PERF_UCHE_VBIF_READ_BEATS_SP
+    counter9  = 13;   // PERF_UCHE_READ_REQUESTS_SP
+    counter10 = 15;   // PERF_UCHE_WRITE_REQUESTS_SP
+    counter11 = 16;   // PERF_UCHE_WRITE_REQUESTS_VPC
+  }
+
+  VFD = {
+    counter0 = 0;    // PERF_VFD_BUSY_CYCLES
+    counter1 = 2;    // PERF_VFD_STALL_CYCLES_VPC_ALLOC (the VPC backpressure, 12.5% in cfg-vertex)
+    counter2 = 5;    // PERF_VFD_STARVE_CYCLES_UCHE
+    counter3 = 8;    // PERF_VFD_DECODED_ATTRIBUTE_BYTES
+    counter4 = 9;    // PERF_VFD_NUM_ATTRIBUTES
+    counter5 = 17;   // PERF_VFD_TOTAL_VERTICES
+  }
+
+  PC = {
+    counter0 = 0;    // PERF_PC_BUSY_CYCLES
+    counter1 = 2;    // PERF_PC_STALL_CYCLES_VFD
+    counter2 = 4;    // PERF_PC_STALL_CYCLES_VPC (the 63% of the 17.11 run)
+    counter3 = 19;   // PERF_PC_VERTEX_HITS (the reuse behind 2.9:1, first time measured)
+    counter4 = 20;   // PERF_PC_IA_VERTICES
+    counter5 = 21;   // PERF_PC_IA_PRIMITIVES
+    counter6 = 25;   // PERF_PC_VS_INVOCATIONS
+    counter7 = 28;   // PERF_PC_3D_DRAWCALLS
+  }
+
+  VPC = {
+    counter0 = 0;    // PERF_VPC_BUSY_CYCLES
+    counter1 = 16;   // PERF_VPC_VS_BUSY_CYCLES
+    counter2 = 17;   // PERF_VPC_PS_BUSY_CYCLES   <- new: the other side of the split
+    counter3 = 10;   // PERF_VPC_SP_COMPONENTS    <- new: components handed to the FS
+    counter4 = 25;   // PERF_VPC_NUM_VPCRAM_WRITE <- new: writes into VPC RAM
+    counter5 = 24;   // PERF_VPC_LM_FULL_WAIT_FOR_INTP_END <- new: interpolate waiting
+  }
+
+  TSE = {
+    counter0 = 6;    // PERF_TSE_INPUT_PRIM (the denominator of vertices/primitive)
+  }
+
+  SP = {
+    counter0 = 0;    // PERF_SP_BUSY_CYCLES
+    counter1 = 48;   // PERF_SP_EXPORT_VPC_TRANS (SP->VPC transactions, the other
+                     // side of the varyings traffic)
+  }
+}
