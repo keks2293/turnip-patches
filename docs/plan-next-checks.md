@@ -781,8 +781,25 @@ v3.1's `d3d12_device_caps_override` only raises capabilities and assigns `max_fe
 against `12_1` measured identical to 0.1 point on every block ratio. The API-isolation check stays closed
 until a title that can choose its API is on this machine.
 
-15. **The VPC/varyings question, and the counters that can actually ask it** (cfg written 21.11;
-    one game session, shared with 12/13/14). Two claims were put forward as the next lever: ir3
+15. **Closed 22.11, journal 40.14: the varyings payload is small and the VPC does not wait on it; the
+    occupancy of the VPC's sub-units stays undecoded.** The counters this item asked for were already
+    programmed by `tools/fdperf/fdperf.cfg-vpc` and sat unread in the ten 21.11 arms:
+    `LM_FULL_WAIT_FOR_INTP_END` is 1.0-1.1 % of the core (1.2 % of `VPC_BUSY`), `NUM_VPCRAM_WRITE` 2.62
+    and `SP_COMPONENTS` 0.89 per VS invocation in every arm, `VFD_STALL_CYCLES_VPC_ALLOC` 12.4 % of VFD
+    busy against 12.5 % in the 17.11 vertex run, `PC_VERTEX_HITS` 0.65 per IA vertex. So the branch
+    "excess or unpacked varyings saturate the VPC" is closed on the payload and the wait signature, and
+    the knob it named - `tu6_vpc_varying_mode()` / `tu6_emit_vpc_varying_modes()` - has no measurement
+    behind it and stays untouched. What the pre-registration did not expect: `VPC_PS_BUSY` is
+    83.7-84.5 % of the core, not a small share - but with `VPC_BUSY` 91.5 % and `VPC_VS_BUSY` 88.7 % the
+    three cannot be phases of one pipe, and neither the XML nor the tree describes them, so no
+    "interpolation is the wall" claim is available from these counters. `UCHE_WRITE_REQUESTS_VPC` reads
+    exactly 0 in every arm while `..._SP` reads 47-49 M/s: a measured zero whose wiring on a7xx is not
+    described, so it is recorded and not used.
+
+    (The text below is the pre-registration as it stood on 21.11; it is kept because the reading it fixed
+    is what 40.14 was judged against.)
+
+    Two claims were put forward as the next lever: ir3
     leaving non-position work in the *binning* vertex shader (so VFD and VPC pay per mesh twice),
     and excess or unpacked varyings saturating the VPC. Journal 38 worked out what is already
     answered, from the committed dumps of the two 17.11 runs - and it is more than expected:
@@ -934,6 +951,9 @@ vertex in the VPC in DWORD's") from them, so a VS output the FS does not read is
 counted in the per-vertex size; and the measured payload is small (`VPC_NUM_VPCRAM_WRITE` 2.62 per
 invocation, `VFD_NUM_ATTRIBUTES` 5.08 per vertex). What remains open in this queue item is only the
 semantics of `VPC_PS_BUSY` (no `desc=` in the XML); `fdperf.cfg-vpc3` was run as part of queue 19 below.
+(22.11: the counter half of (c) is measured now - queue 15 closed by journal 40.14, which adds the
+wait signature `LM_FULL_WAIT_FOR_INTP_END` at 1.0-1.1 % of the core and confirms the payload in nine
+arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/`VS_BUSY`.)
 
 19. **Closed 21.11, journal 40.9: the VPC attribute buffer is not a lever.** The premise was that on
     A740 the sysmem attribute buffer is a too-small 0x20000; in this tree the answer is that our

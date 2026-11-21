@@ -1003,7 +1003,7 @@
     "results/fdperf-mesa27-vertex/fdperf-raw.txt",
     "results/game-patched-algopg.log"
    ],
-   "lines": 772,
+   "lines": 838,
    "headings": [
     "## 40.1 What was run",
     "## 40.2 The discard, and what kind of discard it is",
@@ -1017,7 +1017,8 @@
     "## 40.10 What this does not show",
     "## 40.11 The binning/visibility counter groups can be programmed deliberately (queue 20)",
     "## 40.12 The VSC tile counter is a per-session switch, and that decides what 40.11 measured",
-    "## 40.13 What the 22.11 additions do not show"
+    "## 40.13 What the 22.11 additions do not show",
+    "## 40.14 The varyings counters were programmed on 21.11, and they close the payload half of that branch (queue 15)"
    ],
    "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
    "verdict_source": "journal 40"

@@ -20,7 +20,9 @@ off and forced (40.8, 40.11; 40.12 adds that those runs never started a binning 
 measurement of a working BV thread), and the VPC
 attribute buffer (`TU_FORCE_PROPS=has_gmem_vpc_attr_buf` delivers - the driver logs the a750 sizes - and
 moves nothing, 40.9). What stays open is the wall itself: `VPC_BUSY` 91 %, of whose time
-`VPC_VPCRAM_FULL_CYCLES` accounts for ~51 % - the largest single named component measured so far.
+`VPC_VPCRAM_FULL_CYCLES` accounts for ~51 % - the largest single named component measured so far - and
+whose sub-unit occupancy (`VS_BUSY` 88.7 %, `PS_BUSY` 84.1 % of the core) has no semantics in any register
+description in the tree (40.14).
 
 ## 40.1 What was run
 
@@ -773,3 +775,63 @@ What that changes in the entry's own wording:
 * Nothing here changed the ship stack: `build/out` is still `4c3cdb210082`, no file in `patches/` was
   touched, and every 22.11 arm is the released driver with an environment variable.
 
+## 40.14 The varyings counters were programmed on 21.11, and they close the payload half of that branch (queue 15)
+
+**Why.** Queue 15 of `docs/plan-next-checks.md` pre-registered a reading for the last open vertex
+question - "is the VPC saturated because of varyings?" - and named the counters that can answer it:
+`VPC_PS_BUSY_CYCLES`, `VPC_SP_COMPONENTS`, `VPC_NUM_VPCRAM_WRITE`, `VPC_LM_FULL_WAIT_FOR_INTP_END`,
+`PC_VERTEX_HITS` and the per-client write-request side of UCHE. `tools/fdperf/fdperf.cfg-vpc` carries all
+of them inside the hw budgets, and the ten 21.11 arms run with it (`vpcbase1`, `vpcbase2`, `hpbase2`,
+`hp50`, `lrz2`, `cb1`, `fl111`, `fl121`, `nopref`, `hp40`) - but 40.6 quoted only the coupling ratios of
+those dumps, so the varyings numbers sat unread in the committed dumps. Read here over the pinned-clock
+windows of `scripts/fdperf-arm-table.py` (`t_rel` 20-105 s with `CP_ALWAYS_COUNT` within 1 % of 680 MHz);
+`scripts/fdperf-vpc-ratios.py` prints the same columns per dump.
+
+| arm | VPC busy | `VS_BUSY` | `PS_BUSY` | `LM_FULL_WAIT_FOR_INTP_END` | `NUM_VPCRAM_WRITE` per VS invocation | `SP_COMPONENTS` per VS invocation |
+|---|---|---|---|---|---|---|
+| `vpc-vpcbase2` | 91.57 % | 88.68 % | 84.11 % | 1.10 % | 2.62 | 0.89 |
+| `vpc-fl111` | 91.58 % | 88.67 % | 84.19 % | 1.11 % | 2.63 | 0.89 |
+| `vpc-fl121` | 91.60 % | 88.69 % | 84.20 % | 1.14 % | 2.62 | 0.89 |
+| `vpc-cb1` | 91.61 % | 88.69 % | 84.17 % | 1.10 % | 2.62 | 0.89 |
+| `vpc-nopref` | 91.53 % | 88.63 % | 84.24 % | 1.12 % | 2.62 | 0.89 |
+| `vpc-lrz2` | 91.73 % | 86.73 % | 84.09 % | 1.06 % | 2.62 | 0.89 |
+| `vpc-hpbase2` | 91.71 % | 86.51 % | 84.49 % | 1.07 % | 2.63 | 0.89 |
+| `vpc-hp50` | 91.45 % | 87.61 % | 83.67 % | 1.05 % | 2.62 | 0.89 |
+| `vpc-vpcbase1` | 91.49 % | 84.94 % | 84.23 % | 0.98 % | 2.62 | 0.89 |
+| `vpc-hp40` | no pinned-clock window (40.12) | - | - | - | - | - |
+
+Three more counters from the same dumps: `PC_VERTEX_HITS` 470-501 M/s, i.e. 0.65 of `PC_IA_VERTICES`
+(718-765 M/s); `UCHE_WRITE_REQUESTS_VPC` reads **0.0 M/s** in every arm while `UCHE_WRITE_REQUESTS_SP`
+reads 46.3-48.8 M/s; and `VFD_STALL_CYCLES_VPC_ALLOC / VFD_BUSY` is 12.4 % (12.5 % in the 17.11 vertex
+run of queue 15, so the arm set did not move it).
+
+**Reading, against the pre-registered rule.**
+
+* The payload half of the branch closes. The VPC moves 2.62 `VPCRAM` writes and 0.89 `SP_COMPONENTS` per
+  vertex-shader invocation, and `LM_FULL_WAIT_FOR_INTP_END` - the signature queue 15 named for "the
+  interpolate side is waiting on the link map" - is 1.0-1.1 % of the core, about 1.2 % of `VPC_BUSY`.
+  Whatever the VPC is doing 91.5 % of the time, it is not waiting on varyings to drain, and the per-vertex
+  payload is the same in every arm. The knob queue 15 named for a varying-side fix,
+  `tu6_vpc_varying_mode()` / `tu6_emit_vpc_varying_modes()` (`tu_pipeline.cc:677-730`, `734-776`), is
+  therefore **not** justified by any number in this repository, and it has not been tried.
+* `PS_BUSY` is *not* a small share: 83.7-84.5 % of the core in all nine usable arms. That is the one
+  number the pre-registration did not expect, and it cannot be turned into a varying claim, because
+  `VPC_BUSY` 91.5 % + `VS_BUSY` 88.7 % + `PS_BUSY` 84.1 % sum to well over one core - the three are not
+  mutually exclusive phases of one pipe, and `a7xx_perfcntrs.xml` gives no description for any of them
+  (40.7 already said the "packing varyings" gloss of `PS_BUSY` is an inference). So the honest sentence is
+  that the VPC's sub-unit occupancy is high and undecoded, not that interpolation is the wall.
+* The fetch side stays as journal 38 described it: `VFD_STALL_CYCLES_VPC_ALLOC` is 12.4 % of VFD busy
+  unchanged across nine arms, and `PC_VERTEX_HITS` at 0.65 per IA vertex is the reuse behind the
+  1.03 vertices per input primitive of 40.6.
+* The zero of `UCHE_WRITE_REQUESTS_VPC` is recorded and not interpreted. The counter is programmed
+  (`fdperf.cfg-vpc`, UCHE `counter11 = 16`), so this is a measured zero, but it sits next to a non-zero
+  SP write-request counter and a `VPCRAM` write count of 2.62 per invocation, which cannot all three be
+  "the VPC writes nothing to L2". What the client-side write counters wire up to on a7xx is not in the
+  register description in this tree, so no claim is built on it.
+
+**What this does not show.** Whether the VPC's 91.5 % is geometry math or varying packing - the two
+counters that would separate them are `VPC_PS_BUSY` and `VPC_VS_BUSY`, and their semantics are not
+described anywhere in the tree or the XML; asking the hardware by changing
+`tu6_emit_vpc_varying_modes()` is a build and a measurement that this evidence does not motivate. And the
+arms above are all 21.11 sessions, so their content spread is the one 40.10 describes; the columns that
+move between them are `VS_BUSY` (84.9-88.7 %) and the primitive rate, not the per-invocation payload.
