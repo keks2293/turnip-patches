@@ -672,6 +672,15 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     control: that is a cap demonstration, and an allocation failure there would be an artefact of
     the value, not a result.
 
+    Record the reported heap **and** the reported budget at every value, and expect them to differ.
+    Re-reading the artifact (2026-11-21) pulls out the number that decides how much this check can
+    show: while the heap is reported as 5.49 GiB, the budget is reported as 980 MiB, because
+    `vk_physical_device_heap_budget()` (`vk_physical_device.h:180-198`) takes the smaller of the heap
+    and `0.9 x MemAvailable + heap_used`, and this machine had under 1 GiB free in every one of the
+    five runs. So the number an application is told it may reach is already about five times below
+    the heap here, and a run at `0.5` or `0.4` may move a figure that was never binding. Only logging
+    both separates "no effect" from "effect on the loose number".
+
     What each outcome would mean, said in advance: lower swap with the same vkd3d peak means the
     engine was sizing itself against the report and the report was misleading; the same swap and
     the same fps means the report is ignored by this stack and the whole branch closes with a

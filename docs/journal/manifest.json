@@ -813,7 +813,7 @@
     "results/test-perfprops-rig.log",
     "results/vulkaninfo-heap-report.log"
    ],
-   "lines": 182,
+   "lines": 198,
    "headings": [
     "## 34.1 What has already been measured, so the search does not repeat it",
     "## 34.2 The surface none of them covered, read off the tree",

@@ -130,10 +130,26 @@ So on this machine the driver tells a fresh application that there are 5.49 GiB 
 memory - 75 % of 7.32 GiB, because of the heuristic, not because anyone chose it - while journal 17
 measured that the game's own vkd3d resources peak at 3129 MiB and turnip's live BOs at 3490 MiB on
 a system that was then already running with 4.95 GiB of swap used. The budget is a separate number:
-`tu_get_budget_memory()` (`tu_device.cc:2269`) hard-codes 0.9 of *free* system memory, so the budget
-follows the machine and not the option, until the heap drops below it - which is why the last row
-has `budget == size` and why that row is a control on the cap at `vk_physical_device.h:196`, not a
-candidate value.
+`tu_get_budget_memory()` (`tu_device.cc:2269`) passes a hard-coded `0.9` of *free* system memory
+into `vk_physical_device_heap_budget()` (`vk_physical_device.h:180-198`), which computes
+`MIN2(heap_size, 0.9 x MemAvailable + heap_used)` rounded down to MiB, `MemAvailable` being read
+from `/proc/meminfo` (`os_misc.c:428`). So the budget follows the machine and not the option, until
+the heap drops below it - which is why the last row has `budget == size` and why that row is a
+control on the cap at `vk_physical_device.h:196`, not a candidate value.
+
+Reading the same artifact again (2026-11-21) pulls out a number worth saying on its own. The `usage`
+line in every one of the five blocks is `0`, so the budget the driver reported is 0.9 of the free
+memory read *while it ran*: 1027604480 / 1011875840 / 1004535808 / 1026555904 bytes, i.e. 980 / 965
+/ 958 / 979 MiB. Those land on the `MemAvailable` figures the shell read *after* each process had
+exited, to the MiB - arithmetic working out rather than a finding, since `0.9 x (available + ~100
+MiB of the querying process's own memory)` is close to a fixed point when available sits near
+1 GiB. This artifact cannot separate those two terms, because the shell sampled `/proc/meminfo`
+after the process exited and not during it. What it does show, and what does not depend on that, is
+the ratio: while the heap is reported as 5.49 GiB, the budget is reported as under 1 GiB, because
+the machine has about 1 GiB free. The smaller of the two - the number an application is told it may
+actually reach - sits about five times below the heap here. Journal 17 concluded "no env levers for
+memory" from what was *used*; on the report side, which is what queue 13 is about, the budget and
+not the heap is the tight number.
 
 The memory-type switch in the same area, `tu_expose_device_local_only_memory_type`, is a different
 axis and was checked as a control: it moves the reported type count 4 -> 5, the new type being
