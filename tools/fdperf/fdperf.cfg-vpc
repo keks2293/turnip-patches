@@ -9,7 +9,7 @@
 // the 17.11 runs did.  This cfg spends the VPC budget on the split instead.
 //
 // WHAT THE 17.11 RUNS ALREADY ANSWERED, from the raw dumps of both runs
-// (results/fdperf-mesa27/fdperf-raw.txt, results/fdperf-mesa27-vertex/fdperf-raw.txt;
+// (results/games/re4/mesa27/fdperf-raw.txt, results/games/re4/mesa27-vertex/fdperf-raw.txt;
 // the VPC group was already 6/6 there and carried VS_BUSY/VS_WORKING/ATTR_REQ_LM):
 //   * VPC_VS_BUSY / VPC_BUSY = 92.8-96.4% - almost all VPC busy cycles are on the
 //     VS side.  VPC_PS_BUSY was not in either cfg, so the other side is NOT known

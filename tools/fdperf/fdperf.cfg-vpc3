@@ -1,13 +1,13 @@
 // fdperf.cfg-vpc3 - the last place left inside the VPC: its own RAM and the LM handshake.
 //
-// cfg-vpc (21.11, results/fdperf-vpc-vpcbase*/ and results/fdperf-vpc-cb1/-lrz2/) answered
+// cfg-vpc (21.11, results/games/re4/vpc-vpcbase*/ and results/games/re4/vpc-cb1/-lrz2/) answered
 // what the VPC produced: BUSY 90.3-91.0% of 680 MHz, VS_BUSY/BUSY 92.7-96.8% and
 // PS_BUSY/BUSY 91.8-92.1% (overlapping stage counters, not a partition), NUM_VPCRAM_WRITE
 // 2.62 per PC_VS_INVOCATIONS, SP_COMPONENTS 0.89 per invocation, LM_FULL_WAIT_FOR_INTP_END
 // 1.07-1.19% of BUSY, UCHE_WRITE_REQUESTS_VPC 0.0 M/s (the XML gives this client no read
 // counter at all, so L2 traffic is a VFD question, not a VPC one).
 //
-// cfg-vpc2 (21.11, results/fdperf-vpc-vpc2b/) answered what it waits for, and the answer is
+// cfg-vpc2 (21.11, results/games/re4/vpc-vpc2b/) answered what it waits for, and the answer is
 // "almost nothing that names another block":
 //   * VPC_WORKING/VPC_BUSY = 66.96% - the 17.11 figure (66.9-69.9%) reproduced to 0.1 point;
 //   * VPC_STALL_CYCLES_VFD_WACK / BUSY = 0.00%, VPC_STALL_CYCLES_SP_LM 0.36%,

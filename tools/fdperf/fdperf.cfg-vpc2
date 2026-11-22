@@ -1,7 +1,7 @@
 // fdperf.cfg-vpc2 - the second half of the VPC budget: WHY the VPC is busy, not what it produced.
 //
 // fdperf.cfg-vpc spends six VPC slots on BUSY/VS_BUSY/PS_BUSY/SP_COMPONENTS/
-// NUM_VPCRAM_WRITE/LM_FULL_WAIT and answered on 21.11 (results/fdperf-vpc-vpcbase*/,
+// NUM_VPCRAM_WRITE/LM_FULL_WAIT and answered on 21.11 (results/games/re4/vpc-vpcbase*/,
 // scripts/fdperf-vpc-ratios.py):
 //   * VPC_BUSY 90.3-91.0% of 680 MHz, VS_BUSY/VPC_BUSY 92.7-96.8%, PS_BUSY/VPC_BUSY
 //     91.8-92.1% - the two sides overlap, they are not a partition of BUSY;

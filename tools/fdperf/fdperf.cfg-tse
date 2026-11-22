@@ -8,8 +8,8 @@
 // results/raw/fdperf-vpcbase1.txt): nothing between IA and TSE drops a primitive, so
 // every primitive the IA feeds pays for VS/VPC work and the only culling left is at TSE.
 //
-// What the committed 17.11 runs already give for this group (results/fdperf-mesa27/
-// fdperf-raw.txt, results/fdperf-mesa27-vertex/fdperf-raw.txt, windows t_rel>=35s):
+// What the committed 17.11 runs already give for this group (results/games/re4/mesa27/
+// fdperf-raw.txt, results/games/re4/mesa27-vertex/fdperf-raw.txt, windows t_rel>=35s):
 //   TSE_BUSY 447.0/445.5 Mc/s = 65.7/65.5% of 680 MHz (79.6% with the saturated-window
 //   filter of steady-state.txt), TSE_STARVE_CYCLES_PC/BUSY 41.9/39.8% (TSE waits for
 //   primitives from upstream), TSE_CLIPPING_CYCLES/BUSY 3.5/3.7%, INPUT_PRIM 202.5/211.9 Mc/s.

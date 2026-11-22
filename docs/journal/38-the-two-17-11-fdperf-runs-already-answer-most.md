@@ -11,7 +11,7 @@ One entry of this repository's journal. Index: [`docs/analysis.md`](../analysis.
 import importlib.util
 spec = importlib.util.spec_from_file_location("an", "scripts/fdperf-analyze.py")
 an = importlib.util.module_from_spec(spec); spec.loader.exec_module(an)
-samples, window = an.parse("results/fdperf-mesa27/fdperf-raw.txt")   # or -vertex/
+samples, window = an.parse("results/games/re4/mesa27/fdperf-raw.txt")   # or -vertex/
 t0 = samples[0]["t"]
 sel = [s["v"] for s in samples
        if s["v"].get("PERF_CP_ALWAYS_COUNT", 0) / window > 5e8 and s["t"] - t0 >= 35]
@@ -28,7 +28,7 @@ an empty cell, never a 0, which is the rule already documented in that script. T
 counters were checked against the committed dump of 17.11 for regression: same 46 rows, no
 duplicate columns, `VPC_PS_BUSY_PER_S` empty there because that cfg line never existed.
 
-**Which windows.** The predicate written in the header of `results/fdperf-mesa27/steady-state.txt`
+**Which windows.** The predicate written in the header of `results/games/re4/mesa27/steady-state.txt`
 (`CP_ALWAYS_COUNT > 5e8`, `t_rel >= 35`) selects 35 of 46 windows in the main run and 34 in the
 vertex run, and gives VPC busy 88.8 % / 90.5 % against the recorded 91.1 % / 90.5 % - i.e. the
 recorded "33 windows" filter is not exactly recoverable from that header. Absolute busy % is
@@ -127,7 +127,7 @@ not wired into fdperf.
 
 The proposal also expected the 64-bit no-list UBWC grant (journal 37) to reduce TP -> UCHE misses and
 so relieve the L2 arbiter. The committed per-client split says this cannot be where the mass is:
-`results/fdperf-mesa27-vertex/steady-state.txt` measures DRAM reads per client as TP 12.0 GB/s
+`results/games/re4/mesa27-vertex/steady-state.txt` measures DRAM reads per client as TP 12.0 GB/s
 (81 %), VFD 2.3 (16 %), PC 0.4 (3 %), **SP 0.05 GB/s (0.3 %)**. Journal 37 established that
 `R64_*` has no texture entry and its only reader is a storage image, i.e. an SP-side client, so a
 grant in that class addresses the client that is 0.3 % of reads, not the 81 %. Journal 37 said the

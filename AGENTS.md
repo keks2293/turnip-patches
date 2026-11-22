@@ -136,6 +136,10 @@ not committed artifacts):
   in the entry.
 * **One commit per measurement batch**: arms + artifacts + entry + regenerated index. No
   wording-only commits, no "clarify wording" commits.
+* **Name the game in the path.** A game measurement lives under
+  `results/games/<title>/`, and its entry says which title, which executable, which API
+  translation layer and which resolution. `scripts/run-game.sh` writes the title into the
+  run log's header (`# game: ...`) so a raw log can be identified even out of place.
 * **Corrections are three lines**: dated, naming the wording they correct, one sentence about
   what moved. The old sentence stays; the rest of the entry is not re-flowed.
 * **No style rewrites of committed text.** If committed prose is bad, fix the format in the
@@ -167,8 +171,11 @@ So:
   was later promoted to an entry of its own, as `21-10` was);
 * experiment: `experiments/exp-NN-<slug>.patch`, cited together with its entry;
 * decision: `docs/decisions/ADR-NNNN-<slug>.md`;
-* curated log: `results/<direction>-<what>.log`, with a header naming the tool, the
-  driver build hash, the environment and how to regenerate it;
+* game measurement: `results/games/<title>/...` - one directory per measured title, the
+  title in the path so a citation cannot lose it; a counter from one game is never put in a
+  table with another's. `results/games/README.md` is the registry;
+* curated log: `results/games/<title>/<direction>-<what>.log`, with a header naming the
+  tool, the driver build hash, the environment and how to regenerate it;
 * raw logs stay in `results/raw/` (gitignored) - a curated file is what git sees and what
   a claim may cite.
 

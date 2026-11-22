@@ -504,7 +504,7 @@ by the log of the running game - the device is created at 12_0, the
 `0xc000 is not supported` rejection is gone (only `0xc100` remains -
 that is 12_1: `ROVsSupported` requires
 `VK_EXT_fragment_shader_interlock`, not implemented in Turnip).
-Analysis - section 9 of the doc, log - `results/game-patched.log`.
+Analysis - section 9 of the doc, log - `results/games/re4/game-patched.log`.
 
 The side effect for which the gate was lifted is now visible in
 action: the game on 12_0 does not reach a window. Within 200 s the
@@ -528,11 +528,11 @@ packaged driver is built with `prefix=/usr` and reads
 is not `vkd3d`, so both drivers report `Preserve32 = false`.
 
 **The game works.** Verified by runs: `VKD3D_SHADER_MODEL=6_6` on the
-patched driver (`results/game-patched-sm66.log`); stock with
-`VKD3D_FEATURE_LEVEL=12_0` (`results/game-stock-flforce.log`); and a
+patched driver (`results/games/re4/game-patched-sm66.log`); stock with
+`VKD3D_FEATURE_LEVEL=12_0` (`results/games/re4/game-stock-flforce.log`); and a
 clean run on the rebuilt driver - neither `DRIRC_CONFIGDIR` nor
 `~/.drirc`, SM 6.6 comes up by itself and the force never applies
-(`results/game-patched-clean.log`).
+(`results/games/re4/game-patched-clean.log`).
 
 Analysis - section 10 of the doc. The build fix (`--prefix=/usr` in
 `scripts/build-turnip.sh`) removes the cause: the driver reads the

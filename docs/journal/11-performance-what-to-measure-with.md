@@ -25,7 +25,7 @@ by time, only by `gpu_load`.
 
 ### 11.1. What RE4 showed
 
-Two phases, unambiguously distinguishable (`results/game-patched-hud.log`):
+Two phases, unambiguously distinguishable (`results/games/re4/game-patched-hud.log`):
 
 | phase | fps | gpu_load | core clock |
 |---|---|---|---|
@@ -65,7 +65,7 @@ difference is within the scene's noise, and the windows are not fully
 comparable (in the 12_0 run the core dropped to 220 MHz, i.e. part of the tail
 was not gameplay).
 
-Logs: `results/game-patched-fl1111.log`, `results/fps-patched-fl1111.csv`.
+Logs: `results/games/re4/game-patched-fl1111.log`, `results/games/re4/fps-patched-fl1111.csv`.
 
 A side observation from the log: with the force to 11_1 the game asked for 12_0
 and got the rejection `0xc000` — and went ahead and played on 11_1 anyway. So

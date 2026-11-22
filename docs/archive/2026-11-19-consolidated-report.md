@@ -1100,8 +1100,8 @@ vkd3d-proton 3.1.0. Нужно разделить, чьи это образы:
 
 Разобраны оба инвентаря по полю `list=` и по флагу
 `VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT` (`flags & 0x8`):
-`results/game-patched-imginv4.log` (база, до 0014) и
-`results/game-patched-imginv5.log` (с 0014).
+`results/games/re4/game-patched-imginv4.log` (база, до 0014) и
+`results/games/re4/game-patched-imginv5.log` (с 0014).
 
 | факт | inv4, 3639 созда | inv5, 4177 созда |
 |---|---|---|
@@ -1544,9 +1544,9 @@ exp-1…exp-11 + exp-13/13b/14/15/16/17 (exp-12 нет); полный разбо
 | `results/test-0014v2-matrix.log`, `…-forceflag.log` | 0014 v2 сломан на `RGBA8→BGRA8`/`BGRA8→RGBA8`, счётчик 94 этого не видит (§7.3-7.5, `patches/DROPPED.md`) |
 | `results/test-stock-mesa27-matrix.log`, `results/test-stock-flag-matrix.log` | сток 76 EXACT против 73 со флагом: флаг сам по себе ломает `MUTABLE+SPARSE`-создания (§7.11) |
 | `results/imginv-3variants.txt` | вывод `imginv-stats.py`/`imginv-classes.py` по трём инвентарям: без 0014 / с 0014 / сток+флаг — числа §7.13 воспроизводятся отсюда, сырые логи в git не входят |
-| `results/fdperf-mesa27*/steady-state.txt` | стена памяти |
-| `results/fps-gov-*.csv` | governor = шум |
-| `results/fps-ctrl100{,b}.csv` | артефакт 1.86 fps |
+| `results/games/re4/mesa27*/steady-state.txt` | стена памяти |
+| `results/games/re4/fps-gov-*.csv` | governor = шум |
+| `results/games/re4/fps-ctrl100{,b}.csv` | артефакт 1.86 fps |
 
 ---
 

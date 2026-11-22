@@ -35,8 +35,8 @@
 //     arms -> the BV registers mirror the ordinary ones and the numbers are not per-thread.
 //
 // What the runs answered (22.11, journal 40.11 and 40.12; arms bvbase, bvforce, bvforce2,
-// bvforce3, results/fdperf-bv-*/).  Of the three readings above, the third one is the one
-// that came true, and the label check (results/fdperf-bv-idle-labelcheck.txt) shows the cfg
+// bvforce3, results/games/re4/bv-*/).  Of the three readings above, the third one is the one
+// that came true, and the label check (results/games/re4/bv-idle-labelcheck.txt) shows the cfg
 // does address the BV groups, so the halves are addressable but not per-thread: BV_TP
 // BUSY reads 100.000 % of the ordinary TP BUSY, whole unprogrammed BV groups mirror their
 // ordinary twin, and BV_TSE/BV_PC primitives read 0/s with CB off and forced.  The reason

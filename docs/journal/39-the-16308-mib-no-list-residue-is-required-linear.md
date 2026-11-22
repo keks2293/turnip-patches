@@ -198,7 +198,7 @@ this is the residue *after* v1):
 
 The residue carries `SAMPLED` in 1630.8 MiB of 1630.8 and `STORAGE` in 1012.1 — it is a TP-side pile,
 and TP is the client that owns the memory wall (12.0 GB/s of 14.8, 81 % of DRAM reads, in
-`results/fdperf-mesa27-vertex/steady-state.txt`). That is the only reason it looked interesting, and it
+`results/games/re4/mesa27-vertex/steady-state.txt`). That is the only reason it looked interesting, and it
 still is the right client. It does not matter, because of 39.1:
 
 - 32-bit-class bases — `R11G11B10_FLOAT` 374.7, `R32_UINT` 358.4, `R32_FLOAT` 79.0, `R8G8B8A8_SNORM`
@@ -258,7 +258,7 @@ is a gap in `0014` v1's predicate.
 `0014` v1 moved 2450.3 MiB of no-list images into tiled, and that has never been measured for traffic
 or fps: journal 21.12 says so in its own text ("fps is not what this run measures - the inventory
 is"), and the 17.11 fdperf runs predate `0014` (entries 21.11 and 21.12 are both dated 18.11), which
-makes `results/fdperf-mesa27-vertex/steady-state.txt` a baseline taken with *everything* in linear. The
+makes `results/games/re4/mesa27-vertex/steady-state.txt` a baseline taken with *everything* in linear. The
 A/B needs no new patch, only a build of the ship stack without `0014`, same scene, compared by the
 per-client ratios journal 38 allows (TP GB/s, starve), not by levels. Queue 16 - and it starts with the
 revert problem of 39.7, because the committed patch file does not revert the tree.

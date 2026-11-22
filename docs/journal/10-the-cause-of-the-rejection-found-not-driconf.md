@@ -6,7 +6,7 @@ One entry of this repository's journal. Index: [`docs/analysis.md`](../analysis.
 
 `VKD3D_SHADER_MODEL=6_6 scripts/run-game.sh patched 200` — **the game ran**:
 the swapchain is created and recreated (`1920x1080` → `1280x800`), no window
-rejection. Log — `results/game-patched-sm66.log`.
+rejection. Log — `results/games/re4/game-patched-sm66.log`.
 
 The same run verified that the env reaches vkd3d: it prints
 `d3d12_device_caps_shader_model_override: Overriding supported shader model: 6_6.`
@@ -14,7 +14,7 @@ So the non-working `VKD3D_DEBUG=trace` is a separate problem (not this run),
 and environment variables reach vkd3d fine.
 
 Separately: `VKD3D_FEATURE_LEVEL=12_0` on stock
-(`results/game-stock-flforce.log`) also gives a working game. This reproduces
+(`results/games/re4/game-stock-flforce.log`) also gives a working game. This reproduces
 "fact 1" from the document in the `rp6-vkd3d-analysis` branch already on RE4.
 The level force raises `max_shader_model` only to 6_0
 (`d3d12_device_caps_override`, `device.c:10888`), so the SM level in this run
@@ -139,8 +139,8 @@ Verified by rebuilding and running: the path in the binary became
 `/usr/share/drirc.d`, the patches are in place
 (`sparseResidencyImage2D = true`), the game runs **without** `DRIRC_CONFIGDIR`
 and **without** `~/.drirc` — SM 6.6 comes up three times, the force is applied
-zero times (`results/game-patched-prefixusr.log`, and again
-`results/game-patched-clean.log` after both crutches were removed).
+zero times (`results/games/re4/game-patched-prefixusr.log`, and again
+`results/games/re4/game-patched-clean.log` after both crutches were removed).
 
 The `--prefix=/usr` edit is safe because `DATADIR` is not used anywhere else in
 the tree — only the path to driconf changes. `SYSCONFDIR` (same trick,

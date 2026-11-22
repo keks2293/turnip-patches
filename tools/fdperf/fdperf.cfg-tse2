@@ -8,7 +8,7 @@
 //   VPC shaded produce no visible primitive at all,
 //   TSE_ZERO_PIXEL_PRIM 68.9 Mc/s = 27.0% of the input (37.5% of the drops),
 //   TSE_BUSY 542.2 Mc/s = 79.7% of the locked 680 MHz (independent of the 17.11 run's 79.6% in
-//   results/fdperf-mesa27/steady-state.txt), while the same sample sets reproduce the cfg-vpc
+//   results/games/re4/mesa27/steady-state.txt), while the same sample sets reproduce the cfg-vpc
 //   anchors: VPC_BUSY 91.6%, PC_STALL_CYCLES_VPC/PC_BUSY 68.53%, UCHE arbiter stall 43.40%,
 //   VFD starve on UCHE 55.73%, VSC_BUSY 0.38%.
 // The missing half is why those 183.6 Mc/s die: this cfg spends all four TSE slots on the

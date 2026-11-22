@@ -61,7 +61,7 @@ have looked like "ICD not found" rather than a loading error.
 
 ### Gate removed on a live application
 
-After rebuilding with WSI (`results/game-patched.log`): DXVK creates the
+After rebuilding with WSI (`results/games/re4/game-patched.log`): DXVK creates the
 instance, the device is created, and — the main thing — **12_0 is accepted**.
 The rejection `Feature level 0xc000 is not supported` is gone, while the
 rejection `0xc100` (12_1) remains, as it should: 12_1 runs into a different

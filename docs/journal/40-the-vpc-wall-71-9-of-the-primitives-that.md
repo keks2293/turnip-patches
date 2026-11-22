@@ -32,13 +32,13 @@ description in the tree (40.14).
 
 | run | driver state | sampler cfg | dump (committed) |
 |---|---|---|---|
-| `tse1` | ship stack `4c3cdb210082`, no env | `tools/fdperf/fdperf.cfg-tse` | `results/fdperf-tse-tse1/fdperf-raw.txt` |
-| `tse2` | ship stack, no env | `tools/fdperf/fdperf.cfg-tse2` | `results/fdperf-tse2-tse2/fdperf-raw.txt` |
-| `algo-prefer_gmem` | + `TU_AUTOTUNE_ALGO=prefer_gmem` | `fdperf.cfg-tse` | `results/fdperf-tse-algo-prefer-gmem/fdperf-raw.txt` |
-| `algo-bandwidth` | + `TU_AUTOTUNE_ALGO=bandwidth` | `fdperf.cfg-tse` | `results/fdperf-tse-algo-bandwidth/fdperf-raw.txt` |
-| `forcecb` | + `TU_DEBUG=forcecb` | `fdperf.cfg-tse` | `results/fdperf-tse-forcecb/fdperf-raw.txt` |
-| `cbbase`, `cbforce` | none, and + `TU_DEBUG=forcecb` | `fdperf.cfg-tse3` | `results/fdperf-tse3-cbbase/`, `results/fdperf-tse3-cbforce/` |
-| `vpc3base`, `attrbuf` | none, and + `TU_FORCE_PROPS=has_gmem_vpc_attr_buf` | `fdperf.cfg-vpc3` | `results/fdperf-vpc3-vpc3base/`, `results/fdperf-vpc3-attrbuf/` |
+| `tse1` | ship stack `4c3cdb210082`, no env | `tools/fdperf/fdperf.cfg-tse` | `results/games/re4/tse-tse1/fdperf-raw.txt` |
+| `tse2` | ship stack, no env | `tools/fdperf/fdperf.cfg-tse2` | `results/games/re4/tse2-tse2/fdperf-raw.txt` |
+| `algo-prefer_gmem` | + `TU_AUTOTUNE_ALGO=prefer_gmem` | `fdperf.cfg-tse` | `results/games/re4/tse-algo-prefer-gmem/fdperf-raw.txt` |
+| `algo-bandwidth` | + `TU_AUTOTUNE_ALGO=bandwidth` | `fdperf.cfg-tse` | `results/games/re4/tse-algo-bandwidth/fdperf-raw.txt` |
+| `forcecb` | + `TU_DEBUG=forcecb` | `fdperf.cfg-tse` | `results/games/re4/tse-forcecb/fdperf-raw.txt` |
+| `cbbase`, `cbforce` | none, and + `TU_DEBUG=forcecb` | `fdperf.cfg-tse3` | `results/games/re4/tse3-cbbase/`, `results/games/re4/tse3-cbforce/` |
+| `vpc3base`, `attrbuf` | none, and + `TU_FORCE_PROPS=has_gmem_vpc_attr_buf` | `fdperf.cfg-vpc3` | `results/games/re4/vpc3-vpc3base/`, `results/games/re4/vpc3-attrbuf/` |
 
 All four: one RE4 session, 110 x 1 s sample sets, the steady window `t_rel` 20-105 s (40 windows), core
 pinned at 680 MHz, analysis with `scripts/fdperf-tse-ratios.py` (written for this entry: it prints a
@@ -80,7 +80,7 @@ exist in `src/freedreno/registers/adreno/a7xx_perfcntrs.xml`; the real names are
 above.
 
 `TSE_BUSY_CYCLES` is 542.19 Mc/s = 79.73 % of 680 MHz in `tse1`, which is an independent confirmation of
-the 79.6 % figure in `results/fdperf-mesa27/steady-state.txt` (17.11, a different cfg and a different
+the 79.6 % figure in `results/games/re4/mesa27/steady-state.txt` (17.11, a different cfg and a different
 week). In the same four dumps `TSE_INPUT_PRIM` and `PC_IA_PRIMITIVES` are equal to the sample
 (ratio 1.0000 in all of them), i.e. nothing between the IA and TSE drops a primitive. Two readings of
 that equality, and this entry does not decide between them: either every primitive really is passed
@@ -99,8 +99,8 @@ names, not quotes.
 visibility stream culling the invisible primitives before the draw pass" is not a question this group can
 ask, in any combination of its slots.
 
-What it does answer, from the committed 17.11 runs (`results/fdperf-mesa27/fdperf-raw.txt`,
-`results/fdperf-mesa27-vertex/fdperf-raw.txt`, windows >= 35 s) and from `tse1`/`tse2`: `VSC_BUSY` is
+What it does answer, from the committed 17.11 runs (`results/games/re4/mesa27/fdperf-raw.txt`,
+`results/games/re4/mesa27-vertex/fdperf-raw.txt`, windows >= 35 s) and from `tse1`/`tse2`: `VSC_BUSY` is
 3.7 / 3.9 Mc/s (0.54 / 0.57 % of the core) in 17.11 and 2.59 / 2.57 Mc/s (0.38 %) tonight, and 85.1 /
 85.6 % of that small busy time is `VSC_STALL_CYCLES_UCHE`. The block is idle more than 99 % of the time;
 whatever the visibility stream decides, it is not where the time goes. `PERF_VSC_EOT_NUM` reads 0.00 M/s
@@ -153,7 +153,7 @@ to win by removing it.
 
 That the environment variable reaches the autotuner was checked, not assumed - `TU_DEBUG=startup` makes
 the driver print the value it parsed (`tu_autotune.cc:300-301`), verbatim from
-`results/game-patched-algopg.log` and `results/game-patched-algobogus.log`:
+`results/games/re4/game-patched-algopg.log` and `results/games/re4/game-patched-algobogus.log`:
 
 ```
 TU: info: TU_AUTOTUNE_ALGO=4 (prefer_gmem)
@@ -190,13 +190,13 @@ nothing is now read in the source rather than inferred. vkd3d-proton `v3.1`
 
 so `11_1` lowers the reported level and cannot lower the shader model (the SM 6.6/6.7/6.8 "Enabling
 support" lines in the log come from `d3d12_device_caps_init_shader_model` and are unaffected). The
-override does happen - verbatim, from `results/game-patched-fl111w.log` with `VKD3D_DEBUG=warn`:
+override does happen - verbatim, from `results/games/re4/game-patched-fl111w.log` with `VKD3D_DEBUG=warn`:
 
 ```
 warn:vkd3d-proton:d3d12_device_caps_override: Overriding feature level: 0xb100.
 ```
 
-and the negative control, `results/game-patched-flbogusw.log`:
+and the negative control, `results/games/re4/game-patched-flbogusw.log`:
 
 ```
 warn:vkd3d-proton:d3d12_device_caps_override: Unrecognized feature level nonsense.
@@ -219,7 +219,7 @@ over the 233690016-byte `re4.exe` prints nothing, while `via.render.RenderDevice
 `GAMEARGS="-forceDX11"` left the game on the D3D12 path; `WINEDLLOVERRIDES='d3d12='` did too. All three
 runs still log `warn:vkd3d-proton:d3d12_device_create_vkd3d_queues:` (a D3D12 device with queues) and the
 game still writes `Capability=DirectX12` back into `local_config.ini`
-(`results/game-patched-dx11dx11.log`, `…-dx11forceDX11.log`, `…-d3doff.log`).
+(`results/games/re4/game-patched-dx11dx11.log`, `…-dx11forceDX11.log`, `…-d3doff.log`).
 
 ## 40.7 Two measurement defects found while doing this
 
@@ -237,7 +237,7 @@ game still writes `Capability=DirectX12` back into `local_config.ini`
    copied the HUD output with `cp /tmp/opencode/mangologs/*.csv /tmp/opencode/fps-$TAG.csv`; MangoHud
    writes both `re4_<date>.csv` and `re4_<date>_summary.csv`, and `cp` of two sources onto one file name
    fails, so `tse1` (CSV gone) and `forcecb` (recovered by hand from `mangologs`, now
-   `results/fps-forcecb.csv`) had no fps table. The runner now takes the newest non-`_summary` CSV. The
+   `results/games/re4/fps-forcecb.csv`) had no fps table. The runner now takes the newest non-`_summary` CSV. The
    rule for this repository: a run whose CSV is missing is reported with fps `NOT MEASURED`, as `tse1` is.
 
 ## 40.8 There is a binning switch, it is off by our own configuration, and forcing it did nothing
@@ -342,7 +342,7 @@ unsigned 64-bit value. Averaged as printed, that one sample turned a counter who
 read 0-21,728 into the number quoted above. (22.11, for exactness: that dump carries 70 sample labels
 and 68 tile values, one of them the wrapped one, and the rest run 0 to 28,306 over the whole file and
 0 to 21,728 inside `t_rel` 20-105 s. It is also a committed artifact now,
-`results/fdperf-tse3-cbbase/fdperf-raw.txt`, which is what `scripts/fdperf_sections.py` re-reads.) The
+`results/games/re4/tse3-cbbase/fdperf-raw.txt`, which is what `scripts/fdperf_sections.py` re-reads.) The
 same class of defect was already written up in
 journal 22.1 (quoting a tool's printed number without reading how it is produced), and it is now
 filtered in the script: `scripts/fdperf_sections.py`, shared by the three ratio scripts, drops values
@@ -415,7 +415,7 @@ the fetch map and does not extend the per-vertex size. `nir_remove_dead_variable
 `nir_var_shader_in | nir_var_shader_out` also runs in `ir3_nir_lower_io` (`ir3_nir.c:1018`). Consistent
 with that, the measured per-invocation payload is already small: `VPC_NUM_VPCRAM_WRITE` 2.62 per
 invocation, `SP_COMPONENTS` 0.89 per invocation, `VFD_NUM_ATTRIBUTES` 5.08 per vertex
-(`scripts/fdperf-vpc-ratios.py`, `results/fdperf-vpc-vpcbase1/fdperf-raw.txt`). What is *not* established
+(`scripts/fdperf-vpc-ratios.py`, `results/games/re4/vpc-vpcbase1/fdperf-raw.txt`). What is *not* established
 is that `VPC_PS_BUSY` means "packing varyings for the FS" - `a7xx_perfcntrs.xml` has no descriptions - so
 the claim "the VPC spends its 91 % packing varyings" stays an inference. The other half of that
 question, whether the VPC's own RAM is what limits it, was measured after this paragraph was written
@@ -446,15 +446,15 @@ SAMPCFG=tools/fdperf/fdperf.cfg-vpc3 /tmp/opencode/session.sh vpc3base
 SAMPCFG=tools/fdperf/fdperf.cfg-vpc3 env TU_FORCE_PROPS=has_gmem_vpc_attr_buf /tmp/opencode/session.sh attrbuf
 ```
 
-Delivery is proved from the game log, 9 lines each in `results/game-patched-attrbuf.log`, 0 in
-`results/game-patched-vpc3base.log` (the raw files are `results/raw/game-patched-{attrbuf,vpc3base}.log`):
+Delivery is proved from the game log, 9 lines each in `results/games/re4/game-patched-attrbuf.log`, 0 in
+`results/games/re4/game-patched-vpc3base.log` (the raw files are `results/raw/game-patched-{attrbuf,vpc3base}.log`):
 
 ```
 TU: info: TU_FORCE_PROPS: has_gmem_vpc_attr_buf
 TU: info: TU_FORCE_PROPS: vpc_attr_buf_size sysmem=0x20000 gmem=0xc000
 ```
 
-The numbers (`scripts/fdperf-vpcram-ratios.py results/fdperf-vpc3-*/fdperf-raw.txt 20 105`, 40 and 39
+The numbers (`scripts/fdperf-vpcram-ratios.py results/games/re4/vpc3-*/fdperf-raw.txt 20 105`, 40 and 39
 one-second windows, core pinned at 680 MHz):
 
 | counter | `vpc3base` | `attrbuf` | reading |
@@ -530,7 +530,7 @@ thread's. `fdperf.c`'s `config_restore()` resolves every group of `fd_perfcntrs(
 so `tools/fdperf/fdperf.cfg-bv` (new) has `BV_VPC`, `BV_TSE`, `BV_PC`, `BV_TP` sections whose selects
 are deliberately different from the defaults.
 
-**Control, run on an idle GPU** (`results/fdperf-bv-idle-labelcheck.txt`): fdperf prints the *label* of
+**Control, run on an idle GPU** (`results/games/re4/bv-idle-labelcheck.txt`): fdperf prints the *label* of
 whatever it programmed, so the same slots of the BV half are compared between a `cfg-tse3` run (no BV
 section) and a `cfg-bv` run. `cfg-tse3` prints a group's first countables there - `PERF_PC_WORKING_CYCLES`,
 `PERF_VPC_STALL_CYCLES_UCHE`, `PERF_TSE_CLIPPING_CYCLES` - and `cfg-bv` prints exactly what was asked
@@ -542,11 +542,11 @@ for: `PERF_PC_IA_PRIMITIVES`, `PERF_VPC_VPCRAM_FULL_CYCLES`, `PERF_VPC_WIT_FULL_
 add a `select_offset` (8, 8, 6, 12, 24, 4), i.e. `VPC_PERFCTR_VPC_SEL` holds six ordinary slots and
 then six BV slots; `BV_TSE`, `BV_RAS`, `BV_LRZ`, `BV_HLSQ`, `BV_CP` have no `select_offset`, so their
 selects *are* the ordinary group's words. The value registers are separate anyway: in
-`results/fdperf-bv-bvbase/fdperf-raw.txt` slot 0 of `TSE` reads 247 M primitives/s and slot 0 of
+`results/games/re4/bv-bvbase/fdperf-raw.txt` slot 0 of `TSE` reads 247 M primitives/s and slot 0 of
 `BV_TSE` reads 0.
 
 **What was run** (all on the ship stack `4c3cdb210082`, env only; dumps
-`results/fdperf-bv-{bvbase,bvforce,bvforce2,bvforce3,bvforce4,bvforce5}/fdperf-raw.txt`; one RE4
+`results/games/re4/bv-{bvbase,bvforce,bvforce2,bvforce3,bvforce4,bvforce5}/fdperf-raw.txt`; one RE4
 session each, 110 x 1 s windows, core pinned to 680 MHz - which `bvbase` held in only 16 of its 38
 steady windows, see the notes under the numbers table):
 
@@ -620,7 +620,7 @@ GPU state.
   their ordinary twin: in `cbforce`, `BV_TP` 100.076 %, `BV_CP` 100.076 %, `BV_UCHE` 100.355 %,
   `BV_CCU` 101.278 %, `BV_RB` 100.668 % and the BV copies of `PC_IA_PRIMITIVES`, `TSE_INPUT_PRIM` and
   `TSE_OUTPUT_VISIBLE_PRIM` 100.5-100.6 % of the ordinary counters (`scripts/fdperf-bv-table.py` on
-  `results/fdperf-tse3-cbforce/fdperf-raw.txt`). A select word that was never written carries the
+  `results/games/re4/tse3-cbforce/fdperf-raw.txt`). A select word that was never written carries the
   previous run's value or zero, and the BV value register then reports the same event as the ordinary
   one. So 40.8's "BV medians of 0.02-0.08 % of the core" measured nothing about the BV thread: those
   were groups whose BV select happened to name a nearly-idle counter.
@@ -644,7 +644,7 @@ left) did not bring the tiles back.
 counters, the `startup` flag added for the delivery line changed the driver, or the sessions differ.
 Two more arms test the last two: `tse3cb2` (`cfg-tse3`, no BV section at all,
 `TU_DEBUG=startup,forcecb`) and `tse3cb3` (`cfg-tse3`, plain `TU_DEBUG=forcecb`, the 21.11 arm repeated
-tonight). Dumps `results/fdperf-tse3-{tse3cb2,tse3cb3}/`, plus `results/fdperf-bv-{bvforce4,bvforce5}/`
+tonight). Dumps `results/games/re4/tse3-{tse3cb2,tse3cb3}/`, plus `results/games/re4/bv-{bvforce4,bvforce5}/`
 from 40.11.
 
 **Tiles fed per second.** Two window rules, both printed, because the two kinds of counter need
@@ -866,7 +866,7 @@ forced by `FORCEBIN` (511) / killed by `NOBIN` (513).
 (`tu_cmd_buffer.cc:3103-3106`), never `mesa_log*`, so no debug level prints it. Two branches
 log on their own (the feedback-loop sites 5603/8811, `perf_debug()`) and in the `dbg-perf`
 session they printed **zero** times while other `perf_debug()` sites printed by the thousand
-(`results/dbg-flip-and-messages.txt`) - so the feedback-loop branch provably did not fire and
+(`results/games/re4/dbg-flip-and-messages.txt`) - so the feedback-loop branch provably did not fire and
 the rest are silent by construction. Closing this needs a counter, not a knob: a per-second
 histogram of `force_render_mode_reason`, modelled on `tu_dbg_log_gmem_load_store_skips()`
 (`tu_util.cc:593-642`, called from `tu_queue.cc:436-437`). Needs a build (queue 16/22).
@@ -887,9 +887,9 @@ if it lowers fps the driver chose rightly. Testable with no build - the override
 `0x31011`, `0x30009`, and `TU: info: Watching TU_DEBUG_FILE: /tmp/opencode/tu-dbg-file.txt`
 under `0x1`. All four dumps report `max_freq=680000000`.
 
-**Numbers.** `results/dbg-flip-and-messages.txt` (generator `scripts/dbg-flip-table.py`,
-reads `results/fdperf-dbg-{perf,file,gmem,sysmem}/fdperf-raw.txt` and
-`results/fps-dbg-*.csv`) has the per-arm fps windows, message counts and the flip rows. The
+**Numbers.** `results/games/re4/dbg-flip-and-messages.txt` (generator `scripts/dbg-flip-table.py`,
+reads `results/games/re4/dbg-{perf,file,gmem,sysmem}/fdperf-raw.txt` and
+`results/games/re4/fps-dbg-*.csv`) has the per-arm fps windows, message counts and the flip rows. The
 three numbers that decide it, p25 fps 95-150 s against `VSC_BUSY` % of the core and
 `VSC_INPUT_TILES` median /s: default 15.34 / 0.38 % / 0; forced sysmem 15.18 / 0.38 % / 0;
 forced GMEM+binning 10.27 / 12.51 % / 53,505,966.
@@ -933,8 +933,8 @@ by setting `ubwc_enabled = false` (`tu_image.cc:637-644`). `/tmp/opencode/chain2
 (new: UCHE 57/58 `..._UBWC_READ/WRITE_BEATS`, 43/44 `..._READ_REQUESTS_TP_UBWC/NONUBWC`,
 the CMPDECMP CCU counters, `PERF_CP_CACHE_FLUSH`).
 
-**Numbers.** `results/traffic-ubwc-ab.txt` (generator `scripts/fdperf-traffic-table.py`, reads
-`results/fdperf-tr-{base,nocomp,noupload}/fdperf-raw.txt`); 16 B per UCHE VBIF beat. Key row:
+**Numbers.** `results/games/re4/traffic-ubwc-ab.txt` (generator `scripts/fdperf-traffic-table.py`, reads
+`results/games/re4/tr-{base,nocomp,noupload}/fdperf-raw.txt`); 16 B per UCHE VBIF beat. Key row:
 `tr-base` 15.59 GB/s DRAM read, 317 MB/s UBWC reads, 37 MB/s UBWC writes, TP requests
 48.4 M/s UBWC against 1.95 G/s non-UBWC; `tr-nocomp` UBWC 0.00 / 0.00 and TP UBWC 0 in 52 of
 52 samples. Frame rate 15.26 -> 15.06 p25, DRAM read 15.59 -> 15.73 GB/s.
@@ -954,3 +954,45 @@ was set), which is why chain24 re-runs the pair with `TU_DEBUG=perf`. And the `t
 session ran a light scene from t=100 (six 10 s buckets at 64-93 fps, 23 of 50 samples
 off-clock), so its fps row is not comparable and the flag needs one more session; the
 `tr-base`/`tr-nocomp` pair the verdict rests on is unaffected.
+
+Correction 22.11 10:30: that third session has been run - `tr-noupload2` in 40.18 is clean (52 of 52
+pinned, max 18.5 fps) and gives p25 15.19 against the baseline's 15.26, so `no_upload_hvv` is a zero on
+frame rate as well; the 64-93 fps stretch was content.
+
+## 40.18 The third render mode is also slower than sysmem, and depth is where RE4's compressed traffic lives (queues 22, 23)
+
+**Question.** Two leftovers. (a) GMEM *without* forcing `binning_useful` - the third of the three
+render modes, never run. (b) Which images carry the 317 MB/s of UBWC reads of 40.17.
+
+**Method.** `/tmp/opencode/chain24.sh`, 10:15-10:27 on 22.11, ship stack `4c3cdb210082`, game
+Resident Evil 4 Gold Edition (`re4.exe`, D3D12 -> vkd3d-proton 3.1.0, 2560x1440 - `results/games/README.md`).
+Arms, each with its delta in `results/games/re4/<tag>/meta.txt`: `gmem-nobin`
+(`TU_DEBUG=startup,gmem,perf,log_skip_gmem_ops`, log line `TU_DEBUG=0x31001`, `cfg-tse3`);
+`tr-nocomp-perf` (`TU_DEBUG=startup,perf` + `VKD3D_CONFIG=disable_color_compression,disable_depth_compression`,
+`cfg-traffic`); `tr-noupload2` (`VKD3D_CONFIG=no_upload_hvv`, `cfg-traffic`) - a clean re-run of 40.17's
+third arm.
+
+**Numbers.** `results/games/re4/dbg-flip-and-messages.txt` and `results/games/re4/traffic-ubwc-ab.txt`
+(generators committed); fps from `results/games/re4/fps-*.csv`. Render-mode ladder, p25 95-150 s:
+forced sysmem 15.18, default 15.34, GMEM without binning 13.74 (tiles 0, `VSC_BUSY` 0.08 % of the
+core), GMEM + binning 10.27. `tr-nocomp-perf`: 177 `Disabling UBWC ... due to
+VK_IMAGE_COMPRESSION_DISABLED_EXT` lines, **all** of them `PIPE_FORMAT_Z32_FLOAT` or
+`Z32_FLOAT_S8X24_UINT` (0 colour formats), against 2495 `... due to mutable formats` lines for the
+colour class; traffic identical to `tr-nocomp` (UBWC 0.00, TP UBWC 0 in 52/52). `tr-noupload2`: every
+traffic column within 1 % of `tr-base`, p25 15.10 / 15.19, 52 of 52 samples pinned at 680 MHz.
+
+**Verdict.** (a) The render-mode ladder has no rung above sysmem: GMEM without binning is ~10 %
+slower than sysmem and feeds no tiles, so the whole GMEM/binning direction is closed for this game -
+not just "forcing binning is bad" but "GMEM is worse in both of its forms". (b) The compressed traffic
+is depth: in the shipped vkd3d-proton's RE4 profile the compression-control switch applies to depth
+images only, turning the UBWC counters to exactly zero, while the colour images are already
+uncompressed through their mutable-format lists. So the tiling class journals 21-24 are about (colour,
+format lists) is outside the 2 % measured in 40.17. (c) `no_upload_hvv` is a zero on a session that is
+not anomalous: the earlier 64-93 fps stretch of 40.17 was content, not the flag - today's re-run has no
+frame above 18.5 and the same p25 as the baseline.
+
+**Does not show.** Whether some individual depth pass benefits from compression (the counters are
+global, the switch is per-image-class). Whether `disable_color_compression` alone changes anything at
+all in this game: with depth compression on and colour off, the UBWC traffic would stay, so that arm is
+pointless here. Which images *keep* UBWC and why - a per-image log line is one `perf_debug()` away but
+needs a build, and the answer would not change any number measured so far.

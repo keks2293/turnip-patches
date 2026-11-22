@@ -16,11 +16,11 @@ docs/fdperf-a7xx.md on hw budgets and silent-ignore).  Both that rule and the wr
 rule live in scripts/fdperf_sections.py.  The XML lists these counters as <value name=...> with
 no unit, so a "per vertex" figure is a ratio of two counters, not a decoded quantity.
 
-DRAM bytes: VBIF beats x 16 B, the conversion used by results/fdperf-mesa27-vertex/
+DRAM bytes: VBIF beats x 16 B, the conversion used by results/games/re4/mesa27-vertex/
 steady-state.txt (748 Mbeats/s = 12.0 GB/s there).
 
 Usage:
-    python3 scripts/fdperf-vpc-ratios.py results/fdperf-vpc-base/fdperf-raw.txt 20 105
+    python3 scripts/fdperf-vpc-ratios.py results/games/re4/vpc-base/fdperf-raw.txt 20 105
 """
 import sys
 from statistics import mean

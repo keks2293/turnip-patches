@@ -33,15 +33,15 @@ FREQ = 680e6          # core clock pinned for every run below (fdperf prints max
 # Which dump answers which question of journal 40.12, and what its environment was.  Written down by
 # hand: guessing which run had which flag is how 40.8's tile row went wrong.
 RUNS = [
-    ("cbbase", "results/fdperf-tse3-cbbase/fdperf-raw.txt", "21.11", "cfg-tse3", "none (CB off)"),
-    ("cbforce", "results/fdperf-tse3-cbforce/fdperf-raw.txt", "21.11", "cfg-tse3", "forcecb"),
-    ("bvbase", "results/fdperf-bv-bvbase/fdperf-raw.txt", "22.11", "cfg-bv", "none"),
-    ("bvforce", "results/fdperf-bv-bvforce/fdperf-raw.txt", "22.11", "cfg-bv", "forcecb"),
-    ("bvforce3", "results/fdperf-bv-bvforce3/fdperf-raw.txt", "22.11", "cfg-bv", "startup,forcecb"),
-    ("bvforce4", "results/fdperf-bv-bvforce4/fdperf-raw.txt", "22.11", "cfg-bv2", "startup,forcecb"),
-    ("bvforce5", "results/fdperf-bv-bvforce5/fdperf-raw.txt", "22.11", "cfg-bv3", "startup,forcecb"),
-    ("tse3cb2", "results/fdperf-tse3-tse3cb2/fdperf-raw.txt", "22.11", "cfg-tse3", "startup,forcecb"),
-    ("tse3cb3", "results/fdperf-tse3-tse3cb3/fdperf-raw.txt", "22.11", "cfg-tse3", "forcecb"),
+    ("cbbase", "results/games/re4/tse3-cbbase/fdperf-raw.txt", "21.11", "cfg-tse3", "none (CB off)"),
+    ("cbforce", "results/games/re4/tse3-cbforce/fdperf-raw.txt", "21.11", "cfg-tse3", "forcecb"),
+    ("bvbase", "results/games/re4/bv-bvbase/fdperf-raw.txt", "22.11", "cfg-bv", "none"),
+    ("bvforce", "results/games/re4/bv-bvforce/fdperf-raw.txt", "22.11", "cfg-bv", "forcecb"),
+    ("bvforce3", "results/games/re4/bv-bvforce3/fdperf-raw.txt", "22.11", "cfg-bv", "startup,forcecb"),
+    ("bvforce4", "results/games/re4/bv-bvforce4/fdperf-raw.txt", "22.11", "cfg-bv2", "startup,forcecb"),
+    ("bvforce5", "results/games/re4/bv-bvforce5/fdperf-raw.txt", "22.11", "cfg-bv3", "startup,forcecb"),
+    ("tse3cb2", "results/games/re4/tse3-tse3cb2/fdperf-raw.txt", "22.11", "cfg-tse3", "startup,forcecb"),
+    ("tse3cb3", "results/games/re4/tse3-tse3cb3/fdperf-raw.txt", "22.11", "cfg-tse3", "forcecb"),
 ]
 
 TILES = "PERF_VSC_INPUT_TILES"

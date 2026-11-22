@@ -9,8 +9,8 @@ each — a `Memory heap #0 ... usage` report from VK_EXT_memory_budget),
 `TU_DEBUG=bos` (top of turnip's live BOs; printed after every submit, therefore
 the raw 4,215,096 lines / 242 MB stayed in results/raw/, only the last dump in
 git) and MangoHud CSV (`ram_used`/`swap_used`). Artifacts:
-`results/vkd3d-mem.log`, `results/game-patched-mem.log`,
-`results/fps-at-mem.csv`.
+`results/vkd3d-mem.log`, `results/games/re4/game-patched-mem.log`,
+`results/games/re4/fps-at-mem.csv`.
 
 ### Numbers
 

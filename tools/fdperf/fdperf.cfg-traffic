@@ -2,7 +2,7 @@
 // how many of them travel as UBWC, and how often the driver flushes caches.
 //
 // Why: journals 40.15/40.16 closed the binning question (forcing GMEM+HW binning costs a
-// third of the frame rate, see results/fdperf-dbg-{perf,gmem}), so the remaining traffic
+// third of the frame rate, see results/games/re4/dbg-{perf,gmem}), so the remaining traffic
 // claim to test is the compression one: whether UBWC carries any of RE4's DRAM traffic at
 // all, and what happens when the *translation layer* asks for it off
 // (VKD3D_CONFIG=disable_color_compression,disable_depth_compression). The counters that

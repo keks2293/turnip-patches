@@ -73,11 +73,18 @@ fi
 
 # The full run log (raw) — into results/raw, it is in .gitignore: there are thousands of
 # lines of wine/FEX noise that say nothing about the cause. What goes into git is the
-# filtered results/game-<mode>.log, assembled by scripts/curate-game-log.sh.
-mkdir -p "$REPO/results/raw"
+# filtered results/games/<title>/game-<mode>[-<tag>].log, assembled by
+# scripts/curate-game-log.sh: one directory per measured title, because a counter from one
+# game is never compared with another game's.
+mkdir -p "$REPO/results/raw" "$REPO/results/games/${TITLE:-re4}"
 SUFFIX="${TAG:+-$TAG}"
 RAW="$REPO/results/raw/game-$MODE$SUFFIX.log"
-LOG="$REPO/results/game-$MODE$SUFFIX.log"
+LOG="$REPO/results/games/${TITLE:-re4}/game-$MODE$SUFFIX.log"
+
+# The title, for the log header and for the per-title results directory: derived from the
+# game directory name when not overridden, so a second title gets its own directory by
+# setting TITLE= (see results/games/README.md).
+GAME_TITLE="${GAME_TITLE:-Resident Evil 4 Gold Edition}"
 CURATE="$REPO/scripts/curate-game-log.sh"
 
 export STEAM_COMPAT_DATA_PATH="$PREFIX"
@@ -107,7 +114,7 @@ export VK_LOADER_DEBUG="${VK_LOADER_DEBUG:-error,warn}"
 # HUDINTERVAL — sample period in ms, default 1000 (once per second).
 # Historically it was hard-coded to 1000, and that is not enough: over a 150 s run
 # n≈85 samples, and the p50 spread between runs that are known to be equivalent
-# reaches 24–43 ms (docs/analysis.md, section 15 and results/fps-patched-*.csv).
+# reaches 24–43 ms (docs/analysis.md, section 15 and results/games/re4/fps-patched-*.csv).
 # On such noise an effect below ~40% cannot be separated in principle, so
 # for frametime comparisons set 100 (n≈1500). For earlier series
 # behavior does not change — the default value is the same.
@@ -140,7 +147,17 @@ echo
 # which one matters. With VK_DRIVER_FILES there is one device.
 {
   echo "# date: $(date -Is)"
+  echo "# game: $GAME_TITLE - $GAME_EXE"
   echo "# VK_DRIVER_FILES=${VK_DRIVER_FILES:-<unset>}"
+  if [ -n "${VK_DRIVER_FILES:-}" ]; then
+    so="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["ICD"]["library_path"])' \
+        "$VK_DRIVER_FILES" 2>/dev/null || true)"
+    echo "# driver: ${so:-<unresolved>} sha256=$(sha256sum "$so" 2>/dev/null | cut -c1-12)"
+  else
+    echo "# driver: stock (packaged by the distribution)"
+  fi
+  echo "# env delta (what makes this arm differ):"
+  env | grep -E '^(TU_|VKD3D_|MESA_|FD_|RADV_|ZINK_|MANGOHUD)' | sort | sed 's/^/#   /'
   echo "# DRIRC_CONFIGDIR=${DRIRC_CONFIGDIR:-<unset>}"
   echo "# MANGOHUD=${MANGOHUD:-<unset>}"
   echo "# MANGOHUD_CONFIG=${MANGOHUD_CONFIG:-<unset>}"

@@ -28,5 +28,5 @@ not the nature of the bound.
 ## Evidence
 
 journal 13-17; `docs/fdperf-a7xx.md` (steady state, vertex run,
-conclusion); `results/fdperf-mesa27*/steady-state.txt`, `results/fps-gov-*.csv`,
-`results/fps-ctrl100{,b}.csv`.
+conclusion); `results/games/re4/mesa27*/steady-state.txt`, `results/games/re4/fps-gov-*.csv`,
+`results/games/re4/fps-ctrl100{,b}.csv`.

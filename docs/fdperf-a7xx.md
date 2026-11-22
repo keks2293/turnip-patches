@@ -22,18 +22,18 @@ or geometry/vertices" with per-block kernel counters (not `VK_KHR_performance_qu
 | `scripts/fdperf-tse-ratios.py <dump> [lo] [hi]` | the TSE-discard ratios (visible/input, the reason counters, VSC busy and tiles fed) |
 | `scripts/fdperf-vpcram-ratios.py <dump> [lo] [hi]` | the VPC's own memory system (`VPCRAM_FULL`, `WIT_FULL`, `STALL_CYCLES_VPCRAM_POS`, `LM_ACK`, `LM_REQ_HIT`) - a table for the `cfg-vpc3` half of the budget, which no other script can read |
 | `scripts/fdperf-bv-table.py [--lo] [--hi] <dump> ...` | the two halves of one dump side by side, ordinary group against its `BV_*` twin - the only reader that wants both, and the table queue 20 is read from |
-| `scripts/fdperf-arm-table.py [--lo] [--hi] [dir ...]` | one row per run: VPC busy, PC stall on VPC, UCHE arbiter stall, VFD/TP starve on UCHE, TP busy, TSE input and visible share, DRAM reads and p25 fps, over every `results/fdperf-*/fdperf-raw.txt`. Duty cycles are averaged over pinned-clock windows only (see "Reading a dump"), and the row says how many windows were dropped and what the dump's median clock was; which fps CSV belongs to which run is written in the script, not guessed |
+| `scripts/fdperf-arm-table.py [--lo] [--hi] [dir ...]` | one row per run: VPC busy, PC stall on VPC, UCHE arbiter stall, VFD/TP starve on UCHE, TP busy, TSE input and visible share, DRAM reads and p25 fps, over every `results/games/re4/*/fdperf-raw.txt`. Duty cycles are averaged over pinned-clock windows only (see "Reading a dump"), and the row says how many windows were dropped and what the dump's median clock was; which fps CSV belongs to which run is written in the script, not guessed |
 | `scripts/fdperf-tile-table.py [--lo] [--hi] [dir ...]` | the binning-pass indicator for the nine runs that can answer that question: tiles/s and `VSC_BUSY` cut over the steady window and over the pinned-clock window, side by side, with the cfg and `TU_DEBUG` of each run written down in the script. Journal 40.12 is read from it |
 | `scripts/fdperf-analyze.py <file> [tsv] [--freq MHz]` | per-window busy%/latencies/traffic |
 | `scripts/fdperf-align.py <tsv> <freq-track> <csv> <csv-start>` | overlay windows onto the MangoHud CSV and cur_freq |
 | `build/out/fdperf` | binary (Mesa 27, `meson -Dtools=freedreno`, build - in `docs/mesa-27-plan.md`) |
 
 Run artifacts (RE4, Mesa 27):
-- `results/fdperf-mesa27/` (17.11 16:01, main cfg): `fdperf-raw.txt`,
+- `results/games/re4/mesa27/` (17.11 16:01, main cfg): `fdperf-raw.txt`,
   `fdperf-per-window.tsv`, `freq-trace.txt`, `fps.csv`, `steady-state.txt`;
-- `results/fdperf-mesa27-vertex/` (17.11 18:01, cfg-vertex, per-client):
+- `results/games/re4/mesa27-vertex/` (17.11 18:01, cfg-vertex, per-client):
   the same + `aligned.txt`; `steady-state.txt` - DRAM split by client.
-- `results/fdperf-vpc-vpcbase1/` and the other `results/fdperf-{vpc,vpc2,vpc3,tse,tse2,tse3,tse-algo}-*/`
+- `results/games/re4/vpc-vpcbase1/` and the other `results/games/re4/{vpc,vpc2,vpc3,tse,tse2,tse3,tse-algo}-*/`
   directories (21.11, one per run, `fdperf-raw.txt` + `fdperf-per-window.tsv`): what they answer is
   journal 40 - the vertex-path split, the TSE discard, the CB/VSC question and the VPC's own RAM.
 - What the 17.11 pair already answered without a new session - `VPC_VS_BUSY/VPC_BUSY` at 92.8-96.4 %
@@ -46,9 +46,9 @@ Run artifacts (RE4, Mesa 27):
   against 90.6-92.4 % in every other run of the day - and its absolute values are not comparable with
   the rest even though its within-pair comparison is.
 - Two `PERF_VSC_*` selectors need care. `VSC_EOT_NUM` (value 3) reads 0.0/s over all 40 windows of a
-  run where `VSC_BUSY` in the same windows is 2.57 Mc/s (`results/fdperf-tse2-tse2/`) - no signal.
+  run where `VSC_BUSY` in the same windows is 2.57 Mc/s (`results/games/re4/tse2-tse2/`) - no signal.
   `VSC_INPUT_TILES` (value 4) works and is the counter that answers "is anything being binned at all":
-  medians 56/s with CB off against 1,532/s under `TU_DEBUG=forcecb` (`results/fdperf-tse3-cbbase/`,
+  medians 56/s with CB off against 1,532/s under `TU_DEBUG=forcecb` (`results/games/re4/tse3-cbbase/`,
   `-cbforce`, journal 40.8), but it is an *event* counter (print it per second, never as a share of the
   core) and one window in 70 of `cbbase` came back as `18446744073709551290` = 2**64 - 82, a negative
   delta imaged as unsigned; averaged as printed it turns a few hundred into 4.5e11, which is how a
@@ -90,10 +90,10 @@ Run artifacts (RE4, Mesa 27):
   `PERF_PC_IA_PRIMITIVES`, `PERF_VPC_VPCRAM_FULL_CYCLES`, `PERF_VPC_WIT_FULL_CYCLES`,
   `PERF_TSE_INPUT_PRIM` where the same slots of a `cfg-tse3` dump print the group's first countables
   (`PC_WORKING_CYCLES`, `VPC_STALL_*`, `TSE_CLIPPING_CYCLES`). Measured in journal 40.11, runs
-  `bvbase`/`bvforce3`, `results/fdperf-bv-*/`.
+  `bvbase`/`bvforce3`, `results/games/re4/bv-*/`.
 - **An unprogrammed `BV_*` half is not a measurement, and `cfg-bv` fixes that.** In a dump whose cfg
   names no BV group, whole groups of the BV half mirror the ordinary counter: in
-  `results/fdperf-tse3-cbforce/fdperf-raw.txt` the BV copies of `TP_BUSY` are 100.076 %, of `CP_BUSY`
+  `results/games/re4/tse3-cbforce/fdperf-raw.txt` the BV copies of `TP_BUSY` are 100.076 %, of `CP_BUSY`
   100.076 %, of `UCHE_BUSY` 100.355 %, of `CCU_BUSY` 101.278 %, of `RB_BUSY` 100.668 % and of
   `PC_IA_PRIMITIVES`/`TSE_INPUT_PRIM`/`TSE_OUTPUT_VISIBLE_PRIM` 100.5-100.6 %. A select word that was
   never written keeps the previous run's value or zero, and the BV value register then reports the same
@@ -263,7 +263,7 @@ budget is exhausted by per-client counters; UBWC needs a separate cfg/run).
 
 ## Result: RE4, Mesa 27, DX12, steady state (33 windows @ 680 MHz)
 
-Full numbers - `results/fdperf-mesa27/steady-state.txt`. Key points:
+Full numbers - `results/games/re4/mesa27/steady-state.txt`. Key points:
 
 - **UCHE (L2): 90% busy, of which 39% is stall on the arbiters.** The bottleneck
   is L2 cache arbitration, not DRAM bandwidth.
@@ -300,7 +300,7 @@ Full numbers - `results/fdperf-mesa27/steady-state.txt`. Key points:
 `fdperf.cfg-vertex` (per-client UCHE 12/12, VFD 8/8, PC 8/8), 33 steady-state
 windows, fps ~14-23 (faster than the 16:01 run, different content; the profile
 structure is identical: PC 95%, UCHE 89.5%, SP 94.3%, TP 79.6%). Full numbers -
-`results/fdperf-mesa27-vertex/steady-state.txt`.
+`results/games/re4/mesa27-vertex/steady-state.txt`.
 
 - **DRAM read by client: TP (textures) 12.0 GB/s (81%), VFD (vertices)
   2.3 GB/s (16%), PC 0.4 (3%), SP 0.05 (0.3%).** The sum 922 Mbeats/s ~ total

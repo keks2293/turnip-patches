@@ -1,7 +1,10 @@
 # TU_DEBUG render-mode arms, journal 40.16/40.17 (queues 22, 23).  Regenerate:
-#   scripts/dbg-flip-table.py > results/dbg-flip-and-messages.txt
-# Driver build: build/out/libvulkan_freedreno.so, sha256 4c3cdb210082 (ship stack).
-# Sampler: tools/fdperf/fdperf.cfg-tse3 for the four dbg arms.
+#   scripts/dbg-flip-table.py > results/games/re4/dbg-flip-and-messages.txt
+# game: Resident Evil 4 Gold Edition (re4.exe), D3D12 via vkd3d-proton 3.1.0,
+#       2560x1440, proton-cachyos-11.0-arm64; see results/games/README.md
+# driver: build/out/libvulkan_freedreno.so sha256 4c3cdb210082 (ship stack)
+# delta per arm: the TU_DEBUG value in its delivery line, nothing else
+# sampler: tools/fdperf/fdperf.cfg-tse3 for the four dbg arms
 
 ===== dbg-perf
   log lines: 31481

@@ -34,7 +34,7 @@ Rollback: git apply -R /var/home/armada/opencode/turnip-a7xx-dx12/experiments/ex
 (do not use git checkout of this file: it holds uncommitted 0005/0006.)
 
 Log: results/raw/game-patched-norefusal.log (outside git), filtered -
-results/game-patched-norefusal.log.
+results/games/re4/game-patched-norefusal.log.
 
 diff --git a/src/freedreno/vulkan/tu_image.cc b/src/freedreno/vulkan/tu_image.cc
 index 8a109e16b58..fdc5c2bd52e 100644

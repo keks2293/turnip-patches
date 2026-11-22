@@ -45,5 +45,5 @@ today. The report is measured (journal 34.4); the behaviour is queue 13. This is
 unasked driver-side question here that points at the bound in ADR-0008 instead of around it.
 
 Decisions: ADR-0008, ADR-0001, ADR-0004. Artifacts: `docs/fdperf-a7xx.md`,
-`results/fdperf-mesa27*/steady-state.txt`, `results/fps-*.csv`,
+`results/games/re4/mesa27*/steady-state.txt`, `results/games/re4/fps-*.csv`,
 `results/test-perfprops-rig.log`, `tools/fdperf/fdperf-windowed-delta.patch`.

@@ -1,0 +1,9 @@
+# game:    Resident Evil 4 Gold Edition (re4.exe), D3D12 via vkd3d-proton 3.1.0
+# title:   re4
+# tag:     tr-noupload2
+# date:    2026-11-22 (chain24, 10:15-10:27)
+# driver:  build/out/libvulkan_freedreno.so sha256=4c3cdb210082
+# cfg:     tools/fdperf/fdperf.cfg-traffic
+# env:     VKD3D_CONFIG=no_upload_hvv
+# chain:   /tmp/opencode/chain24.sh
+# source:  results/raw/game-patched-tr-noupload2.log (gitignored), fps: results/games/re4/fps-tr-noupload2.csv

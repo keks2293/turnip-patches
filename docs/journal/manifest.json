@@ -151,8 +151,8 @@
     "build/out/freedreno_icd.json",
     "results/raw/game-",
     "results/game-",
-    "results/game-stock.log",
-    "results/game-patched.log"
+    "results/games/re4/game-stock.log",
+    "results/games/re4/game-patched.log"
    ],
    "lines": 65,
    "headings": [],
@@ -171,7 +171,7 @@
    "artifacts": [
     "scripts/build-turnip.sh",
     "build/mesa-x86-build.sh",
-    "results/game-patched.log",
+    "results/games/re4/game-patched.log",
     "build/out"
    ],
    "lines": 226,
@@ -190,13 +190,13 @@
    "verdict_first_line": "",
    "artifacts": [
     "scripts/run-game.sh",
-    "results/game-patched-sm66.log",
-    "results/game-stock-flforce.log",
+    "results/games/re4/game-patched-sm66.log",
+    "results/games/re4/game-stock-flforce.log",
     "build/out/libvulkan_freedreno.so",
     "build/build.sh",
     "scripts/build-turnip.sh",
-    "results/game-patched-prefixusr.log",
-    "results/game-patched-clean.log",
+    "results/games/re4/game-patched-prefixusr.log",
+    "results/games/re4/game-patched-clean.log",
     "build/out/freedreno_icd.json",
     "results/raw/game-patched.log"
    ],
@@ -216,9 +216,9 @@
    "verdict_first_line": "",
    "artifacts": [
     "scripts/run-game.sh",
-    "results/game-patched-hud.log",
-    "results/game-patched-fl1111.log",
-    "results/fps-patched-fl1111.csv"
+    "results/games/re4/game-patched-hud.log",
+    "results/games/re4/game-patched-fl1111.log",
+    "results/games/re4/fps-patched-fl1111.csv"
    ],
    "lines": 114,
    "headings": [],
@@ -251,7 +251,7 @@
    "verdict_first_line": "neither CPU, nor GPU, nor memory is loaded, yet a frame is 75 ms.",
    "artifacts": [
     "build/out/libvulkan_freedreno.so",
-    "results/fps-gov-{ondemand,performance}.csv"
+    "results/games/re4/fps-gov-{ondemand,performance}.csv"
    ],
    "lines": 113,
    "headings": [],
@@ -302,8 +302,8 @@
     "scripts/shot.py",
     "scripts/pixelcheck.py",
     "scripts/run-game.sh",
-    "results/fps-abbase.csv",
-    "results/game-patched-ab{base,tp,gc}.log",
+    "results/games/re4/fps-abbase.csv",
+    "results/games/re4/game-patched-ab{base,tp,gc}.log",
     "results/raw/game-patched-ab{tp,gc}.log",
     "results/vkmark-ab-autotune.txt"
    ],
@@ -346,8 +346,8 @@
    "artifacts": [
     "scripts/run-game.sh",
     "results/vkd3d-mem.log",
-    "results/game-patched-mem.log",
-    "results/fps-at-mem.csv",
+    "results/games/re4/game-patched-mem.log",
+    "results/games/re4/fps-at-mem.csv",
     "results/vulkaninfo-heap-report.log"
    ],
    "lines": 54,
@@ -929,10 +929,10 @@
    "verdict_first_line": "",
    "artifacts": [
     "scripts/fdperf-analyze.py",
-    "results/fdperf-mesa27/fdperf-raw.txt",
-    "results/fdperf-mesa27/steady-state.txt",
+    "results/games/re4/mesa27/fdperf-raw.txt",
+    "results/games/re4/mesa27/steady-state.txt",
     "tools/fdperf/fdperf.cfg-vpc",
-    "results/fdperf-mesa27-vertex/steady-state.txt"
+    "results/games/re4/mesa27-vertex/steady-state.txt"
    ],
    "lines": 151,
    "headings": [
@@ -962,7 +962,7 @@
     "results/test-p14-base.log",
     "patches/DROPPED.md",
     "scripts/nolist-residue.py",
-    "results/fdperf-mesa27-vertex/steady-state.txt",
+    "results/games/re4/mesa27-vertex/steady-state.txt",
     "scripts/class-order-check.py",
     "tests/vk-fmt-classes.json",
     "scripts/gen-vk-fmt-classes.py"
@@ -991,19 +991,19 @@
    "verdict_first_line": "on the ship stack, in the same 1 s sample, `PERF_TSE_INPUT_PRIM` equals",
    "artifacts": [
     "tools/fdperf/fdperf.cfg-tse",
-    "results/fdperf-tse-tse1/fdperf-raw.txt",
+    "results/games/re4/tse-tse1/fdperf-raw.txt",
     "tools/fdperf/fdperf.cfg-tse2",
-    "results/fdperf-tse2-tse2/fdperf-raw.txt",
-    "results/fdperf-tse-algo-prefer-gmem/fdperf-raw.txt",
-    "results/fdperf-tse-algo-bandwidth/fdperf-raw.txt",
-    "results/fdperf-tse-forcecb/fdperf-raw.txt",
+    "results/games/re4/tse2-tse2/fdperf-raw.txt",
+    "results/games/re4/tse-algo-prefer-gmem/fdperf-raw.txt",
+    "results/games/re4/tse-algo-bandwidth/fdperf-raw.txt",
+    "results/games/re4/tse-forcecb/fdperf-raw.txt",
     "scripts/fdperf-tse-ratios.py",
-    "results/fdperf-mesa27/steady-state.txt",
-    "results/fdperf-mesa27/fdperf-raw.txt",
-    "results/fdperf-mesa27-vertex/fdperf-raw.txt",
-    "results/game-patched-algopg.log"
+    "results/games/re4/mesa27/steady-state.txt",
+    "results/games/re4/mesa27/fdperf-raw.txt",
+    "results/games/re4/mesa27-vertex/fdperf-raw.txt",
+    "results/games/re4/game-patched-algopg.log"
    ],
-   "lines": 957,
+   "lines": 995,
    "headings": [
     "## 40.1 What was run",
     "## 40.2 The discard, and what kind of discard it is",
@@ -1021,7 +1021,8 @@
     "## 40.14 The varyings counters were programmed on 21.11, and they close the payload half of that branch (queue 15)",
     "## 40.15 The render-mode decision is two functions, and its stated reason never reaches a log (queue 22)",
     "## 40.16 Forcing GMEM plus HW binning costs a third of the frame rate; the flip happens inside one session (queue 22)",
-    "## 40.17 UBWC carries 2 % of RE4's DRAM reads, and turning it off from the translation layer does not move the frame rate (queue 23)"
+    "## 40.17 UBWC carries 2 % of RE4's DRAM reads, and turning it off from the translation layer does not move the frame rate (queue 23)",
+    "## 40.18 The third render mode is also slower than sysmem, and depth is where RE4's compressed traffic lives (queues 22, 23)"
    ],
    "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
    "verdict_source": "journal 40"

@@ -2,7 +2,7 @@
 // Derived from fdperf.cfg-tse by replacing VSC slot 1 (STALL_CYCLES_UCHE) with INPUT_TILES;
 // the group budget is 2, so BUSY + INPUT_TILES is all this group can carry.
 //
-// Why: BUSY alone is 0.21-0.57 % of the core in every run sampled so far (results/fdperf-tse-tse1,
+// Why: BUSY alone is 0.21-0.57 % of the core in every run sampled so far (results/games/re4/tse-tse1,
 // -tse2, -algo-prefer-gmem, -algo-bandwidth and the two 17.11 dumps), which says the block is
 // idle but not what its little work is.  INPUT_TILES counts tiles entering the VSC: near zero
 // means nothing is being binned, so the geometry cull that the TSE discard (journal 40.2,

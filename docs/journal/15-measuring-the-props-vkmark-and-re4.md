@@ -82,8 +82,8 @@ playthrough).
 | `enable_tp_ubwc_flag_hint` | 11.0 | 12.5 | 13.34 | 66 |
 | `has_generic_clear,r8g8` | 11.5 | 12.4 | 12.50 | 77 |
 
-CSV: `results/fps-abbase.csv`, `fps-abtp.csv`, `fps-abgc.csv`; logs
-`results/game-patched-ab{base,tp,gc}.log`. The force reached the driver — in
+CSV: `results/games/re4/fps-abbase.csv`, `fps-abtp.csv`, `fps-abgc.csv`; logs
+`results/games/re4/game-patched-ab{base,tp,gc}.log`. The force reached the driver — in
 `results/raw/game-patched-ab{tp,gc}.log` there are lines
 `TU_FORCE_PROPS: <name>` (in base there are none).
 
@@ -117,9 +117,9 @@ all four configurations.
 | `64 + TU_AUTOTUNE_FLAGS=preempt_optimize` | 12.6 | 12.6, 12.6 | 0 |
 | `TU_FORCE_PROPS=load_inline_uniforms_via_preamble_ldgk` | 12.6 | 12.6, 12.6 | 0 |
 
-CSV: `results/fps-at-*.csv` (the mapping of names to configs is in
+CSV: `results/games/re4/fps-at-*.csv` (the mapping of names to configs is in
 `results/series-autotune.txt`; the mislabeled `fps-at-bigb.csv` is an extra
-baseline run), logs `results/game-patched-at-*.log`.
+baseline run), logs `results/games/re4/game-patched-at-*.log`.
 
 - **`big_gmem` is consistently 1.5 frames worse (~12%)**: occupying more GMEM
   on this game's pass is harmful. Anti-recommendation.
@@ -177,7 +177,7 @@ Protocol as in 15.5, interleaved within the day:
 **Turning the option off is 1.0 frames worse (~8%)**, both switches agree, the
 series noise is ±0.3. Cached-coherent host memory under FEX is faster than
 uncached — the option must not be turned off, there is nothing left to measure.
-CSV: `results/fps-at-{offA,base6,offB,base7}.csv`, series —
+CSV: `results/games/re4/fps-at-{offA,base6,offB,base7}.csv`, series —
 `results/series-drirc.txt`.
 
 ### 15.7 Summary

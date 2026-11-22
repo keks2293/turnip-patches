@@ -21,7 +21,7 @@ Rules this script follows, all of them learned the hard way (docs/fdperf-a7xx.md
 
 Usage:
     scripts/fdperf-arm-table.py [--lo 20 --hi 105] [dir-or-dump ...]
-    # with no arguments, every results/fdperf-*/fdperf-raw.txt in the repository
+    # with no arguments, every results/games/re4/*/fdperf-raw.txt in the repository
 """
 import csv
 import glob
@@ -55,36 +55,36 @@ COLS = [
 # None means the run has no CSV at all - `tse1` lost its CSV to the runner bug (journal 40.7) and
 # `cbforce` was a counter-only arm.
 FPS = {
-    "mesa27":            "results/fdperf-mesa27/fps.csv",
-    "mesa27-vertex":     "results/fdperf-mesa27-vertex/fps.csv",
-    "tse-algo-bandwidth":    "results/fps-algo-bandwidth.csv",
-    "tse-algo-prefer-gmem":  "results/fps-algo-prefer_gmem.csv",
-    "tse-forcecb":       "results/fps-forcecb.csv",
+    "mesa27":            "results/games/re4/mesa27/fps.csv",
+    "mesa27-vertex":     "results/games/re4/mesa27-vertex/fps.csv",
+    "tse-algo-bandwidth":    "results/games/re4/fps-algo-bandwidth.csv",
+    "tse-algo-prefer-gmem":  "results/games/re4/fps-algo-prefer_gmem.csv",
+    "tse-forcecb":       "results/games/re4/fps-forcecb.csv",
     "tse-tse1":          None,
-    "tse2-tse2":         "results/fps-tse2.csv",
-    "tse3-cbbase":       "results/fps-cbbase.csv",
+    "tse2-tse2":         "results/games/re4/fps-tse2.csv",
+    "tse3-cbbase":       "results/games/re4/fps-cbbase.csv",
     "tse3-cbforce":      None,
-    "vpc-cb1":           "results/fps-cb1.csv",
-    "vpc-fl111":         "results/fps-fl111.csv",
-    "vpc-fl121":         "results/fps-fl121.csv",
-    "vpc-hp40":          "results/fps-hp40.csv",
-    "vpc-hp50":          "results/fps-hp50.csv",
-    "vpc-hpbase2":       "results/fps-hpbase2.csv",
-    "vpc-lrz2":          "results/fps-lrz2.csv",
-    "vpc-nopref":        "results/fps-nopref.csv",
-    "vpc-vpcbase1":      "results/fps-vpcbase1.csv",
-    "vpc-vpcbase2":      "results/fps-vpcbase2.csv",
-    "vpc2-vpc2b":        "results/fps-vpc2b.csv",
-    "vpc3-attrbuf":      "results/fps-attrbuf.csv",
-    "vpc3-vpc3base":     "results/fps-vpc3base.csv",
-    "bv-bvbase":         "results/fps-bvbase.csv",
-    "bv-bvforce":        "results/fps-bvforce.csv",
-    "bv-bvforce2":       "results/fps-bvforce2.csv",
-    "bv-bvforce3":       "results/fps-bvforce3.csv",
-    "bv-bvforce4":       "results/fps-bvforce4.csv",
-    "bv-bvforce5":       "results/fps-bvforce5.csv",
-    "tse3-tse3cb2":      "results/fps-tse3cb2.csv",
-    "tse3-tse3cb3":      "results/fps-tse3cb3.csv",
+    "vpc-cb1":           "results/games/re4/fps-cb1.csv",
+    "vpc-fl111":         "results/games/re4/fps-fl111.csv",
+    "vpc-fl121":         "results/games/re4/fps-fl121.csv",
+    "vpc-hp40":          "results/games/re4/fps-hp40.csv",
+    "vpc-hp50":          "results/games/re4/fps-hp50.csv",
+    "vpc-hpbase2":       "results/games/re4/fps-hpbase2.csv",
+    "vpc-lrz2":          "results/games/re4/fps-lrz2.csv",
+    "vpc-nopref":        "results/games/re4/fps-nopref.csv",
+    "vpc-vpcbase1":      "results/games/re4/fps-vpcbase1.csv",
+    "vpc-vpcbase2":      "results/games/re4/fps-vpcbase2.csv",
+    "vpc2-vpc2b":        "results/games/re4/fps-vpc2b.csv",
+    "vpc3-attrbuf":      "results/games/re4/fps-attrbuf.csv",
+    "vpc3-vpc3base":     "results/games/re4/fps-vpc3base.csv",
+    "bv-bvbase":         "results/games/re4/fps-bvbase.csv",
+    "bv-bvforce":        "results/games/re4/fps-bvforce.csv",
+    "bv-bvforce2":       "results/games/re4/fps-bvforce2.csv",
+    "bv-bvforce3":       "results/games/re4/fps-bvforce3.csv",
+    "bv-bvforce4":       "results/games/re4/fps-bvforce4.csv",
+    "bv-bvforce5":       "results/games/re4/fps-bvforce5.csv",
+    "tse3-tse3cb2":      "results/games/re4/fps-tse3cb2.csv",
+    "tse3-tse3cb3":      "results/games/re4/fps-tse3cb3.csv",
 }
 
 
@@ -186,7 +186,7 @@ def main():
         else:
             sys.exit(f"unknown option --{key}")
         args = args[2:]
-    paths = sorted(glob.glob("results/fdperf-*/fdperf-raw.txt")) if not args else [
+    paths = sorted(glob.glob("results/games/re4/*/fdperf-raw.txt")) if not args else [
         os.path.join(a, "fdperf-raw.txt") if os.path.isdir(a) else a for a in args
     ]
     head = [c[0] for c in COLS]

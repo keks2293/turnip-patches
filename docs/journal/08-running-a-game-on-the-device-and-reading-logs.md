@@ -51,14 +51,14 @@ from `VK_LOADER_DEBUG=all scripts/run-game.sh patched`.
 - **stock, CWD = the game folder**: rejections of 12_1 and 12_0, fallback to
   11_1, swapchain 1920x1080 → 2560x1440, postprocessing pipelines load, **the
   game loads**. The game has no separate "12_0 only" mode — 11_1 satisfies it
-  (`results/game-stock.log`).
+  (`results/games/re4/game-stock.log`).
 - **stock, CWD = the repo**: the same rejections, but `local_config.ini` went
   into the repo → black screen.
 - **a single stock ICD** (via `VK_DRIVER_FILES` pointing at the packaged
   freedreno) — same behavior: so "one device instead of two" by itself changes
   nothing.
 - **the patched ICD**: `sparseResidencyImage2D = true`, but DXVK dies on
-  `vkCreateInstance` before the game even (`results/game-patched.log`). It is
+  `vkCreateInstance` before the game even (`results/games/re4/game-patched.log`). It is
   not a dependency problem: the patched `.so` links only against `libz`,
   `libdrm`, `libexpat`, `libstdc++` and `libc` — gallium is compiled into it.
   The cause of the rejection is analyzed in section 9.

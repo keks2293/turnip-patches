@@ -46,6 +46,11 @@ def main() -> int:
         print(__doc__)
         return 2
 
+    print("# game: Resident Evil 4 Gold Edition (re4.exe), D3D12 via vkd3d-proton 3.1.0,")
+    print("#       2560x1440; per-arm delta in results/games/re4/<tag>/meta.txt")
+    print("# cfg: tools/fdperf/fdperf.cfg-traffic; 16 B per UCHE VBIF beat")
+    print("# driver: build/out/libvulkan_freedreno.so sha256 4c3cdb210082 unless an arm says otherwise")
+    print("")
     hdr = ["arm", "pinned", "MHz"] + [n for n, _, _ in PAIR] + [n for n, _ in RAW]
     rows = []
     for path in paths:
@@ -63,7 +68,10 @@ def main() -> int:
                 vals.append(statistics.median(v))
             return sum(vals) * scale
 
-        row = [path.split("/")[-2] if "/" in path else path,
+        # the arm is the directory the dump lives in (results/games/re4/<tag>/fdperf-raw.txt)
+        parts = path.split("/")
+        arm = parts[-2] if len(parts) > 1 else parts[0]
+        row = [arm,
                f"{len(pin)}/{len(samples)}",
                f"{statistics.median([s['PERF_CP_ALWAYS_COUNT'] for s in samples])/1e6:.0f}"]
         for _n, names, scale in PAIR:

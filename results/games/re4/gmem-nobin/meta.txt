@@ -1,0 +1,9 @@
+# game:    Resident Evil 4 Gold Edition (re4.exe), D3D12 via vkd3d-proton 3.1.0
+# title:   re4
+# tag:     gmem-nobin
+# date:    2026-11-22 (chain24, 10:15-10:27)
+# driver:  build/out/libvulkan_freedreno.so sha256=4c3cdb210082
+# cfg:     tools/fdperf/fdperf.cfg-tse3
+# env:     TU_DEBUG=startup,gmem,perf,log_skip_gmem_ops
+# chain:   /tmp/opencode/chain24.sh
+# source:  results/raw/game-patched-gmem-nobin.log (gitignored), fps: results/games/re4/fps-gmem-nobin.csv

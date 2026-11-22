@@ -350,7 +350,7 @@ p50 14.90, p95 17.36, mean 13.93. +0.7 fps over the baseline - within the expect
 gain, but there is no structural change (the bottleneck remains in memory/hardware). The nature of the
 bottleneck was measured with per-block counters: L2/UCHE arbitration + DRAM latency ~220 ns
 through the vertex path, not DRAM bandwidth - `docs/fdperf-a7xx.md`,
-`results/fdperf-mesa27/`. The data is in
+`results/games/re4/mesa27/`. The data is in
 `results/mesa27/` (`fps-mesa27.csv`, the filtered and raw logs; the log
 has the device signed: `Turnip Adreno (TM) 740 | sparseResidencyImage2D
 true`). To conclude "27 is better" 2-3 repetitions are needed.

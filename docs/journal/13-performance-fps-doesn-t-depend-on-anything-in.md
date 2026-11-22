@@ -100,7 +100,7 @@ visible in every row: gpu_load 98% and 680 MHz already in the window,
 i.e. `ondemand` reaches the ceiling there (as `docs/fdperf-a7xx.md` warned from
 the counter side). The end state is the distro default `simple_ondemand`.
 
-CSVs: `results/fps-gov-{ondemand,performance}.csv` (the 16:28 CSV was deleted
+CSVs: `results/games/re4/fps-gov-{ondemand,performance}.csv` (the 16:28 CSV was deleted
 by the next run — `HUDLOG` recreates the log directory, so keep CSVs out of
 `/tmp/opencode/mangologs` right after a run; the row above records the parsed
 numbers, same build).

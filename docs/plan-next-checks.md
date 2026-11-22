@@ -466,7 +466,7 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    it does not buy: it is not a compression claim (open question 15), it is one geometry,
    `sparseImageInt64Atomics=0`, and the write paths into such an image (`clear`, `blit`, `r2d`)
    are not exercised. Added by journal 38, and it changes what this item is *for*: the per-client
-   DRAM split in `results/fdperf-mesa27-vertex/steady-state.txt` puts SP at 0.05 GB/s of 14.8
+   DRAM split in `results/games/re4/mesa27-vertex/steady-state.txt` puts SP at 0.05 GB/s of 14.8
    (0.3 % of reads) against TP at 81 %, and a class whose only reader is a storage image is an
    SP-side client - so no fps argument can be made for this grant on this workload. The case for
    it is coverage of a legal create, which is a weaker reason to spend a build than the volume
@@ -511,7 +511,7 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
      `scripts/imginv-stats.py` and `scripts/imginv-classes.py` (their own output labels)
      and the annotation headers of
      `results/{series-autotune,series-drirc,vkmark-ab-autotune,vkmark-ab-r8g8,vkmark-flags,test-8bpp-meta-shape}.txt`
-     and `results/fdperf-mesa27{,-vertex}/steady-state.txt`. Translating the two scripts
+     and `results/games/re4/mesa27{,-vertex}/steady-state.txt`. Translating the two scripts
      means re-running them over `results/raw/` and checking that every number in
      `results/imginv-3variants.txt` comes out identical - the labels may change, the
      counters may not.
@@ -772,7 +772,7 @@ carries no DX-flavoured flag: `grep -a -o -E '.{0,18}-[a-zA-Z_]*dx[12][12]?.{0,1
 233690016-byte `re4.exe` prints nothing, and `via.render.RenderDeviceAPI` / `DirectX11` / `DirectX12`
 appear only as the reflection enum. Launching with `GAMEARGS="-dx11"`, with `GAMEARGS="-forceDX11"`, and
 with `WINEDLLOVERRIDES='d3d12='` (the dll disabled, so neither vkd3d-proton nor a wine builtin can be
-loaded) left all three runs on D3D12: `results/game-patched-dx11dx11.log`, `…-dx11forceDX11.log` and
+loaded) left all three runs on D3D12: `results/games/re4/game-patched-dx11dx11.log`, `…-dx11forceDX11.log` and
 `…-d3doff.log` each still contain `d3d12_device_create_vkd3d_queues`, and the game rewrites
 `Capability=DirectX12` into `local_config.ini`. Renaming the prefix's `d3d12.dll`/`d3d12core.dll` was
 rejected without running it: that would route the game to wine's own D3D12-on-wined3d, which answers
@@ -853,7 +853,7 @@ until a title that can choose its API is on this machine.
     measured for traffic or fps - journal 21.12 says as much about its own run ("fps is not what this
     run measures - the inventory is"), and the 17.11 fdperf runs predate `0014` (entries 21.11 and
     21.12 are both dated 18.11), so the committed profile - TP 12.0 GB/s of 14.8, 81 % of DRAM reads,
-    `results/fdperf-mesa27-vertex/steady-state.txt` - is a baseline with those images in linear.
+    `results/games/re4/mesa27-vertex/steady-state.txt` - is a baseline with those images in linear.
 
     ```sh
     # A = the ship stack as released.  B = the same stack without 0014, in a COPY of the tree:
@@ -867,8 +867,8 @@ until a title that can choose its API is on this machine.
     # ACCEPT B only if exp-14's inventory shows the pre-0014 signature: MUTABLE with listn=0 and
     # 0 MiB tiled, the imginv4 row of results/imginv-3variants.txt.  Never the .so hash.
     # one session per build, base run between them, sampler on the steady stretch:
-    scripts/fdperf-sample.sh 130 1000 results/fdperf-0014ab/A.txt tools/fdperf/fdperf.cfg-vertex
-    python3 scripts/fdperf-analyze.py results/fdperf-0014ab/A.txt
+    scripts/fdperf-sample.sh 130 1000 results/games/re4/0014ab/A.txt tools/fdperf/fdperf.cfg-vertex
+    python3 scripts/fdperf-analyze.py results/games/re4/0014ab/A.txt
     HUDLOG=150 scripts/run-game.sh patched 170
     # the ship tree is never touched by this: B lives in ../mesa27-src-no0014 and is deleted after
     ```
@@ -963,7 +963,7 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
     (`freedreno_devices.py:854-856`), not in `a7xx_base`/`a7xx_gen2`. Upstream's own probe
     `TU_FORCE_PROPS=has_gmem_vpc_attr_buf` substitutes those sizes and logs
     `TU_FORCE_PROPS: vpc_attr_buf_size sysmem=0x20000 gmem=0xc000` (`tu_device.cc:1799-1806`), and the
-    log of `results/fdperf-vpc3-attrbuf/` carries 9 such lines against 0 in the control, so delivery is
+    log of `results/games/re4/vpc3-attrbuf/` carries 9 such lines against 0 in the control, so delivery is
     proved. Measured with `tools/fdperf/fdperf.cfg-vpc3` (`vpc3base` against `attrbuf`,
     `scripts/fdperf-vpcram-ratios.py`): VPC busy 91.70 % against 90.86 %, `VPCRAM_FULL` 50.84 % against
     50.82 % of busy, `WIT_FULL` 1.25 % against 1.25 %, `STALL_CYCLES_VPCRAM_POS` 0.44 % against 0.42 %,
@@ -977,11 +977,11 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
     were made they had no work to do.** `tools/fdperf/fdperf.cfg-bv` names `BV_VPC`/`BV_TSE`/`BV_PC`/
     `BV_TP` and the selects land: on an idle GPU the BV half of the same slots prints the requested names
     (`PC_IA_PRIMITIVES`, `VPC_VPCRAM_FULL_CYCLES`, `TSE_INPUT_PRIM`) where a cfg without BV sections
-    prints the group's first countables (`results/fdperf-bv-idle-labelcheck.txt`). The register map in
+    prints the group's first countables (`results/games/re4/bv-idle-labelcheck.txt`). The register map in
     `a7xx_perfcntrs.json` says how separate they are: `BV_PC`/`BV_VFD`/`BV_VPC`/`BV_TP`/`BV_SP`/`BV_UFC`
     share their ordinary twin's select register with a `select_offset`, `BV_TSE`/`BV_RAS`/`BV_LRZ`/
     `BV_HLSQ`/`BV_CP` have none and so share the very words; the value registers are separate.
-    Measured (`cfg-bv`, six arms `results/fdperf-bv-*/`, p25 15.15-15.29): the BV banks report
+    Measured (`cfg-bv`, six arms `results/games/re4/bv-*/`, p25 15.15-15.29): the BV banks report
     0.06-0.08 % of the core on their own `BUSY`/`WORKING` counters and 0/s on every per-primitive counter
     in them (`BV_PC` `PC_IA_PRIMITIVES`, `BV_TSE` `TSE_INPUT_PRIM`/`TSE_OUTPUT_VISIBLE_PRIM`, `BV_VPC`
     `VPCRAM_FULL`/`WIT_FULL`), with CB off and with `TU_DEBUG=forcecb` whose delivery the driver logged
@@ -999,7 +999,7 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
     and 40.12 leave the question here). On 22.11 every forced arm read `VSC_INPUT_TILES` = 0 in every
     window - `cfg-tse3` without any BV section included, and with `forcecb` delivered and logged - where
     21.11's `cfg-tse3` + `forcecb` arm fed 1,532 tiles/s in all 88 windows and its CB-off twin in 32 of 40
-    at a median of 56/s (`results/fdperf-tse3-cbforce/`, `results/fdperf-tse3-cbbase/`,
+    at a median of 56/s (`results/games/re4/tse3-cbforce/`, `results/games/re4/tse3-cbbase/`,
     `scripts/fdperf-tile-table.py`). So the flag was set and the driver still did not bin: `forcecb`
     clears one gate (`tu_cmd_buffer.cc:3506`) and the other reasons (`cb_disable_reason`) stay, and what
     decides them is not visible in any log of this repository. Arms: a scene or stretch where the tile
@@ -1061,11 +1061,11 @@ instead of against a build.
 | 12 | is a `VkImageFormatListCreateInfo` with `viewFormatCount == 0` the same as passing no list | NOT MEASURED, and `exp-21` deliberately keeps `0014`'s answer (an empty list is forwarded, and the predicates answer it as the worst case). The spec's wording makes them equal, but the inventories cannot tell the two apart - both are `listn=0` - so this is not a question a replay answers |
 | 13 | why does the system driver give UBWC to a `MUTABLE` image with no list, where both Mesa 27 builds refuse it | ONE ROW, journal 31: `B8G8R8A8_UNORM`, `nolist=0x102000` against `0x100000`. Not in the two refusal functions (byte-identical to refs `mesa-26.2.6` and `main`), so it is either elsewhere in 26.2 or in the distribution's own patches (`mesa-vulkan-drivers-26.2.6-1.fc44.armada`, not in this repository). Chasing it would need the downstream source; it changes no verdict, and `exp-18` does not depend on it |
 | 14 | does a `R64_UINT`/`R64_SINT` view of a UBWC image work, once `STORAGE` makes it legal | ANSWERED 21.11, journal 37: probe `XR64` built the shape and ran it - a no-list `MUTABLE` image with `STORAGE` in the usage, UBWC kept by the `TU_UBWC_NOLIST_64` knob of `experiments/exp-23-ubwc-nolist-64-knob.patch`, stays tiled with the `+0x2000` tail and reads `0/262144` wrong through an `r64ui` storage image, including after `imageAtomicAdd(+1)` per word. It also settled the shape question: a list that *names* `R64_*` is refused compression by `FD6_UBWC_UNKNOWN_COMPAT` with the knob on and off, so the no-list create was the only place the question could be asked at all. `results/test-xr64-nolist-64-ubwc.log`. Still open inside the answer: `sparseImageInt64Atomics=0` on this device, so the sparse corner is unmeasured, and journal 38 puts the class on the SP client, which is 0.3 % of measured DRAM reads |
-| 15 | is the compressor actually writing compressed bytes, or only a metadata plane | ANSWERED 22.11, journal 40.17: yes, bytes. In RE4's steady stretch the bus carries 317 MB/s of `PERF_UCHE_UBWC_READ_BEATS` and 37 MB/s of `..._WRITE_BEATS` against 15.59 / 0.29 GB/s of VBIF traffic - 2.0 % of the read bytes, 2.4 % of the texture client's requests - and the switch that proves the counter means what it says is on the application side: `VKD3D_CONFIG=disable_color_compression,disable_depth_compression` in the shipped vkd3d-proton drives all four UBWC counters, and the TP UBWC request counter, to exactly zero in 52 of 52 samples while the CMPDECMP write-data column doubles. `tools/fdperf/fdperf.cfg-traffic`, `scripts/fdperf-traffic-table.py`, `results/traffic-ubwc-ab.txt`. Also measured in the same pair: taking compression off costs +0.9 % DRAM read, +10 % DRAM write and no measurable frame rate. Still open inside the answer: which images the 317 MB/s belongs to - the counters are global, so whether `0014`'s images are inside that 2 % is queue 16, not this |
+| 15 | is the compressor actually writing compressed bytes, or only a metadata plane | ANSWERED 22.11, journal 40.17: yes, bytes. In RE4's steady stretch the bus carries 317 MB/s of `PERF_UCHE_UBWC_READ_BEATS` and 37 MB/s of `..._WRITE_BEATS` against 15.59 / 0.29 GB/s of VBIF traffic - 2.0 % of the read bytes, 2.4 % of the texture client's requests - and the switch that proves the counter means what it says is on the application side: `VKD3D_CONFIG=disable_color_compression,disable_depth_compression` in the shipped vkd3d-proton drives all four UBWC counters, and the TP UBWC request counter, to exactly zero in 52 of 52 samples while the CMPDECMP write-data column doubles. `tools/fdperf/fdperf.cfg-traffic`, `scripts/fdperf-traffic-table.py`, `results/games/re4/traffic-ubwc-ab.txt`. Also measured in the same pair: taking compression off costs +0.9 % DRAM read, +10 % DRAM write and no measurable frame rate. Still open inside the answer: which images the 317 MB/s belongs to - the counters are global, so whether `0014`'s images are inside that 2 % is queue 16, not this |
 | 16 | does any of the reachable driconf perf options change fps in RE4 | NOT MEASURED, queue 12 (journal 34.3 covers correctness on the rig only, and the rig has no textured depth renderpass). Two candidates remain, `tu_allow_concurrent_binning` and `disable_conservative_lrz`, both expected zeros given ADR-0008; the third, `tu_disable_conservative_fdm_binning`, lost its precondition in journal 35.1 (0 density-map images in 11 984 creates) and is held until an FDM attachment is observed. Needs the game, so it needs most of this machine's 7.3 GiB |
 | 17 | what does the game do when the driver reports less memory than the heap it reports today | NOT MEASURED, queue 13. The report itself is measured - journal 34.4, `results/vulkaninfo-heap-report.log`, five `vulkaninfo` runs over `heap_memory_percent` - and the queue names the two values to try in the game. What vkd3d-proton does under a smaller report is not, and journal 17's 3129 MiB peak against 4.95 GiB of swap is why the question is not empty |
 | 18 | is any of the 22 shading-rate images ever attached to a render pass, and at what rates | NOT MEASURED. Journal 35.1 counts the images and journal 35.2 measures the capability, but a usage bit is a declaration: the driver has no log line for `subpass->fsr_attachment != VK_ATTACHMENT_UNUSED`, so the check needs one added `if` plus a build, then a game run. Without it, "the game uses VRS" stays an inference, and not even the driver's own per-subpass register write can be observed from a log |
-| 19 | what did the 2450.3 MiB that `0014` v1 moved out of linear buy in traffic or fps | NOT MEASURED, queue 16 (no new patch: a B build without `0014` made in a copy of the tree - `git apply -R` does not work, open question 20 - then one A/B session). Journal 39 sizes what no rule can move (the 1630.8 MiB residue, required linear by the Vulkan class rule plus `fd6_pipe2swap()`), so this is the only no-list number left. The committed profile that looks like an answer - `results/fdperf-mesa27-vertex/steady-state.txt`, TP 12.0 GB/s and 81 % of DRAM reads - was sampled 17.11, and `0014` is journal 21.12, dated 18.11: that run is a with-everything-linear baseline, not a before/after |
+| 19 | what did the 2450.3 MiB that `0014` v1 moved out of linear buy in traffic or fps | NOT MEASURED, queue 16 (no new patch: a B build without `0014` made in a copy of the tree - `git apply -R` does not work, open question 20 - then one A/B session). Journal 39 sizes what no rule can move (the 1630.8 MiB residue, required linear by the Vulkan class rule plus `fd6_pipe2swap()`), so this is the only no-list number left. The committed profile that looks like an answer - `results/games/re4/mesa27-vertex/steady-state.txt`, TP 12.0 GB/s and 81 % of DRAM reads - was sampled 17.11, and `0014` is journal 21.12, dated 18.11: that run is a with-everything-linear baseline, not a before/after |
 | 20 | does the committed `patches/0014-turnip-mutable-no-list-tiling.patch` describe the tree that built the shipped `c17d02bcaae9…` | NOT SETTLED. Journal 39.7: `git apply -R --check` of that file fails on the recorded ship-stack tree at `tu_formats.cc:261`, and the texts differ by function names (`tu6_mutable_compat_class` vs the tree's static `mutable_compat_class`/`mutable_views`) and by comment wording. The difference cannot change a result, so no verdict in journal 39 depends on it - but it decides how queue 16 makes its B build, and a shipped patch file that is not the built text is a reference-table error worth fixing once, by regenerating the file from the tree and recording in `docs/release.md` which hash it belongs to |
 
 ## Pitfalls (reminder)
