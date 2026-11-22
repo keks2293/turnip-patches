@@ -1,0 +1,87 @@
+Experiment 26 (0014 off, by hand) - NOT FOR COMMIT, and not a change to the driver:
+this is the B side of the measurement queue 16 asks for, written down as a patch so
+that the tree it describes can be rebuilt and the edit can be undone as one action.
+
+Purpose. Patch 0014 (patches/0014-turnip-mutable-no-list-tiling.patch, shipped in
+27.0.0-devel-p14) moved 1450 creates / 2450.3 MiB of MUTABLE images without a format
+list from linear to tiled (results/nolist-residue-p14.log) and has never been
+measured for traffic or fps: journal 21.12 says of its own run that the inventory is
+what it measured, and the fdperf runs of 17.11 predate it. Queue 16 asks what those
+2450.3 MiB are worth, and that needs a driver identical to the ship stack except
+without 0014.
+
+Why by hand. git apply -R patches/0014-turnip-mutable-no-list-tiling.patch does not
+revert the tree: journal 39.7 measured it, the 0014 text in ../mesa27-src and the
+committed patch file are different texts (among other things the committed file
+rewords a comment above the VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT block in
+tu_get_image_format_properties, while the tree's diff of that file has no such
+hunk). What the two texts have in common is the semantic site: the place where a
+missing format list is replaced by the base format's compatibility class. That site
+is reverted here and nothing else is.
+
+The change. In tu6_mutable_format_list_forces_linear(), the predicates are handed
+the application's list, NULL for the images this is about, instead of the class -
+which is the state tu6_format_list_has_swaps(), tu6_format_list_reinterprets_r8g8_r16()
+and tu6_format_list_swaps_are_uniform() were written for and what they answer with
+their worst case. mutable_views() and mutable_compat_class() stay in the file,
+unreferenced, marked __attribute__((unused)) so the measurement build is as
+warning-free as the A build; putting 0014 back is deleting this patch.
+
+What is NOT reverted: the VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT block in
+tu_get_image_format_properties. It is not 0014's - in the committed 0014 its own
+context lines already contain that block, so it came with an earlier patch of the
+series, and the A/B is about 0014 alone.
+
+Acceptance, as pre-registered by queue 16: the build of this tree is accepted as
+"0014 off" only if the exp-14 inventory it produces shows the pre-0014 signature -
+MUTABLE images with listn=0 and 0 MiB in tiled, the imginv4 row of
+results/imginv-3variants.txt - never on the .so hash. The inventory rig
+(experiments/exp-14-image-inventory.patch) is therefore kept in both build trees.
+
+Rollback: git apply -R experiments/exp-26-ship-0014-off.patch in the tree it was
+applied to (../mesa27-src-no0014). The shared ../mesa27-src is not touched by it.
+
+--- a/src/freedreno/vulkan/tu_formats.cc
++++ b/src/freedreno/vulkan/tu_formats.cc
+@@ -286,7 +286,12 @@
+  * multi-planar) and when the class does not fit into max; the caller then keeps
+  * the conservative answer which is given for a missing list.
+  */
+-static unsigned
++/* __attribute__((unused)) since the B tree of queue 16 (experiments/
++ * exp-26-ship-0014-off.patch) leaves this unreferenced: the machinery stays in the
++ * tree so that putting 0014 back is one line, and the attribute keeps the
++ * measurement build warning-free without pulling in a macro it did not need.
++ */
++__attribute__((unused)) static unsigned
+ mutable_compat_class(VkFormat format, VkFormat *list, unsigned max)
+ {
+    enum pipe_format base = vk_format_to_pipe_format(format);
+@@ -347,7 +352,7 @@
+  * whichever class its base format belongs to.  Only the layout is a property
+  * of the block, and therefore decidable without the list.
+  */
+-static const VkImageFormatListCreateInfo *
++__attribute__((unused)) static const VkImageFormatListCreateInfo *
+ mutable_views(VkFormat format, const VkImageFormatListCreateInfo *fmt_list,
+               VkFormat *compat_list, unsigned compat_max,
+               VkImageFormatListCreateInfo *compat_info)
+@@ -403,11 +408,13 @@
+    if (info->props.ubwc_all_formats_compatible)
+       return false;
+ 
+-   VkFormat compat_list[64];
+-   VkImageFormatListCreateInfo compat_info;
+-   const VkImageFormatListCreateInfo *views =
+-      mutable_views(format, fmt_list, compat_list, ARRAY_SIZE(compat_list),
+-                    &compat_info);
++   /* 0014 off (experiments/exp-26-ship-0014-off.patch, the B tree of queue 16):
++    * the predicates below are handed the list of the application, which is NULL
++    * for a mutable image created without one - the state they were written for.
++    * This is the whole semantic difference between the two trees of that
++    * measurement; the class machinery above stays in the file, unreferenced.
++    */
++   const VkImageFormatListCreateInfo *views = fmt_list;
+ 
+    if (tu6_format_list_reinterprets_r8g8_r16(vk_format_to_pipe_format(format),
+                                              views))

@@ -1003,7 +1003,7 @@
     "results/games/re4/mesa27-vertex/fdperf-raw.txt",
     "results/games/re4/game-patched-algopg.log"
    ],
-   "lines": 1530,
+   "lines": 1566,
    "headings": [
     "## 40.1 What was run",
     "## 40.2 The discard, and what kind of discard it is",
@@ -1031,7 +1031,8 @@
     "## 40.24 An outside list of features supposedly \"locked behind a7xx_gen3\" for A740: every A8XX gate in the tree is a register difference, and the one software candidate left is `has_alias_rt` (no run)",
     "## 40.25 The outside geometry plan, item by item: the VSC runs nothing on this frame, the VPC knobs are shared or already swept, and none of the three driver features it asks for is reachable from RE4 (queue 29, no run)",
     "## 40.26 On the ship frame the VPC's own RAM is 71 % of its busy time, and switching off the fp16 lowering of varyings moves nothing (chain35, question 24 continued, queue 28 closed)",
-    "## 40.27 What one vertex costs is the same on both frames, so the VPC's RAM pressure is a volume problem and not a width problem (queue 30, no run)"
+    "## 40.27 What one vertex costs is the same on both frames, so the VPC's RAM pressure is a volume problem and not a width problem (queue 30, no run)",
+    "## 40.28 The queue-16 builds exist, the build is reproducible, and that is what makes the ship-hash gap a fact (queue 16, builds)"
    ],
    "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
    "verdict_source": "journal 40"

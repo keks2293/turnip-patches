@@ -1527,3 +1527,40 @@ width does not differ between two frames of different speed, not a manipulation,
 need a driver that packs varyings, which this tree does not have. And what the 31.8-33.0 "bytes per
 vertex" is in absolute terms - a ratio of a counter named `..._BYTES` over a vertex count, with no unit
 and no per-format breakdown in the XML.
+## 40.28 The queue-16 builds exist, the build is reproducible, and that is what makes the ship-hash gap a fact (queue 16, builds)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** Queue 16 wants a driver identical to the ship stack except without patch 0014, and queue
+26 wants `has_alias_rt` forceable at runtime; both need a build. The Mesa tree here is uncommitted by
+design (`AGENTS.md`), so before trusting any build hash with a statement like "B = A minus 0014", the
+mechanism has to be checked: does rebuilding the same tree twice still give the same sha256
+(`docs/release.md` checklist item 2)?
+
+**Method.** The shared `../mesa27-src` was not written to: both measurement trees are `cp -a` copies
+of it (wrapper `/tmp/opencode/build36.sh`, container build `scripts/build-turnip-mesa27.sh`, `-j2`,
+ccache in `/tmp`, ship `build/out` untouched). `../mesa27-src-ab` = copy, exp-24 render-mode rig
+removed (`git apply -R`), exp-25 `TU_FORCE_PROPS` hook added, exp-14 inventory rig kept (queue 16's
+acceptance is an inventory signature). `../mesa27-src-no0014` = the same, plus exp-26 by hand:
+`mutable_views()` no longer feeds the layout predicates - `git apply -R patches/0014` cannot do this,
+journal 39.7. A third copy, `../mesa27-src-verify` = shared tree minus both rigs, was built twice into
+separate directories as the reproducibility control. Every tree is described by
+`scripts/build-tree-stamp.sh` (new: HEAD, sha256 of `git diff`, hook knobs present, .so hash).
+
+**Numbers.** `results/games/re4/0014ab/builds.txt`: verify built twice -> `f80d33ab2077` both times
+(`/tmp/opencode/build36-verify.log`, `build36-verify2.log`); A = `88bab928c520` (`build/out-ab`),
+B = `7ae5f008caa8` (`build/out-no0014`); `diff -rq` over the two trees names exactly one file,
+`tu_formats.cc` - the exp-26 hunk.
+
+**Verdict.** The build is reproducible, so a hash difference is a source difference. Two consequences,
+both stronger than they were before this control: (1) `f80d33ab2077` != the ship `4c3cdb210082` means
+the shared tree of 23.11, even with both experiment rigs removed, is **not** the source of the ship
+stack - the drift 39.7 found in the 0014 text is not an artifact of the rigs (0004, 0005 and 0014
+still do not reverse in the rig-free tree), and the exact ship stack cannot be recompiled from this
+machine today. The queue-16 A/B is therefore anchored internally, A against B, and the ship `.so`
+runs on the bench only as a control arm; (2) any measured difference between A and B belongs to the
+single file exp-26 touches, i.e. to 0014's one semantic site.
+
+**Does not show.** Which edit since 20.11 moved the ship hash (the drift was measured, not bisected);
+whether A and B differ at runtime at all - that is chain37; and nothing about alias.rt, whose hook is
+merely present in both trees and does nothing unless `TU_FORCE_PROPS` names it.

@@ -34,7 +34,7 @@ here), the verdict is an ADR in `docs/decisions/`, the measurement is a journal 
 
 ## Experiments (`experiments/`, never for commit)
 
-`exp-1`..`exp-23` (there is no `exp-12`; `exp-18`, `exp-19` and `exp-20` are queued
+`exp-1`..`exp-26` (there is no `exp-12`; `exp-18`, `exp-19` and `exp-20` are queued
 and have no file - the queue owns those numbers), full discussion in
 `experiments/README.md` and in the journal entry named below.
 
@@ -60,6 +60,9 @@ and have no file - the queue owns those numbers), full discussion in
 | 21b | with the create path no longer comparing predicates, do the three predicates (`0004`'s two and `0005`'s) go back to `static` | tail of 21, kept as its own gate because it lands on the definitions `0005`/`0010` wrote; **NOT BUILT** | 21.12 |
 | 22 | do `FD6_UBWC_R16G16B16A16_INT` and `FD6_UBWC_R32G32_INT` describe one cell of the compressor on this chip (`TU_UBWC_64B_MIX`, folds that one pair and nothing else) | one cell in the paths probed: with the knob on, the mixed `{R16G16B16A16_UINT, R32G32_UINT}` create carries the metadata tail and reads `0/262144` wrong through a view of either family; the knob moves two lines of a 621-line log. Reverted from the tree after the run | 32 |
 | 23 | does a UBWC 64-bit image made **without** a format list read and write correctly through an `R64_UINT` storage image (`TU_UBWC_NOLIST_64`: declines the no-list UBWC demotion for 8-byte base blocks, nothing else) | in the probed shape yes: the create keeps the metadata tail (`+0x2000`), stays tiled, reads `0/262144` wrong through `r64ui` and comes back exactly +1 per word after `imageAtomicAdd(+1)`; a list that *names* `R64_UINT` is refused compression with the knob on and off, which is why the question had to be asked without a list. Reverted with `git apply -R` after the run | 37 |
+| 24 | which render mode the autotuner chooses on its own, and for what stated reason (`TU_DBG_RM_HIST=1`) | written into the tree on 22.11 during journal 40.15 without a patch file; saved as one on 23.11 when the tree was inventoried for queue 16. NOT BUILT, NOT RUN; removed from both queue-16 build trees | 40.15, 40.28 |
+| 25 | is the `has_alias_rt` gate protecting something real on a7xx_gen2 | one entry in the `TU_FORCE_PROPS` table, nothing else; built into both queue-16 trees on 23.11, NOT RUN. With the variable unset the driver behaves as before | 40.24, queue 26 |
+| 26 | what is 0014 worth: the B side, its one semantic site reverted by hand | the B tree of queue 16 (`../mesa27-src-no0014`, build `7ae5f008caa8`). Accepted only by the pre-0014 inventory signature of queue 16, never by a hash; `git apply -R patches/0014` cannot do this (journal 39.7) | queue 16, 40.28 |
 
 ## Tools
 

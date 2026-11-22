@@ -56,7 +56,7 @@ cp "$RAW/fdperf-$TAG.txt" "$OUT/$TAG/fdperf-raw.txt" 2>/dev/null || true
 # meta.txt: the answer to "what makes this arm different from that one".  The driver is
 # identified by the sha256 prefix of the .so the ICD actually points at, not by a version.
 ICD_JSON="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["ICD"]["library_path"])' \
-    ../build/out/freedreno_icd.json 2>/dev/null || true)"
+    "${ICD:-../build/out/freedreno_icd.json}" 2>/dev/null || true)"
 SO_SHA="$(sha256sum "$ICD_JSON" 2>/dev/null | cut -c1-12)"
 {
   echo "# game:    $(sed -n 's/^# game: //p' "results/raw/game-patched-$TAG.log" 2>/dev/null | head -1)"

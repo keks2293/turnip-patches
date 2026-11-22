@@ -1,0 +1,202 @@
+Experiment 24 (render-mode verdict histogram) - NOT FOR COMMIT. One call per render
+pass records the verdict of the sysmem/gmem decision, whether HW binning would have
+been used, and the reason string the driver keeps for itself; a histogram of those
+is printed once per second on stderr while TU_DBG_RM_HIST=1.
+
+Purpose. Queue 22 of docs/plan-next-checks.md and journal 40.15. Every render-mode
+measurement in this repository forces a mode and measures the consequence -
+TU_DEBUG=gmem with and without forcebin (journal 40.10, and 40.16 where that costs a
+third of the fps), TU_DEBUG=sysmem (40.20, no change) - and none has recorded what
+the autotuner decides by itself. The reason for a pass is computed and stored in
+tu_cmd_buffer::state.rp.force_render_mode_reason (tu_cmd_buffer.cc:1424-1487) and
+never logged, only traced, so "the driver chose sysmem because of X" is not a
+quantity anyone can count today. This rig makes it one: passes per verdict and
+reason, over the steady stretch of a run, next to the fps of the same run.
+
+Why a separate gate. TU_DEBUG bits are a fixed set and every recorded measurement
+names its mask; a new bit would silently change what a recorded mask means. So the
+rig has its own environment variable, TU_DBG_RM_HIST=1, and without it the added
+code is one comparison against a cached flag per render pass and one call per submit
+that returns. The printing reuses the once-per-second slot in queue_submit() that
+tu_dbg_log_gmem_load_store_skips() (tu_util.cc:593-642) already uses.
+
+The reason strings are literals owned by the driver, so the table stores the pointer
+and compares it by identity: no copies, no allocation, no lifetime question.
+
+Rollback: git apply -R experiments/exp-24-render-mode-histogram.patch - the patch
+touches exactly tu_cmd_buffer.cc, tu_queue.cc, tu_util.cc and tu_util.h, and nothing
+else in those files (tu_cmd_buffer.cc also carries 0013 and 0014 in an uncommitted
+tree, so revert this patch and never git checkout, AGENTS.md).
+
+Provenance: written into ../mesa27-src on 22.11 as part of journal 40.15 and left
+applied there; saved as this patch file on 23.11 while the tree was inventoried for
+the 0014 A/B (queue 16), which is what found the rig in the tree with no patch file
+next to it. Neither built nor run: queue 22 is still open, and this file exists so
+that the rig can be reverted, carried into a build tree, or dropped.
+
+diff --git a/src/freedreno/vulkan/tu_cmd_buffer.cc b/src/freedreno/vulkan/tu_cmd_buffer.cc
+index e9c7454..dac959b 100644
+--- a/src/freedreno/vulkan/tu_cmd_buffer.cc
++++ b/src/freedreno/vulkan/tu_cmd_buffer.cc
+@@ -4195,7 +4195,16 @@ tu_cmd_render(struct tu_cmd_buffer *cmd_buffer,
+    tu_autotune::rp_key_opt rp_key = cmd_buffer->device->autotune->emit_preempt_latency_tracking_rp_hash(cmd_buffer);
+ 
+    tu_autotune::rp_ctx_t rp_ctx = NULL;
+-   if (use_sysmem_rendering(cmd_buffer, &rp_ctx, rp_key))
++   const bool sysmem = use_sysmem_rendering(cmd_buffer, &rp_ctx, rp_key);
++
++   /* Diagnostic only (TU_DBG_RM_HIST=1): record the verdict, whether HW binning
++    * would be used, and the reason string the driver keeps for itself.  The
++    * ask is the same one the real path asks, in the same order.
++    */
++   tu_dbg_note_render_mode(sysmem, !sysmem && use_hw_binning(cmd_buffer),
++                           cmd_buffer->state.rp.force_render_mode_reason);
++
++   if (sysmem)
+       tu_cmd_render_sysmem<CHIP>(cmd_buffer, rp_ctx);
+    else
+       tu_cmd_render_tiles<CHIP>(cmd_buffer, rp_ctx, fdm_offsets);
+diff --git a/src/freedreno/vulkan/tu_queue.cc b/src/freedreno/vulkan/tu_queue.cc
+index 225ef8b..bef9b2b 100644
+--- a/src/freedreno/vulkan/tu_queue.cc
++++ b/src/freedreno/vulkan/tu_queue.cc
+@@ -436,6 +436,9 @@ queue_submit(struct vk_queue *_queue, struct vk_queue_submit *vk_submit)
+    if (TU_DEBUG(LOG_SKIP_GMEM_OPS))
+       tu_dbg_log_gmem_load_store_skips(device);
+ 
++   /* same once-per-second slot, own gate (TU_DBG_RM_HIST=1) */
++   tu_dbg_log_render_mode_histogram();
++
+    pthread_mutex_lock(&device->submit_mutex);
+ 
+    struct tu_cmd_buffer **cmd_buffers =
+diff --git a/src/freedreno/vulkan/tu_util.cc b/src/freedreno/vulkan/tu_util.cc
+index 76e4f4a..647ca60 100644
+--- a/src/freedreno/vulkan/tu_util.cc
++++ b/src/freedreno/vulkan/tu_util.cc
+@@ -640,3 +640,101 @@ tu_dbg_log_gmem_load_store_skips(struct tu_device *device)
+ 
+    pthread_mutex_unlock(&device->submit_mutex);
+ }
++
++/* Render-mode verdict histogram, see the declaration in tu_util.h.  The reason
++ * strings are literals owned by the driver, so the table stores the pointer and
++ * compares it by identity: no copies, no allocation, no lifetime question.
++ */
++#define TU_DBG_RM_MAX_REASONS 32
++
++struct tu_dbg_rm_entry {
++   const char *reason;
++   bool sysmem;
++   uint32_t count;
++   uint32_t binned;
++};
++
++static pthread_mutex_t tu_dbg_rm_lock = PTHREAD_MUTEX_INITIALIZER;
++static struct tu_dbg_rm_entry tu_dbg_rm_entries[TU_DBG_RM_MAX_REASONS];
++static unsigned tu_dbg_rm_num_entries;
++static uint32_t tu_dbg_rm_passes, tu_dbg_rm_sysmem, tu_dbg_rm_gmem, tu_dbg_rm_binned;
++
++static bool
++tu_dbg_rm_hist_enabled(void)
++{
++   static int enabled = -1;
++
++   if (enabled < 0)
++      enabled = os_get_option("TU_DBG_RM_HIST") != NULL;
++
++   return enabled != 0;
++}
++
++void
++tu_dbg_note_render_mode(bool sysmem, bool binned, const char *reason)
++{
++   if (!tu_dbg_rm_hist_enabled())
++      return;
++
++   pthread_mutex_lock(&tu_dbg_rm_lock);
++
++   tu_dbg_rm_passes++;
++   if (sysmem)
++      tu_dbg_rm_sysmem++;
++   else
++      tu_dbg_rm_gmem++;
++   if (binned)
++      tu_dbg_rm_binned++;
++
++   for (unsigned i = 0; i < tu_dbg_rm_num_entries; i++) {
++      if (tu_dbg_rm_entries[i].reason == reason &&
++          tu_dbg_rm_entries[i].sysmem == sysmem) {
++         tu_dbg_rm_entries[i].count++;
++         if (binned)
++            tu_dbg_rm_entries[i].binned++;
++         pthread_mutex_unlock(&tu_dbg_rm_lock);
++         return;
++      }
++   }
++
++   if (tu_dbg_rm_num_entries < TU_DBG_RM_MAX_REASONS) {
++      struct tu_dbg_rm_entry *e = &tu_dbg_rm_entries[tu_dbg_rm_num_entries++];
++      e->reason = reason;
++      e->sysmem = sysmem;
++      e->binned = binned ? 1 : 0;
++      e->count = 1;
++   }
++
++   pthread_mutex_unlock(&tu_dbg_rm_lock);
++}
++
++void
++tu_dbg_log_render_mode_histogram(void)
++{
++   static struct timespec last_time = {};
++
++   if (!tu_dbg_rm_hist_enabled())
++      return;
++
++   struct timespec current_time;
++   clock_gettime(CLOCK_MONOTONIC, &current_time);
++   if (timespec_sub_to_nsec(&current_time, &last_time) < 1000 * 1000 * 1000)
++      return;
++   last_time = current_time;
++
++   pthread_mutex_lock(&tu_dbg_rm_lock);
++
++   mesa_logi("[RM] passes: %u sysmem: %u gmem: %u binned: %u\n",
++             tu_dbg_rm_passes, tu_dbg_rm_sysmem, tu_dbg_rm_gmem,
++             tu_dbg_rm_binned);
++   for (unsigned i = 0; i < tu_dbg_rm_num_entries; i++) {
++      const struct tu_dbg_rm_entry *e = &tu_dbg_rm_entries[i];
++      mesa_logi("[RM]   %-6s %5u  binned %5u  %s\n", e->sysmem ? "sysmem" : "gmem",
++                e->count, e->binned, e->reason ? e->reason : "(no reason)");
++   }
++
++   tu_dbg_rm_passes = tu_dbg_rm_sysmem = tu_dbg_rm_gmem = tu_dbg_rm_binned = 0;
++   tu_dbg_rm_num_entries = 0;
++
++   pthread_mutex_unlock(&tu_dbg_rm_lock);
++}
+diff --git a/src/freedreno/vulkan/tu_util.h b/src/freedreno/vulkan/tu_util.h
+index c212db4..5e8c930 100644
+--- a/src/freedreno/vulkan/tu_util.h
++++ b/src/freedreno/vulkan/tu_util.h
+@@ -473,6 +473,19 @@ tu6_pack_border_color(struct bcolor_entry *bcolor, const VkClearColorValue *val,
+ void
+ tu_dbg_log_gmem_load_store_skips(struct tu_device *device);
+ 
++/* Diagnostic for the render-mode question (journal 40.15, queue 22): the reason a
++ * render pass was put in sysmem or gmem is recorded in
++ * tu_cmd_buffer::state.rp.force_render_mode_reason and never printed. These count
++ * passes per verdict/reason and print a histogram once per second, gated by
++ * TU_DBG_RM_HIST=1 so that no TU_DEBUG bit changes meaning. Experiment-only:
++ * experiments/exp-24-render-mode-histogram.patch.
++ */
++void
++tu_dbg_note_render_mode(bool sysmem, bool binned, const char *reason);
++
++void
++tu_dbg_log_render_mode_histogram(void);
++
+ #define perf_debug(device, fmt, ...) do {                               \
+    if (TU_DEBUG(PERF))                                                  \
+       mesa_log(MESA_LOG_WARN, (MESA_LOG_TAG), (fmt), ##__VA_ARGS__);    \

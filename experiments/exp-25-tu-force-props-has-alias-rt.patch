@@ -1,0 +1,52 @@
+Experiment 25 (make `has_alias_rt` forceable) - NOT FOR COMMIT. One entry in the
+TU_FORCE_PROPS table of tu_device.cc, so that the alias.rt pass can be asked for on
+a7xx_gen2 at runtime without editing a device entry.
+
+Purpose. Queue 26 of docs/plan-next-checks.md and journal 40.24. Of the properties
+only a7xx_gen3/A8XX set, ten are already in that table and were swept in journals
+15.7 and 34; the rest cannot be raised at runtime, because the table is a fixed
+list (tu_device.cc:1750-1770). `has_alias_rt` is the one of those whose driver side
+needs no hardware that gen2 lacks: ir3_create_alias_rt() (ir3_alias.c:762-770) turns
+constants in the fragment shader's render-target sources into `alias.rt`
+instructions in the preamble, the two registers involved, SP_PS_OUTPUT_CONST_CNTL
+and SP_PS_OUTPUT_CONST_MASK, are variants="A7XX-" (a6xx.xml:4242, :4245) and
+tu_shader.cc:2890 already emits them for any A7XX. The gate is therefore a per-chip
+blob observation, and "does it hold for A740 too" is a measurement.
+
+What it does not do: the entry changes nothing unless TU_FORCE_PROPS names it. With
+the variable unset the driver behaves as the ship stack; that is what makes the
+build usable as the A side of an A/B.
+
+Measurement plan as pre-registered by queue 26: A/B TU_FORCE_PROPS=has_alias_rt on
+the cached-shadow frame with tools/fdperf/fdperf.cfg-vpc - the pass removes constant
+components from FS output registers, so the signature to look for is fewer preamble
+movs and slightly less VS/PS work, both printed by that cfg. Delivery is proven by
+the driver's own line in the game log (`TU_FORCE_PROPS: has_alias_rt`, the table
+logs every name it accepts). Correctness is not in that cfg's scope: alias.rt
+changes what the shader writes, so the run needs a picture check with the panel on.
+
+Rollback: git apply -R experiments/exp-25-tu-force-props-has-alias-rt.patch
+(tu_device.cc also carries 0007 and 0013 in an uncommitted tree - never git
+checkout there, AGENTS.md). The shared tree is not touched by this file: both build
+trees of queue 16 are copies, and the hook is applied there.
+
+--- a/src/freedreno/vulkan/tu_device.cc
++++ b/src/freedreno/vulkan/tu_device.cc
+@@ -1766,6 +1766,17 @@
+       { "ubwc_coherency_quirk", &info->props.ubwc_coherency_quirk },
+       { "enable_tp_ubwc_flag_hint",
+         &info->props.enable_tp_ubwc_flag_hint },
++      /* The only gen3 property of queue 26 (docs/plan-next-checks.md, journal
++       * 40.24) that is a software feature rather than a register difference:
++       * a7xx_gen3 sets has_alias_rt in its device entry (freedreno_devices.py:
++       * 869) and the two registers its driver side writes,
++       * SP_PS_OUTPUT_CONST_CNTL and SP_PS_OUTPUT_CONST_MASK, are
++       * variants="A7XX-" (a6xx.xml:4242, :4245) and already emitted for any
++       * A7XX by tu_shader.cc:2890. So the gate is a per-chip blob observation,
++       * and whether it holds for a7xx_gen2 is measurable instead of arguable -
++       * which is what TU_FORCE_PROPS=has_alias_rt asks on the bench.
++       */
++      { "has_alias_rt", &info->props.has_alias_rt },
+    };
+ 
+    char *buf = strdup(force);

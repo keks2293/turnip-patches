@@ -1,0 +1,57 @@
+# What the 0014 A/B builds are (queue 16). Generated 23.11 by:
+#   scripts/build-tree-stamp.sh <tree> <so ...>   for each of the four trees
+# The shared tree is listed too, because both measurement trees are copies of it and the
+# difference between a copy and the shared tree is exactly the patch named in its name.
+#
+# Determinism control (docs/release.md checklist item 2: rebuild the same tree twice): the
+# verify tree was built twice into separate directories and both .so came out
+# f80d33ab2077 (logs /tmp/opencode/build36-verify.log, build36-verify2.log). That is what lets
+# the hash be read as a statement about the source - and it says the shared tree of 23.11, with
+# its two experiment rigs removed, is NOT the source of the ship stack 4c3cdb210082.
+#
+# tree: /var/home/armada/opencode/mesa27-src
+# regenerate: scripts/build-tree-stamp.sh /var/home/armada/opencode/mesa27-src 
+# date:   2026-11-23T07:02:08+08:00
+HEAD        9845cfb5e43e  0002: the A830 KGSL base chip-id (ROCKNIX port), Mesa 27 form.
+diff/all    fa227975afc3  (12 files changed, 787 insertions(+), 81 deletions(-))
+diff/freedreno fa227975afc3  (12 files changed, 787 insertions(+), 81 deletions(-))
+hooks       TU_IMG_INV(1 files) TU_DBG_RM_HIST(4 files) TU_MAX_DRAW_STATES(1 files) TU_CMD_FLAG_CCU_CLEAN_COLOR(3 files) 
+props forced by a device entry that gen3 also sets (audit of journal 40.24): has_alias_rt entries=1
+
+
+# tree: /var/home/armada/opencode/mesa27-src-verify
+# regenerate: scripts/build-tree-stamp.sh /var/home/armada/opencode/mesa27-src-verify /var/home/armada/opencode/build/out-verify/libvulkan_freedreno.so
+# date:   2026-11-23T07:02:08+08:00
+HEAD        9845cfb5e43e  0002: the A830 KGSL base chip-id (ROCKNIX port), Mesa 27 form.
+diff/all    7c48ae112a18  (8 files changed, 618 insertions(+), 80 deletions(-))
+diff/freedreno 7c48ae112a18  (8 files changed, 618 insertions(+), 80 deletions(-))
+hooks       TU_MAX_DRAW_STATES(1 files) TU_CMD_FLAG_CCU_CLEAN_COLOR(3 files) 
+props forced by a device entry that gen3 also sets (audit of journal 40.24): has_alias_rt entries=1
+
+so          f80d33ab2077    11084856 B  /var/home/armada/opencode/build/out-verify/libvulkan_freedreno.so
+
+# tree: /var/home/armada/opencode/mesa27-src-ab
+# regenerate: scripts/build-tree-stamp.sh /var/home/armada/opencode/mesa27-src-ab /var/home/armada/opencode/build/out-ab/libvulkan_freedreno.so
+# date:   2026-11-23T07:02:18+08:00
+HEAD        9845cfb5e43e  0002: the A830 KGSL base chip-id (ROCKNIX port), Mesa 27 form.
+diff/all    35caf4c2707e  (8 files changed, 674 insertions(+), 80 deletions(-))
+diff/freedreno 35caf4c2707e  (8 files changed, 674 insertions(+), 80 deletions(-))
+hooks       TU_IMG_INV(1 files) TU_MAX_DRAW_STATES(1 files) TU_CMD_FLAG_CCU_CLEAN_COLOR(3 files) 
+props forced by a device entry that gen3 also sets (audit of journal 40.24): has_alias_rt entries=1
+
+so          88bab928c520    11084856 B  /var/home/armada/opencode/build/out-ab/libvulkan_freedreno.so
+
+# tree: /var/home/armada/opencode/mesa27-src-no0014
+# regenerate: scripts/build-tree-stamp.sh /var/home/armada/opencode/mesa27-src-no0014 /var/home/armada/opencode/build/out-no0014/libvulkan_freedreno.so
+# date:   2026-11-23T07:02:22+08:00
+HEAD        9845cfb5e43e  0002: the A830 KGSL base chip-id (ROCKNIX port), Mesa 27 form.
+diff/all    150e87a0b817  (8 files changed, 681 insertions(+), 80 deletions(-))
+diff/freedreno 150e87a0b817  (8 files changed, 681 insertions(+), 80 deletions(-))
+hooks       TU_IMG_INV(1 files) TU_MAX_DRAW_STATES(1 files) TU_CMD_FLAG_CCU_CLEAN_COLOR(3 files) 
+props forced by a device entry that gen3 also sets (audit of journal 40.24): has_alias_rt entries=1
+
+so          7ae5f008caa8    11084584 B  /var/home/armada/opencode/build/out-no0014/libvulkan_freedreno.so
+
+# ship stack, for comparison (build/out is not touched by this measurement):
+so          4c3cdb210082    11085024 B  /var/home/armada/opencode/build/out/libvulkan_freedreno.so
+so          4c3cdb210082    11085024 B  /var/home/armada/opencode/build/out/libvulkan_freedreno.ship-4c3cdb21.so
