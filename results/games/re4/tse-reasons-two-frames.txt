@@ -1,0 +1,32 @@
+# Why Resident Evil 4 Gold Edition's primitives are discarded, at its two shadow settings
+#       (re4.exe, D3D12 via vkd3d-proton 3.1.0, 2560x1440).  Registry: results/games/README.md
+# driver: build/out/libvulkan_freedreno.so sha256 4c3cdb210082 (ship stack) in every arm, no
+#       environment delta - the difference is one key of the game's local_config.ini
+# samplers: tools/fdperf/fdperf.cfg-tse2 (reasons + PC_IA_PRIMITIVES) and
+#       tools/fdperf/fdperf.cfg-lrz (input/visible/zero-pixel + LRZ); 1 s windows, t_rel
+#       20-105 s, pinned clock; fps = p25 over MangoHud elapsed 95-150 s
+# regenerate: scripts/tse-reasons-two-frames.py > results/games/re4/tse-reasons-two-frames.txt
+
+| counter | Shadow Cache off: M/s | Shadow Cache off: % of input | | Shadow Cache on: M/s | Shadow Cache on: % of input |
+|---|---|---|---|---|
+| IA input (reason arm) | 255267989.40 M/s |  | 224854006.88 M/s |  |
+| TSE input | 255192181.32 M/s |  | 225091204.37 M/s |  |
+| TSE visible | 71615794.35 M/s |  | 45432664.50 M/s |  |
+| TSE zero-pixel | 68937659.55 M/s |  | 82621115.24 M/s |  |
+| trivially rejected | 53930888.83 M/s | 21.13 % | 41424724.92 M/s | 18.42 % |
+| face-culled | 45202401.67 M/s | 17.71 % | 38449347.15 M/s | 17.10 % |
+| zero area | 832681.05 M/s |  0.33 % | 1175281.60 M/s |  0.52 % |
+| clipped | 349936.60 M/s |  0.14 % | 1620.85 M/s |  0.00 % |
+| sum of the four reasons | 100315908.15 M/s | 39.30 % | 81050974.52 M/s | 36.05 % |
+| drop = input - visible (shape arm) | 183576386.97 M/s | 71.92 % | 179658539.87 M/s | 79.90 % |
+| p25 fps (reason arm) |           15.36 |  |           26.69 |  |
+| 1 s windows kept |              40 |  |              40 |  |
+
+`Shadow Cache off` - reasons and input from `tse2-tse2`, visible/zero-pixel from `tse-tse1`;
+    the two are different sessions of the same scene, hence the input column above.
+`Shadow Cache on` - reasons and input from `tse2-cacheon`, visible/zero-pixel from `lrz-base`;
+    the two are different sessions of the same scene, hence the input column above.
+Semantics: the reason counter names are read from
+`src/freedreno/registers/adreno/a7xx_perfcntrs.xml` (singular `ZERO_AREA_PRIM`,
+`CLIPPED_PRIM`, `TRIVAL_REJ_PRIM`, `FACENESS_CULLED_PRIM`); the XML carries no descriptions,
+so a reason is named, not explained (journal 40.2, same caveat).

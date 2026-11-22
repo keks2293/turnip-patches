@@ -1,0 +1,24 @@
+# Vertex-path occupancy of Resident Evil 4 Gold Edition at its two shadow settings
+#       (re4.exe, D3D12 via vkd3d-proton 3.1.0, 2560x1440).  Registry: results/games/README.md
+# driver: build/out/libvulkan_freedreno.so sha256 4c3cdb210082 (ship stack) in both arms,
+#       no environment delta - the difference is one key of the game's local_config.ini
+# sampler: tools/fdperf/fdperf.cfg-vpc; counter window t_rel 20-105 s at the pinned clock;
+#       fps = p25 over MangoHud elapsed 95-150 s
+# regenerate: scripts/occupancy-two-frames.py > results/games/re4/occupancy-two-frames.txt
+
+| counter | vpc-vpcbase2 | | vpc-cacheon | delta |
+|---|---|---|---|
+| VPC busy |  91.57 % |  85.54 % |  -6.03 pp |
+| VS busy |  88.68 % |  80.65 % |  -8.03 pp |
+| PS busy |  84.11 % |  76.97 % |  -7.14 pp |
+| PC stall on VPC |  65.46 % |  52.72 % | -12.74 pp |
+| TSE input prim/s | 254.79 M/s | 225.88 M/s | -28.90 M/s |
+| SP busy (sum of sub-units) | 1135.14 % | 1134.02 % |  -1.12 pp |
+| UCHE busy (sum of sub-units) | 181.74 % | 179.60 % |  -2.14 pp |
+| p25 fps |   15.25 |   26.74 | +11.49 |
+| 1 s windows kept |          29 |          41 |  |
+
+`vpc-vpcbase2` - AppShadowCache=0 (the frame journals 38-40 describe)
+`vpc-cacheon` - AppShadowCache=1 (chain28, queue 25)
+`fps-vpcbase2.csv` is the 21.11 tag (the csv is named after the tag, the directory after
+the cfg family); both files are committed and their `meta.txt` names the counter cfg.

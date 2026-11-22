@@ -1109,3 +1109,89 @@ this entry says GMEM loses, not why the driver's choice to stay in sysmem cannot
 binning a subset of passes. And the same caveat as 40.19 for the absolute numbers: these are the
 game's cached-shadow frame, so 26.7 is not the 15.3 of journals 38-40 and the two sets are only
 comparable within their own frame.
+
+## 40.21 On the cached-shadow frame the vertex path is still the busiest block, with 6 points of slack it cannot use (queue 25, chain28)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** 40.19 removed 49 % of the frame's primitives and 40.20 showed the render-mode verdict
+survives the change. Both left the same thing unasked: is the wall found in 38-40 still the wall? If
+the vertex path was busy because of the shadow redraw, then with the cache on it should have gone quiet
+and some other block should have taken its place as the limiter - and that other block is where a
+driver-side lever would be.
+
+**Method.** `/tmp/opencode/chain28.sh`, 21:29-21:33 on 22.11: one 210 s session, ship stack
+`4c3cdb210082`, no environment delta, `AppShadowQuality=1 AppShadowCache=1` written into
+`local_config.ini` before launch and restored after (`/tmp/opencode/local_config.re4.orig4`), sampler
+`tools/fdperf/fdperf.cfg-vpc` (the same cfg as the cache-off arm, so the two are the same counters).
+Arm `vpc-cacheon`; the control is the committed `vpc-vpcbase2` of 40.6 - same build, same scene, same
+cfg, cache off (its re-read at the pinned clock is the `91.57 %` row of 40.12's table, and 40.14's
+occupancy table is the same dump).
+
+**Numbers.** `results/games/re4/occupancy-two-frames.txt` (regenerate:
+`scripts/occupancy-two-frames.py > results/games/re4/occupancy-two-frames.txt`), raw dumps
+`results/games/re4/{vpc-vpcbase2,vpc-cacheon}/fdperf-raw.txt`, fps `results/games/re4/fps-{vpcbase2,vpc-cacheon}.csv`.
+Per cent of the pinned core clock: VPC busy 91.57 -&gt; 85.54, VS busy 88.68 -&gt; 80.65, PS busy
+84.11 -&gt; 76.97, `PC_STALL_CYCLES_VPC` 65.46 -&gt; 52.72. TSE input 254.79 -&gt; 225.88 M prim/s. The two
+counters that sum replicated sub-units barely move: SP busy 1135.14 -&gt; 1134.02, UCHE busy
+181.74 -&gt; 179.60. p25 15.25 -&gt; 26.74, over 29 and 41 kept windows.
+
+**Verdict.** The bottleneck does not move: with the lighter frame the vertex path is still the busiest
+block in the core (85.5 %), and the vertex shader inside it still dominates it (80.7 %). What changes
+is that slack appears where the stall was - the primitive collector waits on the vertex path 12.7
+points less - and the frame rate converts that slack into the +11.5 fps of 40.19. In other words the
+game's Shadow Cache did not move the wall, it moved the game's work away from it. No driver-side block
+became visible as a new limiter: nothing in this cfg goes from idle to busy.
+
+**Does not show.** Whether the surviving 8.4 M primitives are the ones a driver could still reject -
+that is 40.22, which reads the TSE reason counters on this frame. Whether the shader side is free:
+`PS busy` is 76.97 %, so the fragment path is busy too, and the two `SP`/`UCHE` rows cannot be read as
+occupancy at all (their sub-unit divisor is not stated in `a7xx_perfcntrs.xml`, so they are quoted only
+as ratios between arms - the same caveat as 40.6). And the window counts differ (29 against 41), so
+small differences in the per-window means are not resolvable; the 6-point and 12-point moves are.
+
+## 40.22 The primitives the cache removed were mostly ones that survive the rasterizer, and the discard reasons keep their shape (queue 18 continued, chain29)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** 40.2 split the death of the frame's primitives into reasons on the cache-off frame:
+21.1 % trivially rejected, 17.7 % face-culled, 0.33 % zero-area, 0.14 % clipped, against a measured
+drop of 71.9 % between TSE input and TSE visible. If the cached frame's survivors died for *different*
+reasons, the remaining lever would be different too - a face-cull-heavy frame is a camera problem, a
+zero-area-heavy frame is a tessellation or scale problem, a zero-pixel-heavy frame is an overdraw
+problem. Which is it now?
+
+**Method.** `/tmp/opencode/chain29.sh`, 21:43-21:47 on 22.11, one 210 s session, ship stack
+`4c3cdb210082`, no environment delta, cache on (`local_config.re4.orig6`), arm `tse2-cacheon` with
+`tools/fdperf/fdperf.cfg-tse2` - four reason counters plus `PERF_PC_IA_PRIMITIVES`, which is the TSE
+group's budget of four plus an IA counter from outside that budget (40.1 is where that budget first
+decided a cfg). The input/visible/zero-pixel trio
+comes from `lrz-base` (40.23, same scene, `fdperf.cfg-lrz`), because 40.1 showed the two cannot be
+sampled in one run; the script therefore prints both input columns so a reader sees the cross-session
+gap.
+
+**Numbers.** `results/games/re4/tse-reasons-two-frames.txt` (regenerate:
+`scripts/tse-reasons-two-frames.py > results/games/re4/tse-reasons-two-frames.txt`), raw dumps
+`results/games/re4/{tse2-tse2,tse2-cacheon,lrz-base}/fdperf-raw.txt`. Cache off -&gt; on, as a share of
+that frame's IA input: trivially rejected 21.13 -&gt; 18.42 %, face-culled 17.71 -&gt; 17.10 %, zero-area
+0.33 -&gt; 0.52 %, clipped 0.14 -&gt; 0.00 %. The four reasons sum to 39.30 -&gt; 36.05 % of the input, against
+a measured drop of 71.92 -&gt; 79.90 %. Rates: input 255.27 -&gt; 224.85 M/s, TSE visible
+71.62 -&gt; 45.43 M/s, TSE zero-pixel 68.94 -&gt; 82.62 M/s (27.0 -&gt; 36.7 % of input).
+
+**Verdict.** The shape is preserved: the same two reasons carry the discard on both frames, within 2.7
+points of each other, so the cached-away geometry was not a special class of primitives. What does move
+is where the survivors go. The input fell 11.8 % while the visible count fell 36.6 % and the
+zero-pixel count *rose* 19.9 % - the cache removes primitives that would have produced pixels, and what
+is left over is proportionally more geometry that the rasterizer rejects for covering nothing. That is
+the same direction as 40.21: the frame got cheaper in shading and in the vertex path, and the ratio of
+"useful pixels to submitted geometry" is not something the driver chooses.
+
+**Does not show.** Nothing about causes of the rejects: the reason counters are named from
+`src/freedreno/registers/adreno/a7xx_perfcntrs.xml`, which carries no `<desc>` for them, so "trivially
+rejected" is the counter's name and not an explanation (40.2's caveat, unchanged). Whether the reasons
+and the shape trio are consistent within one session - they are two sessions, and their input columns
+differ by 0.03 % here, which is why shares are taken against each arm's own input. And whether a reject
+saves the vertex path any work: the two frames show only that `VPC_BUSY` fell 6.03 points when the input
+fell 11.8 % (40.21) while the discard share *rose* 8 points, which is what a "the reject is not worth
+vertex work" reading predicts but is not a measurement of pipeline order - 40.2's caveat about
+`TSE_INPUT_PRIM` and `PC_IA_PRIMITIVES` being the same counter twice covers that ground.

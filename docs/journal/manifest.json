@@ -1003,7 +1003,7 @@
     "results/games/re4/mesa27-vertex/fdperf-raw.txt",
     "results/games/re4/game-patched-algopg.log"
    ],
-   "lines": 1112,
+   "lines": 1198,
    "headings": [
     "## 40.1 What was run",
     "## 40.2 The discard, and what kind of discard it is",
@@ -1024,7 +1024,9 @@
     "## 40.17 UBWC carries 2 % of RE4's DRAM reads, and turning it off from the translation layer does not move the frame rate (queue 23)",
     "## 40.18 The third render mode is also slower than sysmem, and depth is where RE4's compressed traffic lives (queues 22, 23)",
     "## 40.19 With the game's own Shadow Cache on, the frame carries half the primitives and runs 74 % faster (chain25, chain26)",
-    "## 40.20 The render-mode ladder measured on the light frame: the verdict survives, so the sysmem default is not tuned to the game's worst setting (queue 24, chain27)"
+    "## 40.20 The render-mode ladder measured on the light frame: the verdict survives, so the sysmem default is not tuned to the game's worst setting (queue 24, chain27)",
+    "## 40.21 On the cached-shadow frame the vertex path is still the busiest block, with 6 points of slack it cannot use (queue 25, chain28)",
+    "## 40.22 The primitives the cache removed were mostly ones that survive the rasterizer, and the discard reasons keep their shape (queue 18 continued, chain29)"
    ],
    "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
    "verdict_source": "journal 40"
