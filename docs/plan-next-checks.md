@@ -1,340 +1,45 @@
 # Plan: what to check (new patch candidates + re-check of the "dead ends")
 
-17.11.2026. RE4 A/B is paused; the task is to exhaust the options for new patches.
-Each block: **facts -> what to check -> how -> criterion -> artifact**.
+Updated 22.11.2026. Two things are live here: the **queue** below, ordered by what unblocks what, and
+the **open questions** table at the end. A closed branch is not repeated - it has an ADR in
+`docs/decisions/` or a journal entry, and the queue line says so in two sentences. The four
+"re-check the dead end" blocks of 17-18.11 are closed and moved to
+`docs/archive/2026-11-17-plan-recheck-blocks.md` (summary table where they used to be).
 
-State after the server restart: `/tmp` is wiped (the ninja directory + ccache
-are gone) - before any build, `meson setup` again + the PHONY fix
-(`touch -d @0 /tmp/opencode/mesa27-build/build/PHONY`). The mesa27-src tree is
-intact (9 M files, stage A+B not committed, rollback only via `git apply -R`).
-`build/out-base` (base `c9dad346`) and `build/out-ab` (A+B `704aa643`) are in
-place, the hash is correct. `build/out` is currently = base.
+State of the rig, so a queue line can be read without asking:
 
----
-
-## 0. Premise: the BC copy path (candidate A) - blocks verification of 0012
-
-**Facts** (baseline, stack 0001-0011, log `results/test-BCUBWC-baseline.log`):
-- roundtrip (fill `vkCmdCopyBufferToImage` x2 + readback
-  `vkCmdCopyImageToBuffer`, 512x512, pattern in the buffer) on the base is **broken for all
-  three variants** (linear/nonmut/list):
-  - `BC1_UNORM`: **32768/32768 words = 0** (nothing was copied);
-  - `BC3_UNORM` / `BC7_UNORM`: the first **128 words (512 B = 32 blocks of 4x4,
-    texel 0..127 of row 0)** are exact, then 0 (`bad[0]=128(r0,c128)`),
-    "untouched(0xCD)=0" - the engine wrote the whole buffer, the tail is zeros.
-- Both directions go through the **r2d engine** (`r2d_ops<CHIP>`,
-  `tu_copy_buffer_to_image`/`tu_copy_image_to_buffer`, `tu_clear_blit.cc`).
-  A7XX always goes through `r2d_src_buffer_unaligned` (fill) / `r2d_dst_buffer`
-  (readback). The buffer is programmed as a **linear texture** of the BC format
-  (`TPL1_A2D_SRC/DST_TEXTURE_*`), and the image - through `tu_cs_image_ref_2d` (tiling).
-- 0012 A+B is verified only for **CEIL/memreq + create-checks**, not with data:
-  the BC roundtrip is broken anyway, so **the real contents of a BC+UBWC image are
-  not verified**. And RE4 loads BC textures exactly this way (vkd3d ->
-  `vkCmdCopyBufferToImage`) -> if the path is broken, RE4's textures on the base are
-  corrupted, and the 0012 A/B is noisy.
-
-**What to check:**
-1. **Which direction is broken** (fill vs readback). The discriminator: read
-   the same image **not through r2d**, but through the TP (texture path) - a compute shader
-   `texelFetch` into a buffer (TP BC works in RE4 - the game renders). If the TP readback
-   gives the full pattern -> r2d readback is broken (fill is ok); if TP also shows
-   "the first 512 B, then 0" -> fill is broken.
-2. **Whether r2d on A7XX supports BC as a buffer/texture**: `blit_format_texture` ->
-   `tu6_format_texture`, the `a6xx_format` tables; whether the r2d engine has an entry for
-   BC (8B and 16B per block). Hypothesis: r2d can't do BC in the buffer representation ->
-   it copies a partial/zero result.
-3. **Candidate fix**: route BC copies through the **r3d (3D engine)**,
-   as is already done for Y8/NV12 (`ops = &r3d_ops<CHIP>`, `tu_clear_blit.cc:2965`
-   and `:3201`) - if r3d supports BC (shader fetch + write). Check
-   that the r3d blit accepts BC src/dst.
-
-**Criterion:** the established direction + the HW/driver cause; if the fix
-works - candidate patch **0013** (BC copy through r3d), verification:
-roundtrip BC1/BC3/BC7 EXACT on the base and on A+B.
-
-**Artifact:** `results/test-BCcopy-<name>.log`, the journal entry it became (journal 21.8).
-
-### Status (18.11)
-
-- The direction is established: **fill OK (byte-exact), broken is the
-  r2d-readback (image->buffer)** - the TP-readback (texelFetch) is 100% nz
-  for BC3/7; the BC1 fill = the first-fill defect of section 20 (the second
-  fill does not fix it completely, 86% nz). The premise "the RE4 textures
-  are broken on the base" is **withdrawn**: the hot path of vkd3d
-  (buffer->image) works; the T suffix "broken r2d-readback" is a static
-  label of the test, not a measurement.
-- Candidates: **0013v1** (FMT6_NONE -> `fd6_texture_format` in
-  `r2d_dst_buffer`) - rejected (no change, `8c73a859`); **0013-A** (the
-  surrogate format of the dst buffer only: 8B -> R32G32_UINT, 16B ->
-  R32G32B32A32_UINT) - rejected (no change, `d73b0282`); **0013-B** (the
-  SIZE of the image-src /4 for BC in `r2d_src`) - rejected (no change,
-  `172344a7`) - i.e. the texel/block units of the SIZE are not the cause.
-  The defect is identical on base/A+B/0013v1/0013a/0013b: BC1 - all zeros;
-  BC3/7 - the first 512 B are exact, then ~76% of the words match, ~24% are
-  zeros (the zero count varies between the runs, 15008-16000 ->
-  uninitialized memory is read); the linear (no tiling/UBWC) and the UBWC
-  images break the same way; all the controls are EXACT.
-- **0013-C (in progress)**: for the BC-dst the setup programs `FMT6_NONE`
-  into `RB_A2D_BLT_CNTL`/`GRAS_A2D_BLT_CNTL`/`SP_A2D_OUTPUT_INFO` + the
-  `ifmt` from `format_to_ifmt(BC)` = **UNREACHABLE** (BC has one packed
-  channel, no component bits -> garbage in the register). 0013-C programs
-  the surrogate color format (one 4x4 block = one "texel" of the surrogate:
-  8B -> R32G32_UINT, 16B -> R32G32B32A32_UINT, the precedent is
-  `copy_buffer()`) into **all** the output registers + an honest `ifmt`,
-  only on the image->buffer path (the fill is not touched - it works with
-  FMT6_NONE).
-- The fallback candidate: the `COPY` bit (pos 30, A7XX) in
-  `RB_A2D_BLT_CNTL` - not programmed anywhere in the code, the meaning is
-  unknown (a possible "raw copy").
-- If 0013-C does not close it - next: routing the BC through r3d (from the
-  original plan), or a dump of the readback buffer (T_DUMP in the U section
-  of the test) for the structure of the zero words.
-
-### Status close (18.11): the 0013 series is closed, the defect outgrew it
-
-- 0013-C/D/E/F rejected as well (C: the surrogate color format in all output
-  registers - no change; E was dead code; PITCH/SIZE/surrogate hypotheses all
-  refuted - the defect is byte-identical on base/A+B/every 0013 variant).
-- The T_DUMP structure (GEOM sweep + CPU-FILL) redefines the bug: the fill is
-  byte-clean on the failing geometry too (CP[] raw read of the image = 100%
-  fill), `other=0` (only exact words or zeros), and the zero-windows are
-  **geometry- and state-dependent, format-agnostic** - a plain RGBA32 128x128
-  fails with the old BC3-512 signature, 256x128/512x64/256x256 pass. The wording
-  "readback addressing" held until the final verdict below - it is visibility,
-  not addressing.
-- **CLOSED the same evening (see the final section of `bugs-found.md`, journal 21.10): root cause = missing CCU clean on A7XX between b2i and the next
-  reader in one submit.** `TU_I2B_SYNC=1` (FD_CCU_CLEAN_COLOR + WFI before the
-  readback) and the producer-side variant both give 91/91 EXACT; invalidate-only
-  and clean-without-WFI still fail. Fix candidate:
-  `experiments/exp-13b-b2i-ccu-clean-candidate.patch` (validated as-is, no env:
-  `results/test-BCcopy-0013cand.log`). The old "route BC through r3d" fallback is
-  moot - the defect reproduces on r3d too and the fix is engine-agnostic.
-- **Shipped (19.11) as `patches/0013-turnip-b2i-ccu-clean.patch`**, in the form
-  the exp-15 matrix picked (mode 7: mark `CCU_CLEAN_COLOR|WAIT_FOR_IDLE` in
-  `flush_bits`, execute nothing at the copy) - 94/94 EXACT over three repeats
-  and zero cost per copy. The 18.11 objection (a clean+WFI per upload blit
-  would be pure cost) applied to the per-copy forms only; the lazy form adds no
-  work to a submit that does not already end in a flush point. Still no game
-  fps A/B, and none is expected to show anything: RE4 submits between copy and
-  use. Upstream remains the model form + a CTS repro, posted by the user (we do
-  not post to mesa); `experiments/exp-13*`, `exp-15` and the final section of
-  `bugs-found.md` carry everything needed for it.
+* `build/out` is the ship stack `4c3cdb210082`; the shipped `c17d02bcaae9a960…` and tag
+  `27.0.0-devel-p14` are untouched, and no queue item below changes them without a measurement first.
+* A driver build (queue 16) needs the container, `-j2`, ccache under `/tmp`, and a machine with the
+  game closed: ~3.5 GiB of the 7.3 GiB is free while wine services linger, and stale wine services
+  have to be killed with `kill -9` (the normal exit path leaves them).
+* The game's own `local_config.ini` is a measurement variable, not environment: journal 40.19 showed
+  `AppShadowCache` is worth 49 % of the frame's primitives, so every arm writes the setting into its
+  own `meta.txt` and a chain restores the file byte-identically (`docs/howto-measure.md`).
+* The screenshot is a content check only while the panel is powered; with the output off the kernel
+  holds no framebuffer and every capture method returns black (`scripts/drm-state.py`).
 
 ---
 
-## 1. Candidate B: the `QCTDD12766770` fast-clear quirk (patch 0008)
+## Closed re-check blocks of 17-18.11 (moved out, 22.11)
 
-**Facts:**
-- Patch 0008 in `a7xx_gen2` sets them **as a pair**: `has_generic_clear = True`
-  (the speedup - event clear instead of cp_blit; measurements on 30.09: vkmark
-  vertex/shading/texture **-61..-65 %**, RE4 0 %) + `QCTDD12766770 = True`
-  (the limiter).
-- `has_generic_clear` is read in **6 places**:
-  1. `tu_clear_blit.cc:4460` `use_generic_clear_for_image_clear`
-     (vkCmdClearColorImage/ClearDepthStencilImage) - **the only place where the
-     quirk takes effect**: `!(QUIRK && image_is_r8g8)` -> R8G8 goes to cp_blit;
-  2. `tu_clear_blit.cc:5315` (vkCmdClearAttachments -> generic, if there is no
-     predication and the layout is known);
-  3. `tu_cmd_buffer.cc:6870` (subpass begin gmem: skip the gmem clear);
-  4. `tu_cmd_buffer.cc:6899` (subpass begin sysmem: skip the sysmem clear);
-  5. `tu_cmd_buffer.cc:7104` (`tu7_emit_subpass_clear`);
-  6. `tu_pass.cc:592` (renderpass cond config).
-  I.e. apart from #1, generic clear on A740 is **already enabled everywhere** - "use it
-  somewhere else" = narrow the exception in #1 specifically.
-- Comment in the code: a fault with "Clearing VK_FORMAT_R8G8_* **with fast-clear
-  value**, certain dimensions (e.g. 960x540), and having GMEM renderpass
-  afterwards". But the code **blanket**-disables generic clear for **all** R8G8
-  (not only with a fast-clear value, not only 960x540).
+The four blocks that used to sit here asked "is this candidate real, or is the recorded dead end a
+driver gate we mistook for hardware?". All four were answered by 20.11 and none owns a number, so the
+text was moved whole to `docs/archive/2026-11-17-plan-recheck-blocks.md` (unedited, because its value
+is that a later reader can see how each verdict moved) and this is the only copy of the verdicts that
+the plan keeps:
 
-**Hypothesis (user):** the quirk is specifically about fast-clear; the blanket disable
-of R8G8 is excessive; generic clear can be returned for R8G8 with **non**-fast-clear
-values (and/or non-960x540).
-
-**What to check:**
-1. **What a "fast-clear value" is** in the code - where it is determined that a value
-   is eligible for HW fast-clear (LRZ/RB) and which is not. *(Not found yet -
-   the concrete step: search for `fast`/`lrz`/`clear value` in `tu_clear_blit.cc`,
-   `tu_lrz.cc`, `fdl`.)*
-2. **Whether the quirk is required on A740** - the experiment "turn it off and watch for a fault":
-   - build variant: `QCTDD12766770 = False`, `has_generic_clear = True`
-     (the rest of the stack as is). **It cannot be turned off at runtime**: `TU_FORCE_PROPS`
-     and `FD_DEV_FEATURES` quirks only **set true**, they don't clear
-     (`tu_device.cc:1785`, `freedreno_dev_info.py` - props only).
-   - run: **vkmark** (full - many clear patterns) + **RE4**;
-     catch a GPU fault: `dmesg` (kgsl fault/reset), a hang, frame corruption.
-3. **Narrowing** (if the quirk is needed but excessive): move the check into the
-   calling code (there `clear_value` is available), exclude only
-   R8G8 + fast-clear value (and/or sizes like 960x540), leave the rest of R8G8
-   on generic clear. Run vkmark + RE4, measure the gain.
-
-**Criterion:** (a) the quirk isn't needed -> remove it from 0008 (R8G8 on generic clear),
-check that there is no fault; (b) needed but excessive -> a narrowing patch (candidate
-**0014**) + a gain measurement; (c) needed as is -> keep it.
-
-**Patch 0008 description (improve):** rewrite the header, explicitly separating:
-`has_generic_clear` = **performance** (event clear instead of cp_blit,
-vkmark -61..-65 %, RE4 0 %), `QCTDD12766770` = **insurance** against a specific
-fault (fast-clear value + R8G8 + sizes ~960x540 + GMEM renderpass); at
-the time of the patch it was applied to all R8G8 (blanket, possibly excessive - see the plan).
-
-**Artifact:** `results/test-fastclear-<name>.log` (vkmark), `dmesg` excerpts,
-a journal entry (journal 15 is the one that measures this prop); a header edit in
-`patches/0008-*.patch`.
-
-### Status (18.11): closed by analysis - keep the blanket
-
-- The quirk fires in exactly one of the six reads of
-  `has_generic_clear` - `use_generic_clear_for_image_clear`
-  (`tu_clear_blit.cc`): the blanket `!(QUIRK && image_is_r8g8)` -> every
-  R8G8 image-clear goes to the cp_blit; the other five places
-  (vkCmdClearAttachments, the subpass begin gmem/sysmem,
-  `tu7_emit_subpass_clear`, the renderpass config) already get the
-  generic-clear on the A740.
-- The cost of the blanket is measured (30.09, `results/vkmark-ab-r8g8.txt`,
-  a series of 8 runs, interleaved): gc_r8g8 is about gc within the noise -
-  vertex -62.1% vs -63.1%, shading -64.2% vs -61.1%, texture -64.5% vs
-  -64.5%, clear +1.8% vs +0.9%; RE4 0% (median 12.4, n=77, no frame
-  divergence). I.e. the blanket zeroes the gain only for the R8G8
-  image-clear - and "fast-clear value + 960x540 + GMEM" is exactly the
-  pattern on which the fault; the RE4 credit of returning the R8G8 to the
-  generic is about 0.
-- Nothing to narrow it with: the full set of the faulty sizes is unknown
-  (the comment in the code - "e.g. 960x540"), the fast-clear value is not
-  defined separately in the code (not found in tu_clear_blit/tu_lrz/fdl).
-  The build variant `QCTDD12766770=False` is not worth it: the fault risk in
-  RE4 with ~0 new information and ~0 gain (see the measurement above).
-- **Verdict: keep the blanket.** The win of `has_generic_clear`
-  (-61..-65% vkmark vertex/shading/texture) is already obtained and does
-  not depend on the quirk.
+| block | verdict | owner |
+|---|---|---|
+| 0. the BC copy path, which blocked verifying `0012` with data | not a BC defect: the fill is byte-clean and the readback loses windows because A7XX had no CCU clean between `buffer->image` and the next reader in one submit; shipped as `0013` in the lazy form, 94/94 EXACT over three repeats | ADR-0005, journal 21.10, `patches/0013-turnip-b2i-ccu-clean.patch` |
+| 1. the `QCTDD12766770` fast-clear quirk (`0008`) | closed by analysis - the blanket stays. Taking it off costs -61..-65 % in vkmark (vertex/shading/texture), and no targeted form was shown to be safe | the header of `patches/0008-*.patch` |
+| 2. `has_8bpp_ubwc` ("HW corruption") | stays `False`. `{16,4}` is not the cause: `{16,4}/{32,4}/{64,4}` corrupt identically and `{16,8}/{32,8}/{8,8}` fault the GPU (journal 22.4, the exp-17 grid) | ADR-0007, journal 22.1, 22.2 |
+| 3. `R32G32B32`, 96-bit ("no HW entry") | a driver gate, `!util_is_power_of_two_or_zero(cpp)` in `fd6_layout.c`, not a missing hardware entry; the 128-bit format already gets UBWC, so the class has no game significance | journal 21.6.3a, journal 31 |
 
 ---
-
-## 2. Re-check of R8 (`has_8bpp_ubwc` - "HW corruption")
-
-**Facts:**
-- On A740 the effective value is **False** (CEIL "base (has_8bpp_ubwc=0)").
-  In `a7xx_base`/`a7xx_gen2` the flag is **not set** -> the `GPUProps` default is taken
-  (False). Explicitly: `a6xx_base=True` (line 118), `a6xx_gen2/3/4=False`
-  (190/204/234); the a7xx chain `[a7xx_base, a7xx_gen2]` doesn't inherit from a6xx.
-- Gate: `tu_image.cc:386` `!has_8bpp_ubwc && blocksizebits==8 &&
-  plane_count==1 -> return false` (R8 without UBWC).
-- Early measurement (journal 21.7): `FD_DEV_FEATURES=has_8bpp_ubwc=1` ->
-  CEIL[R8] `nonmut=0x42000 > lin` (the *driver* allocates a metadata plane), but
-  the roundtrip readback is **all zeros** (65536/65536 MISMATCH). That number is
-  not a statement about the chip: the metadata size comes from
-  `fd6_ubwc_alloc_size()`.
-- **Probe Z (20.11, answered, with a caveat).** NV12 Y plane = `FMT6_NV12_Y`,
-  `cpp == 1`, UBWC grid `{32,8}`, **not** gated by the property (`ubwc_possible()`
-  gates 8bpp only when `plane_count == 1`). It round-trips **EXACT** through r3d,
-  both tiling flavors, 64x64 to 512x512 and heights 4..512, on the ship `.so`
-  (`results/test-8bpp-tp8bpp-{stock,sizes}.log`). So the chip compresses a
-  `cpp == 1` UBWC plane today. It does *not* follow that `R8_UNORM` would:
-  `registers/adreno/a6xx_enums.xml:114-116` - "FMT6_NV12_Y is not compatible with
-  FMT6_8_UNORM". Z proves capability for the video format, not for plain 8bpp.
-- **What plain `R8_UNORM` does (20.11, `i2b`, the reader whose linear control is
-  EXACT at every size): exactly 25.29 % of the texels read back, at 512x512,
-  256x256, 64x64 and 512x32 - the top-left quarter, `x < W/2` and `y < H/2`, the
-  rest reads `0x00`, first wrong texel always `x = W/2`.** The fraction does not
-  depend on the image size (`results/test-8bpp-tp8bpp-sizes.log`). A copy-filled
-  image (no 3D writer) reads 0.39 %, i.e. nothing, and its metadata plane stays
-  zero (`results/test-8bpp-meta-shape.txt`).
-- **Metadata geometry is not the lever.** Grid sweep (`exp-17`, `TU_8BPP_UBWC`)
-  and a metadata *pitch* sweep (block width 4/2/1 -> pitch 128/256/512 B, plane
-  64..256 KiB) leave both the written volume (1024 B at 512x512, all `0x1f`, four
-  256-byte chunks, stride = 16 rows of the current pitch) and the readable 25.29 %
-  untouched (`results/test-8bpp-meta-pitch-height.log`,
-  `results/test-8bpp-grid-sweep.log`). The 3D writer spends **1 byte per 256
-  texels** whatever the driver reserved (8/16 KiB) - the cell count of `{32,8}`,
-  while Mesa reserves and walks `{16,4}`.
-- Grids with `blockheight >= 8` validate and allocate (`memreq 0x41000`, only 4 KiB
-  of metadata), then the **first submit that touches the image faults the GPU**;
-  everything after `VK_ERROR_DEVICE_LOST` in those logs - including the AB rows -
-  is void. Note the confound before re-reading the sweep: `fdl6_ubwc_tile_dimensions()`
-  also switches the *data* tile to 64x16 when `blockheight == 16`, so those rows
-  never tested metadata geometry alone; `{16,8}`/`{32,8}`/`{8,8}` are
-  the clean rows and they fault.
-- **Upstream.** Origin of the property: `0f770caa232` (Joshua Ashton, 23.09.2022),
-  "Disable 8bpp_ubwc on a6xx gen2 - Fixes text corruption in VSCode on a680" - a
-  workaround, no diagnosis, untouched since. In upstream `main` (raw file, 20.11)
-  `has_8bpp_ubwc` occurs 4 times, all a6xx; a7xx/a8xx never set it. The NV12 Y
-  branch that *does* work was fixed three times (`8ea6f17fdf93`, `fb2646e527e9`,
-  `18399c041267`); `git apply -R --check` says `18399c041267` is already in
-  `mesa27-src`, so "our tree lacks the per-plane plumbing" is false.
-- The "one block row is safe, the step to the next row breaks" model (wrong
-  vertical pitch) cannot be tested at `H <= 16`: there the probe's *linear* control
-  fails too, in both readers. Probe defect at small images, recorded as such, not
-  a UBWC result. See journal 22.1 before re-using any small-image number.
-- The runtime override **works without a rebuild**: `FD_DEV_FEATURES=has_8bpp_ubwc=1`
-  (it is a prop, `freedreno_dev_info.py`).
-
-**What to check:**
-1. **Descriptor / CCU programming for plain 8bpp** - the gap is now localized by
-   shape, not guessed: metadata at 1 byte / 256 texels from the writer, a reader
-   that resolves half the extent on each axis. Which UBWC grid field, metadata
-   pitch and height alignment the driver programs for `FMT6_8_UNORM` versus
-   `FMT6_NV12_Y`, and what the blob programs, is the open part; overriding only
-   `fdl6_get_ubwc_blockwidth/height()` to `{32,8}` faults the GPU, so a fix is more
-   than a table entry.
-2. **Probe AB as a discriminator** (cheap, one build): if a copy-filled R8+UBWC
-   image ever reads EXACT while the 3D-written one stays at 25 %, the bug is in the
-   writer, which is a different patch than a descriptor fix. Today's AB rows at
-   `blockheight >= 8` are post-fault and prove nothing - run it in a fresh process.
-3. (optional) RE4 with `FD_DEV_FEATURES=has_8bpp_ubwc=1`: the game creates 754
-   `R8_UNORM` + 72 `R8_UINT` images (journal 25), so this is the ~70 MiB hole -
-   worth a run *after* a real patch, with the fault risk the grid sweep showed, and
-   note UBWC on a 512x512 R8 image *costs* 8 KiB (`0x42000` vs `0x40000`), so small
-   images lose even in the best case.
-
-**Criterion:** a patch that makes probe AA (`build/tp8bpp`) round-trip EXACT
-without faulting the GPU. Until then `has_8bpp_ubwc = False` on `a7xx_gen2` is the
-correct default - justified by what the hardware writes and reads back, not by a
-`memreq` counter, and not by "the hardware cannot" either (see probe Z above).
-
-**Artifact:** `tests/tp8bpp.c` (+ `tests/tp_write.comp`,
-`scripts/gen-tp-write-spv.sh`), `scripts/sweep-8bpp-grid.sh`,
-`scripts/ubwc-dump-analyze.py`, `results/test-8bpp-tp8bpp-{stock,sizes}.log`,
-`results/test-8bpp-meta-pitch-height.log`, `results/test-8bpp-meta-shape.txt`,
-journal 22 (the whole second pass on 8bpp) and `ADR-0007`.
-
 ---
 
-## 3. Re-check of R32G32B32 (96-bit, "no HW entry")
-
-**Facts:**
-- "No HW entry" is in fact a **driver gate**: `fd6_layout.c:127`
-  `if (!util_is_power_of_two_or_zero(layout->cpp)) { layout->ubwc = false; }`
-  with the comment "R8G8B8 and other 3 component formats don't get UBWC".
-  For R32G32B32 (96 bits = **12 B/texel**) `cpp=12` - not a power of two ->
-  UBWC is off. `ubwc_possible()` does **not** block it (the CEIL label
-  "(ubwc_possible)" in the probes is a **wrong attribution**).
-- **R32G32B32A32 (128 bits = 16 B/texel, a power of two) DOES get UBWC**
-  (there is a compat token `FD6_UBWC_R32G32B32A32_INT`, `freedreno_ubwc.h:157`).
-  CEIL(baseline): `R32G32B32_TYPELESS 12B/texel lin=nonmut=list=0x300000`
-  (no ceiling) - this is 96-bit; 128-bit was not measured in the CEIL probe.
-
-**What to check:**
-1. **Confirm the gate**: `!util_is_power_of_two_or_zero(cpp)` in `fd6_layout.c`
-   (not `ubwc_possible`), and that the CEIL label "(ubwc_possible)" is misleading - fix
-   the probe/conclusion so that the attribution is honest.
-2. **Confirm that R32G32B32A32 (128 bits) is really in UBWC**: add it to the
-   CEIL probe (or take it from the U/CEIL logs) -> `nonmut > lin` is expected
-   (+0x2000 of metadata).
-3. **HW or driver**: the "powers of two only" restriction is more likely HW (UBWC
-   works on byte widths that are powers of two), but it is not confirmed from the blob.
-   A workaround is risky: `assert(!params->force_ubwc || layout->ubwc)` in
-   `fd6_layout.c:150` will fire.
-4. **Significance**: R32G32B32 (96 bits) is rare in games; the common R32G32B32A32
-   (128 bits) is already in UBWC -> **low priority**.
-
-**Criterion:** the exact gate + HW/driver classification + a significance estimate.
-Most likely **the dead end is confirmed**, low priority.
-
-**Artifact:** an edit of the analysis of the 36 classes (journal 21.6.3a), a CEIL log
-with R32G32B32A32.
-
----
-
-## Queue (20.11, updated 21.11)
+## Queue (opened 20.11, updated 22.11)
 
 Ordered by what unblocks what. A closed branch is not repeated here - it has an ADR in
 [`decisions/`](decisions/); this file owns only the next actions.
@@ -622,10 +327,13 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     3. only then decide `exp-21b` and the graduation, and re-run the probes of
        `0005`/`0009`/`0010` after their context moves.
 
-12. **The driconf perf options the props search never covered** (journal 34; no build
-    needed, no new code). Five options are perf-relevant and off for this game; two are
-    candidates, one is held on a precondition that fails, one is a feature trade and one is
-    unreachable on a740 (journal 34.2, and journal 35.1 for the held one).
+12. **Closed 23.11: none of the reachable driconf `perf` options changes RE4's fps.** The driconf perf
+    options the props search never covered (journal 34; no build needed, no new code). Five options are
+    perf-relevant and off for this game; two are candidates, one is held on a precondition that fails,
+    one is a feature trade and one is unreachable on a740 (journal 34.2, and journal 35.1 for the held
+    one). Both candidates came back zeros: concurrent binning as `TU_DEBUG=forcecb` (journal 40.8) and
+    `disable_conservative_lrz` on the cached-shadow frame (journal 40.23), the held FDM option never
+    leaving its "nothing to attach to" state (journal 35.1).
     `TU_FORCE_PROPS` (journal 15) covers boolean device properties, and the
     env switches of journal 13/15.5 cover autotune and draw states. Neither touched Turnip's
     `perf`/`misc` driconf groups (`src/freedreno/vulkan/tu_drirc_gen.py`), which are overridden
@@ -640,11 +348,18 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
       one-line driver log and a build;
     * `tu_allow_concurrent_binning` - A7xx concurrent binning, disabled by default "because it
       regresses performance on desktop games", where the phrase describes an x86 discrete GPU
-      rather than this SoC running a desktop game through vkd3d-proton;
+      rather than this SoC running a desktop game through vkd3d-proton. **Closed 22.11 by journal
+      40.8**: the same switch is reachable without a build as `TU_DEBUG=forcecb`, and forcing it
+      changed nothing; `allow_concurrent_binning` is settled as `forcecb` 18x against `nocb` being
+      the gen2 default;
     * `disable_conservative_lrz` - stops the conservative default from disabling LRZ writes on
       draws that blend and write depth (`tu_lrz.cc:1524`, `:1533`); safe only if the game does
       not contain the three-draw sequence the code comment above those lines spells out, which a
-      screenshot comparison is supposed to answer.
+      screenshot comparison is supposed to answer. **Closed 23.11 by journal 40.23**: measured on
+      the cached-shadow frame, `lrz-nocons` 27.13 p25 over 14 kept windows against a
+      same-configuration cluster of 26.53-26.67, with every LRZ counter unchanged - a zero, and a
+      zero of a switch with almost nothing to give, because LRZ kills 0.54 % of the frame's input
+      primitives in the first place.
 
     Correctness on every shape the rig creates is already established (journal 34.3,
     `results/test-perfprops-rig.log`: four forced runs, 0 differing lines of 621, each carrying
@@ -677,6 +392,12 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     ~220 ns to `VBIF` (ADR-0008), and every lever tried so far on this game has been zero, so
     both remaining candidates are likely zeros. That is a reason to run them in one evening
     session, not a reason to skip them: neither has ever been asked here.
+
+    **Correction, 23.11.** The paragraph above is kept as written; both questions it asks have been
+    asked since, and both answered zero - `forcecb` in journal 40.8 and `disable_conservative_lrz` in
+    journal 40.23, the latter measured on the cached-shadow frame rather than on the 15 fps setting the
+    protocol was drafted against. The screenshot-pair gate this item insisted on was never needed,
+    because nothing gained fps to trade the picture for.
 
 13. **What the game does when the driver reports less memory** (journal 34.4; no build, no new
     code). The other kind of option in the same surface: not the command stream but the report.
@@ -1035,12 +756,55 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
     default is not tuned to the game's worst shadow setting, it is right on both frames, and forced
     sysmem ties the default again (-0.7 %).
 
-25. **Re-measure the block occupancy on the cached-shadow frame** (open question 21; no build).
-    One 210 s session with `AppShadowCache=1` and `tools/fdperf/fdperf.cfg-vpc`, the sampler that
-    produced 40.14's occupancy table (`VPC` 91.6 / `VS_BUSY` 88.7 / `PS_BUSY` 84.1 %), so the VS/PS
-    occupancy of the 26.7 fps frame exists as a measurement instead of as an assumption carried over
-    from the 15.3 fps frame. It is the input any "what is the wall now" answer needs, and it is the
-    cheapest remaining measurement in this file.
+25. Closed by journal 40.21 (chain28, `results/games/re4/occupancy-two-frames.txt`): with
+    `AppShadowCache=1` the vertex path is still the busiest block - `VPC_BUSY` 85.54 % against 91.57 %
+    on the cache-off frame, `VS_BUSY` 80.65 %, `PS_BUSY` 76.97 % - and the primitive collector waits on
+    it 12.7 points less. Nothing else became the wall: no block in `fdperf.cfg-vpc` goes from idle to
+    busy. The 26.7 fps frame is the same wall with 6 points of slack, so open question 21 is answered
+    and the "+9…13 % for a non-geometry fix" ceiling of 40.10/40.15 still applies to this frame.
+
+26. **The never-forceable gen3 properties: `has_alias_rt` is the one candidate worth a build** (needs
+    queue 16's build; the audit is journals 40.24 and `docs/a7xx-gen-props.md`). Of the properties only
+    `a7xx_gen3`/A8XX set, ten are in the `TU_FORCE_PROPS` table and were swept in journals 15.7 and 34;
+    the rest cannot be raised at runtime (`tu_device.cc:1750-1770` is a fixed list): `has_alias_rt`,
+    `has_sw_fuse`, `new_control_regs`, `subpass_fence_cleans_resolve`, `gs_vpc_adjacency_quirk`. The
+    last four are a raytracing fuse, a crashdec register rename, a resolve-wait behaviour and an A750
+    hardware bug - none is a feature A740 is losing. `has_alias_rt` is different: the two registers its
+    driver side writes, `SP_PS_OUTPUT_CONST_CNTL` and `SP_PS_OUTPUT_CONST_MASK`, are
+    `variants="A7XX-"` (`a6xx.xml:4242`, `:4245`) and `tu_shader.cc:2890` already emits them for any
+    A7XX, so the gate is a per-chip blob observation, not a missing register. What to run: add the name
+    to the `TU_FORCE_PROPS` list (one line, same table), build, and A/B `TU_FORCE_PROPS=has_alias_rt`
+    on the cached-shadow frame with `fdperf.cfg-vpc` - the pass removes constant components from FS
+    output registers, so the visible signature is fewer preamble `mov`s and slightly less VS/PS work,
+    both of which that cfg prints. It decides whether one more gen3 software feature is free on gen2
+    or whether the gate is protecting a real hardware difference; the correctness side is a picture
+    check, so a run is only usable if the scene is also captured with the panel on.
+
+27. **The two third-party "locked behind gen3" claims that do not survive inspection** (no build, no
+    run - recorded so the claim does not have to be re-investigated). Checked against
+    `results/device-features-a740.txt` (both the distribution's driver and the ship stack, `vulkaninfo
+    --show-all`) and against the source: `sparseResidencyImage3D` is `false` in both runs and the name
+    occurs nowhere in `src/freedreno/`, with `sparseResidencyStandard3DBlockShape = false` at
+    `tu_device.cc:1349` - no generation gets it, so it is not a lock our patch could remove;
+    `sparseResidencyAliased` is already `true` in both runs and comes from `has_sparse_prr`
+    (`tu_device.cc:495-509`), not from `ubwc_all_formats_compatible`; `VK_EXT_descriptor_buffer` and
+    `VK_EXT_attachment_feedback_loop_layout` are exposed on this device today;
+    `VK_KHR_fragment_shader_barycentric` and `VK_EXT_post_depth_coverage` are absent in both runs
+    because the driver has no extension-table entry for them at all - and there is no `gen >= 3`
+    condition anywhere in `src/freedreno/vulkan/` (the only matches for `a7xx_gen3` are a comment at
+    `tu_lrz.cc:60` and the `TU_FORCE_PROPS` table), so "added for A750 and never tested on A740" cannot
+    be the shape of that gate. What is left of the claim is a real but different question, and it is
+    queue 26.
+
+28. **`VK_KHR_ray_tracing_pipeline` on a device that answers ray queries** (no build; decide from
+    inspection first). `VK_KHR_ray_query` and `VK_KHR_acceleration_structure` are exposed
+    (`results/device-features-a740.txt`, both runs) and `VK_KHR_ray_tracing_pipeline` is not, with the
+    features behind `props.has_ray_intersection` and `has_sw_fuse` (`tu_device.cc:214-216`, `:1844`).
+    Nothing in this repository needs it for RE4 - the game does not ask for RT - so the only reason to
+    open this is another title. What to run: read the upstream gating of the pipeline feature in
+    Turnip (upstream file, not the shallow clone) and write five lines on what gen2 would have to
+    provide in software; if the answer is "a dispatch path we do not have", close it as not our work.
+    `NOT MEASURED`, and it is not on the fps path.
 
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
@@ -1075,12 +839,14 @@ instead of against a build.
 | 13 | why does the system driver give UBWC to a `MUTABLE` image with no list, where both Mesa 27 builds refuse it | ONE ROW, journal 31: `B8G8R8A8_UNORM`, `nolist=0x102000` against `0x100000`. Not in the two refusal functions (byte-identical to refs `mesa-26.2.6` and `main`), so it is either elsewhere in 26.2 or in the distribution's own patches (`mesa-vulkan-drivers-26.2.6-1.fc44.armada`, not in this repository). Chasing it would need the downstream source; it changes no verdict, and `exp-18` does not depend on it |
 | 14 | does a `R64_UINT`/`R64_SINT` view of a UBWC image work, once `STORAGE` makes it legal | ANSWERED 21.11, journal 37: probe `XR64` built the shape and ran it - a no-list `MUTABLE` image with `STORAGE` in the usage, UBWC kept by the `TU_UBWC_NOLIST_64` knob of `experiments/exp-23-ubwc-nolist-64-knob.patch`, stays tiled with the `+0x2000` tail and reads `0/262144` wrong through an `r64ui` storage image, including after `imageAtomicAdd(+1)` per word. It also settled the shape question: a list that *names* `R64_*` is refused compression by `FD6_UBWC_UNKNOWN_COMPAT` with the knob on and off, so the no-list create was the only place the question could be asked at all. `results/test-xr64-nolist-64-ubwc.log`. Still open inside the answer: `sparseImageInt64Atomics=0` on this device, so the sparse corner is unmeasured, and journal 38 puts the class on the SP client, which is 0.3 % of measured DRAM reads |
 | 15 | is the compressor actually writing compressed bytes, or only a metadata plane | ANSWERED 22.11, journal 40.17: yes, bytes. In RE4's steady stretch the bus carries 317 MB/s of `PERF_UCHE_UBWC_READ_BEATS` and 37 MB/s of `..._WRITE_BEATS` against 15.59 / 0.29 GB/s of VBIF traffic - 2.0 % of the read bytes, 2.4 % of the texture client's requests - and the switch that proves the counter means what it says is on the application side: `VKD3D_CONFIG=disable_color_compression,disable_depth_compression` in the shipped vkd3d-proton drives all four UBWC counters, and the TP UBWC request counter, to exactly zero in 52 of 52 samples while the CMPDECMP write-data column doubles. `tools/fdperf/fdperf.cfg-traffic`, `scripts/fdperf-traffic-table.py`, `results/games/re4/traffic-ubwc-ab.txt`. Also measured in the same pair: taking compression off costs +0.9 % DRAM read, +10 % DRAM write and no measurable frame rate. Still open inside the answer: which images the 317 MB/s belongs to - the counters are global, so whether `0014`'s images are inside that 2 % is queue 16, not this |
-| 16 | does any of the reachable driconf perf options change fps in RE4 | NOT MEASURED, queue 12 (journal 34.3 covers correctness on the rig only, and the rig has no textured depth renderpass). Two candidates remain, `tu_allow_concurrent_binning` and `disable_conservative_lrz`, both expected zeros given ADR-0008; the third, `tu_disable_conservative_fdm_binning`, lost its precondition in journal 35.1 (0 density-map images in 11 984 creates) and is held until an FDM attachment is observed. Needs the game, so it needs most of this machine's 7.3 GiB |
+| 16 | does any of the reachable driconf perf options change fps in RE4 | ANSWERED 23.11, journal 40.23 and queue 12: no. `disable_conservative_lrz` 27.13 p25 (14 windows) against a same-configuration cluster 26.53-26.67 with every LRZ counter unchanged; concurrent binning was already a zero as `TU_DEBUG=forcecb` (journal 40.8); the FDM option has no attachment to act on (journal 35.1, 0 density-map images in 11 984 creates) |
 | 17 | what does the game do when the driver reports less memory than the heap it reports today | NOT MEASURED, queue 13. The report itself is measured - journal 34.4, `results/vulkaninfo-heap-report.log`, five `vulkaninfo` runs over `heap_memory_percent` - and the queue names the two values to try in the game. What vkd3d-proton does under a smaller report is not, and journal 17's 3129 MiB peak against 4.95 GiB of swap is why the question is not empty |
 | 18 | is any of the 22 shading-rate images ever attached to a render pass, and at what rates | NOT MEASURED. Journal 35.1 counts the images and journal 35.2 measures the capability, but a usage bit is a declaration: the driver has no log line for `subpass->fsr_attachment != VK_ATTACHMENT_UNUSED`, so the check needs one added `if` plus a build, then a game run. Without it, "the game uses VRS" stays an inference, and not even the driver's own per-subpass register write can be observed from a log |
 | 19 | what did the 2450.3 MiB that `0014` v1 moved out of linear buy in traffic or fps | NOT MEASURED, queue 16 (no new patch: a B build without `0014` made in a copy of the tree - `git apply -R` does not work, open question 20 - then one A/B session). Journal 39 sizes what no rule can move (the 1630.8 MiB residue, required linear by the Vulkan class rule plus `fd6_pipe2swap()`), so this is the only no-list number left. The committed profile that looks like an answer - `results/games/re4/mesa27-vertex/steady-state.txt`, TP 12.0 GB/s and 81 % of DRAM reads - was sampled 17.11, and `0014` is journal 21.12, dated 18.11: that run is a with-everything-linear baseline, not a before/after |
 | 20 | does the committed `patches/0014-turnip-mutable-no-list-tiling.patch` describe the tree that built the shipped `c17d02bcaae9…` | NOT SETTLED. Journal 39.7: `git apply -R --check` of that file fails on the recorded ship-stack tree at `tu_formats.cc:261`, and the texts differ by function names (`tu6_mutable_compat_class` vs the tree's static `mutable_compat_class`/`mutable_views`) and by comment wording. The difference cannot change a result, so no verdict in journal 39 depends on it - but it decides how queue 16 makes its B build, and a shipped patch file that is not the built text is a reference-table error worth fixing once, by regenerating the file from the tree and recording in `docs/release.md` which hash it belongs to |
-| 21 | what is the wall at 26.7 fps, i.e. with the game's Shadow Cache on | NOT MEASURED. Every block-occupancy number in journals 38-40 (VPC 91.7 %, VS 88.7 %, PS 84.1 %) was sampled with the cache off (journal 40.19); on the cached frame `VPC_BUSY` is 85.5 % and MangoHud's `gpu_load` column is a median of 99.0 over 549 samples in `fps-sc-default.csv` (95-150 s), so the frame is still GPU-bound and quotable numbers for the other blocks are simply missing for this regime. Queue 25 is one session with the full-block sampler and `AppShadowCache=1`. What it decides: whether the "+9…13 % ceiling for any non-geometry driver fix" of 40.10/40.15 is still the right ceiling when the shadow redraw is gone |
+| 21 | what is the wall at 26.7 fps, i.e. with the game's Shadow Cache on | ANSWERED 22.11, journal 40.21 (`results/games/re4/occupancy-two-frames.txt`): the same wall with 6 points of slack - `VPC_BUSY` 85.54 % against 91.57 %, `VS_BUSY` 80.65 %, `PS_BUSY` 76.97 %, and the primitive collector waits on the vertex path 12.7 points less. No block goes from idle to busy, so the "+9…13 % for a non-geometry driver fix" ceiling of 40.10/40.15 stands on this frame too |
+| 22 | what do `LRZ_BUSY_CYCLES`, `RAS_STALL_CYCLES_LRZ` and `RB_STARVE_CYCLES_LRZ_TILE` actually count on A7XX | NOT ANSWERED, and 40.23 is the reason it is a question: two arms with `TU_DEBUG=nolrz` (mask `0x81`, `LRZ_PRIM_KILLED_BY_LRZ` 0.00 against 1.21 M/s) read 74.82 % and 74.99 % `LRZ_BUSY`, i.e. indistinguishable from LRZ on. Deciding it needs a workload where LRZ demonstrably rejects - a synthetic depth-overdraw pass in the rig with and without `nolrz`, watching the killed counter and the busy counter together - not another RE4 session. Until then no document in this repository may quote those three counters as a cost |
+| 23 | is `alias.rt` correct on A740, given that its two registers are declared for A7XX | NOT MEASURED, queue 26. `ir3_alias.c:768` refuses on `props.has_alias_rt`, which only `a7xx_gen3` sets, while `tu_shader.cc:2890` programs `SP_PS_OUTPUT_CONST_CNTL`/`SP_PS_OUTPUT_CONST_MASK` for any A7XX and `a6xx.xml:4242`/`:4245` declare both `variants="A7XX-"`. Needs one line in the `TU_FORCE_PROPS` table (queue 16's build), then an fps A/B and a picture check with the panel on |
 
 ## Pitfalls (reminder)
 
