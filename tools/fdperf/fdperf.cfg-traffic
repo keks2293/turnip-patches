@@ -1,0 +1,76 @@
+// fdperf.cfg-traffic - the memory side of the question: how many bytes go to/from DRAM,
+// how many of them travel as UBWC, and how often the driver flushes caches.
+//
+// Why: journals 40.15/40.16 closed the binning question (forcing GMEM+HW binning costs a
+// third of the frame rate, see results/fdperf-dbg-{perf,gmem}), so the remaining traffic
+// claim to test is the compression one: whether UBWC carries any of RE4's DRAM traffic at
+// all, and what happens when the *translation layer* asks for it off
+// (VKD3D_CONFIG=disable_color_compression,disable_depth_compression). The counters that
+// answer it directly, and that no cfg in this repository carried before:
+//   UCHE  57 PERF_UCHE_UBWC_READ_BEATS   / 58 ..._WRITE_BEATS
+//   UCHE  43 PERF_UCHE_READ_REQUESTS_TP_UBWC / 44 ..._TP_NONUBWC (the texture-client split)
+//   CMP    3/4 VBIF READ/WRITE DATA_CCU, 5/6 VBIF READ/WRITE REQUEST (the CCU path)
+//   CP    12 PERF_CP_CACHE_FLUSH (the GMEM<->sysmem cache flushes)
+// Beat-to-byte conversion: UCHE VBIF beats are 16 B (the conversion `docs/fdperf-a7xx.md` uses
+// for the 15.1 GB/s figure); CMP/CMPDECMP data counters are in bytes.
+//
+// Group budgets are the ones fdperf enforces (docs/fdperf-a7xx.md: "reads from cfg only
+// counter0..num_counters-1", UCHE=12, CMP=4, RB=8, TP=12, CP=13, RBBM=4). Lines beyond a
+// budget are silently ignored, so every section below stays inside it: UCHE exactly 12, CMP
+// exactly 4 - which is why the CMPDECMP set drops the arbiter stall that fdperf.cfg names
+// first, and why CMP `counter4 = 6` of that older cfg was never measured at all.
+//
+// Run:
+//   SAMPCFG=tools/fdperf/fdperf.cfg-traffic /tmp/opencode/session.sh <TAG> [VKD3D_CONFIG=...]
+
+FD740 = {
+  CP = {
+    counter0  = 0;    // reserved (ALWAYS_COUNT, frequency)
+    counter1  = 2;    // PERF_CP_BUSY_CYCLES
+    counter2  = 11;   // PERF_CP_CONTEXT_DONE
+    counter3  = 9;    // PERF_CP_MODE_SWITCH
+    counter4  = 12;   // PERF_CP_CACHE_FLUSH  <- cache invalidation/flush commands emitted
+  }
+
+  RBBM = {
+    counter0 = 1;    // PERF_RBBM_ALWAYS_ON (divisor for the duty cycle)
+    counter1 = 9;    // PERF_RBBM_VBIF_BUSY
+    counter2 = 12;   // PERF_RBBM_UCHE_BUSY
+  }
+
+  UCHE = {
+    counter0  = 0;    // PERF_UCHE_BUSY_CYCLES
+    counter1  = 1;    // PERF_UCHE_STALL_CYCLES_ARBITER
+    counter2  = 27;   // PERF_UCHE_VBIF_READ_BEATS_CH0
+    counter3  = 28;   // PERF_UCHE_VBIF_READ_BEATS_CH1
+    counter4  = 52;   // PERF_UCHE_VBIF_WRITE_BEATS_CH0
+    counter5  = 53;   // PERF_UCHE_VBIF_WRITE_BEATS_CH1
+    counter6  = 57;   // PERF_UCHE_UBWC_READ_BEATS   <- compressed bytes on the bus
+    counter7  = 58;   // PERF_UCHE_UBWC_WRITE_BEATS
+    counter8  = 43;   // PERF_UCHE_READ_REQUESTS_TP_UBWC
+    counter9  = 44;   // PERF_UCHE_READ_REQUESTS_TP_NONUBWC
+    counter10 = 38;   // PERF_UCHE_RAM_READ_REQ
+    counter11 = 39;   // PERF_UCHE_RAM_WRITE_REQ
+  }
+
+  CMP = {
+    counter0 = 0;    // PERF_CMPDECMP_STALL_CYCLES_ARB
+    counter1 = 3;    // PERF_CMPDECMP_VBIF_READ_DATA_CCU
+    counter2 = 4;    // PERF_CMPDECMP_VBIF_WRITE_DATA_CCU
+    counter3 = 5;    // PERF_CMPDECMP_VBIF_READ_REQUEST
+    counter4 = 6;    // PERF_CMPDECMP_VBIF_WRITE_REQUEST
+  }
+
+  RB = {
+    counter0 = 0;    // PERF_RB_BUSY_CYCLES
+    counter1 = 12;   // PERF_RB_Z_READ
+    counter2 = 13;   // PERF_RB_Z_WRITE
+    counter3 = 14;   // PERF_RB_C_READ
+    counter4 = 15;   // PERF_RB_C_WRITE
+  }
+
+  TP = {
+    counter0 = 0;    // PERF_TP_BUSY_CYCLES
+    counter1 = 1;    // PERF_TP_STALL_CYCLES_UCHE
+  }
+}

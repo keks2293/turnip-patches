@@ -19,7 +19,11 @@ tree `tu_allow_concurrent_binning` defaults to False, and `TU_DEBUG=forcecb` lea
 off and forced (40.8, 40.11; 40.12 adds that those runs never started a binning pass, so that is not a
 measurement of a working BV thread), and the VPC
 attribute buffer (`TU_FORCE_PROPS=has_gmem_vpc_attr_buf` delivers - the driver logs the a750 sizes - and
-moves nothing, 40.9). What stays open is the wall itself: `VPC_BUSY` 91 %, of whose time
+moves nothing, 40.9). The "why no binning" question is closed as far as the free knobs reach: the reasons
+the driver has are named in code and five of them are silent at every debug level (40.15), and forcing
+GMEM + HW binning in the same session takes the frame rate from 15.3 to 10.2 fps (40.16), so the sysmem
+choice is not a wrong guess that a patch could undo. What stays open is the wall itself: `VPC_BUSY` 91 %,
+of whose time
 `VPC_VPCRAM_FULL_CYCLES` accounts for ~51 % - the largest single named component measured so far - and
 whose sub-unit occupancy (`VS_BUSY` 88.7 %, `PS_BUSY` 84.1 % of the core) has no semantics in any register
 description in the tree (40.14).
@@ -835,3 +839,118 @@ described anywhere in the tree or the XML; asking the hardware by changing
 `tu6_emit_vpc_varying_modes()` is a build and a measurement that this evidence does not motivate. And the
 arms above are all 21.11 sessions, so their content spread is the one 40.10 describes; the columns that
 move between them are `VS_BUSY` (84.9-88.7 %) and the primitive rate, not the per-invocation payload.
+
+## 40.15 The render-mode decision is two functions, and its stated reason never reaches a log (queue 22)
+
+**Question.** Which condition keeps RE4's render passes out of GMEM - and can a `TU_DEBUG`
+level tell us? A code reading, no run; the runs are 40.16.
+
+**Method.** `../mesa27-src` at `9845cfb` plus our eight modified files, as the tree stood
+22.11; the line numbers below are that tree.
+
+**The code.** `use_sysmem_rendering()` (`tu_cmd_buffer.cc:1418-1495`) decides the render
+mode per pass and writes a `force_render_mode_reason` string; `use_hw_binning()` (1386-1416)
+then decides the VSC path, where it is only `vsc->binning_possible && vsc->binning_useful`
+(1415). The branches, in order: `TU_DEBUG(SYSMEM)` (1423), `!tiling->possible` = "Can't fit
+attachments into gmem" (1430), empty render area (1439/1445), tessellation (1450),
+`rp.disable_gmem` (1455, reasons set at 5606 / 8813 / 10688 / 10818), XFB (1462),
+PRIMITIVES_GENERATED query (1472), `TU_DEBUG(GMEM)` returning *false* (1478),
+"Too many tiles and HW binning is not possible" (1485), and the autotuner (1489, reasons at
+`tu_autotune.cc:1820-1937`; with no history it returns `default_mode = SYSMEM`, 1840, with no
+string at all). `binning_possible` is `is_hw_binning_possible()` (`tu_util.cc:359-367`,
+`pipe0.width * pipe0.height <= 32`, tile search 287-343 under the GMEM budget of
+`tu_pass.cc:854-888`); `binning_useful` is `tile_count.w * tile_count.h > 2` (`tu_util.cc:509`),
+forced by `FORCEBIN` (511) / killed by `NOBIN` (513).
+
+**Verdict.** The reason string reaches the Perfetto trace only
+(`tu_cmd_buffer.cc:3103-3106`), never `mesa_log*`, so no debug level prints it. Two branches
+log on their own (the feedback-loop sites 5603/8811, `perf_debug()`) and in the `dbg-perf`
+session they printed **zero** times while other `perf_debug()` sites printed by the thousand
+(`results/dbg-flip-and-messages.txt`) - so the feedback-loop branch provably did not fire and
+the rest are silent by construction. Closing this needs a counter, not a knob: a per-second
+histogram of `force_render_mode_reason`, modelled on `tu_dbg_log_gmem_load_store_skips()`
+(`tu_util.cc:593-642`, called from `tu_queue.cc:436-437`). Needs a build (queue 16/22).
+
+**Does not show.** Which branch fires (NOT MEASURED); whether `tiling->possible` is true for
+the game's passes (`TU_GMEM=` of `tu_knl_drm_msm.cc:1390` is the cheap probe, not run).
+
+## 40.16 Forcing GMEM plus HW binning costs a third of the frame rate; the flip happens inside one session (queue 22)
+
+**Question.** The operator's dichotomy: if forcing binning raises fps a heuristic is wrong,
+if it lowers fps the driver chose rightly. Testable with no build - the overrides are
+`TU_DEBUG` bits and `TU_DEBUG` can be changed at runtime through `TU_DEBUG_FILE`
+(`tu_util.cc:93-120`, runtime subset 69-76).
+
+**Method.** `scripts/run-game.sh patched`, ship stack `4c3cdb210082`, `/tmp/opencode/chain22.sh`
+08:24-08:35 on 22.11 plus the `dbg-sysmem` control at 09:47; sampler
+`tools/fdperf/fdperf.cfg-tse3`. Delivery proved by the driver's own line: `TU_DEBUG=0x30001`,
+`0x31011`, `0x30009`, and `TU: info: Watching TU_DEBUG_FILE: /tmp/opencode/tu-dbg-file.txt`
+under `0x1`. All four dumps report `max_freq=680000000`.
+
+**Numbers.** `results/dbg-flip-and-messages.txt` (generator `scripts/dbg-flip-table.py`,
+reads `results/fdperf-dbg-{perf,file,gmem,sysmem}/fdperf-raw.txt` and
+`results/fps-dbg-*.csv`) has the per-arm fps windows, message counts and the flip rows. The
+three numbers that decide it, p25 fps 95-150 s against `VSC_BUSY` % of the core and
+`VSC_INPUT_TILES` median /s: default 15.34 / 0.38 % / 0; forced sysmem 15.18 / 0.38 % / 0;
+forced GMEM+binning 10.27 / 12.51 % / 53,505,966.
+
+**The flip, which is the measurement.** In `dbg-file` the content does not change, so it is
+one A/B in one session: the flag file was written at chain+85 s and blanked at chain+175 s,
+tiles go 0 -> 49.7 M/s on the next sample and stay 52-54 M/s, and the fps buckets move
+15.2 -> 10.2 and back to 15.2 (MangoHud's clock runs ~35 s behind the chain's launch line;
+one offset lands both edges on the two writes).
+
+**Verdict.** Frame rate fell by a third. At whole-game granularity the driver's sysmem choice
+is the better one, and loading the VSC buys nothing - so "A740 has no binning/binning is off"
+is not a lever for this game and justifies no patch. The `sysmem` control adds that demanding
+sysmem changes nothing at all (15.18 against 15.34, tiles 0 in all 51 pinned samples), which
+is what it looks like when every pass is already in sysmem.
+
+**Does not show.** Whether some *individual* pass would be faster in GMEM (the knob forces
+every pass; a per-pass answer needs the histogram of 40.15). Which branch decided (40.15).
+The `[GMEM] loads/stores total: 0` lines that every arm prints: they count *conditional*
+load/store only (`tu_clear_blit.cc:5894-5935`, gated by `vsc->binning_possible &&
+pass->has_cond_load_store && ...` at `tu_cmd_buffer.cc:6811-6813`), so they say the
+skip-if-no-geometry optimization is not in play, not that GMEM is idle - and they stayed 0 in
+`dbg-gmem`, where tiles were fed. The unit of `A7XX_PERF_VSC_INPUT_TILES` (selector 4, no
+description in `a7xx_perfcntrs.xml`) is NOT VERIFIED: 53.5 M/s at 10.2 fps would be ~13 000
+full-frame 96x96 tile visits per frame, so only the 0 -> 53.5 M/s step is quoted. fps columns
+are within-session; 15.30/15.34/15.36 inside one arm is the noise floor.
+
+## 40.17 UBWC carries 2 % of RE4's DRAM reads, and turning it off from the translation layer does not move the frame rate (queue 23)
+
+**Question.** Open question 15: does the compressor actually write compressed bytes, or only
+a metadata plane (journal 22.2 says the `+0x2000` allocation signature proves an allocation)?
+And what is the price of compression in the real game?
+
+**Method.** No Mesa build: the switch is on the translation layer. The shipped vkd3d-proton
+(`files/lib/wine/vkd3d-proton/x86_64-windows/d3d12core.dll`, `vkd3d-1.1-5641-g44cf7c2`) takes
+`disable_color_compression,disable_depth_compression` in `VKD3D_CONFIG`; upstream
+`libs/vkd3d/resource.c` (upstream source, not committed here) turns those into
+`VkImageCompressionControlEXT` with `VK_IMAGE_COMPRESSION_DISABLED_EXT`, which Turnip honors
+by setting `ubwc_enabled = false` (`tu_image.cc:637-644`). `/tmp/opencode/chain23.sh`,
+09:35-09:50 on 22.11, ship stack `4c3cdb210082`, sampler `tools/fdperf/fdperf.cfg-traffic`
+(new: UCHE 57/58 `..._UBWC_READ/WRITE_BEATS`, 43/44 `..._READ_REQUESTS_TP_UBWC/NONUBWC`,
+the CMPDECMP CCU counters, `PERF_CP_CACHE_FLUSH`).
+
+**Numbers.** `results/traffic-ubwc-ab.txt` (generator `scripts/fdperf-traffic-table.py`, reads
+`results/fdperf-tr-{base,nocomp,noupload}/fdperf-raw.txt`); 16 B per UCHE VBIF beat. Key row:
+`tr-base` 15.59 GB/s DRAM read, 317 MB/s UBWC reads, 37 MB/s UBWC writes, TP requests
+48.4 M/s UBWC against 1.95 G/s non-UBWC; `tr-nocomp` UBWC 0.00 / 0.00 and TP UBWC 0 in 52 of
+52 samples. Frame rate 15.26 -> 15.06 p25, DRAM read 15.59 -> 15.73 GB/s.
+
+**Verdict.** Compressed bytes do move - 2.0 % of the read bytes, 12.7 % of the write bytes,
+2.4 % of the texture client's requests - which answers open question 15 and retires the
+"only a metadata plane" caveat for the game as such. The app-side switch provably reaches the
+compressor (all four UBWC counters exactly zero), and taking compression off costs +0.9 %
+DRAM read, +10 % DRAM write and no measurable frame rate. So compression is not where RE4's
+time goes, and this is also the cheapest A/B queue 16 wanted for `0014` without a Mesa build.
+`no_upload_hvv` moved no traffic counter (all columns within 1 % of `tr-base`).
+
+**Does not show.** Which images the 317 MB/s belongs to - the counters are global, so whether
+`0014`'s images are in that 2 % is queue 16. The driver-side per-image lines are absent in
+these arms (`results/raw/game-patched-tr-*.log` contain no `TU:` lines at all: no `TU_DEBUG`
+was set), which is why chain24 re-runs the pair with `TU_DEBUG=perf`. And the `tr-noupload`
+session ran a light scene from t=100 (six 10 s buckets at 64-93 fps, 23 of 50 samples
+off-clock), so its fps row is not comparable and the flag needs one more session; the
+`tr-base`/`tr-nocomp` pair the verdict rests on is unaffected.

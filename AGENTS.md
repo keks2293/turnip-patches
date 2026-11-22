@@ -111,6 +111,38 @@ repository already had once (journal 22.1).
 Directions in use: `ubwc-format-lists`, `r2d-ccu-clean`, `mutable-lazy-deposition`,
 `8bpp-ubwc`, `re4-perf`, `measurement-tooling`, `release-build`.
 
+### Measure first, write once (added 22.11)
+
+Written after the operator's note that journal editing, not measurement, was eating the
+day. Borrowed from reproducible-research practice (raw data immutable; "treat models,
+figures and tables as outputs you regenerate from code, data and config - do not edit them
+by hand"; "anything in `processed/` should be deletable" - PLOS Comp Biol notebook kit,
+Kempner Institute handbook, Practical Reproducible Research; web sources, corroboration,
+not committed artifacts):
+
+* **Runs before prose.** A session's wall time goes to runs and builds. An entry is written
+  once, after the artifacts exist, and is not reworded afterwards. If a run is possible in
+  the next ten minutes, do the run.
+* **Numbers live in artifacts.** Any table a claim rests on is produced by a committed script
+  from a raw log; the entry cites the file and quotes at most the two or three numbers the
+  verdict needs. A wrong number is fixed in the script and regenerated - a table is never
+  edited by hand, in `results/` or in a document.
+* **Generated outputs are deletable.** Everything under `results/` except `results/raw/` is
+  regenerable from the raw log plus the script that reads it; the header of such a file names
+  the command. If it does not, that is a bug in the script.
+* **Entry template, five headings**: `Question`, `Method` (exact command + build hash),
+  `Numbers` (pointer to the artifact), `Verdict`, `Does not show`. About forty lines of
+  prose. Method detail that only matters for reproduction goes in the script's header, not
+  in the entry.
+* **One commit per measurement batch**: arms + artifacts + entry + regenerated index. No
+  wording-only commits, no "clarify wording" commits.
+* **Corrections are three lines**: dated, naming the wording they correct, one sentence about
+  what moved. The old sentence stays; the rest of the entry is not re-flowed.
+* **No style rewrites of committed text.** If committed prose is bad, fix the format in the
+  next entry.
+* **A queue item is five lines**: what to run, what it decides. Longer than that means it is
+  an entry, not a queue line.
+
 ### Writing for a reader who does not skim
 
 An agent reads this repository one file at a time, in whatever order a search returns.

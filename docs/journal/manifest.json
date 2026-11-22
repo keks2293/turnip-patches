@@ -1003,7 +1003,7 @@
     "results/fdperf-mesa27-vertex/fdperf-raw.txt",
     "results/game-patched-algopg.log"
    ],
-   "lines": 838,
+   "lines": 957,
    "headings": [
     "## 40.1 What was run",
     "## 40.2 The discard, and what kind of discard it is",
@@ -1018,7 +1018,10 @@
     "## 40.11 The binning/visibility counter groups can be programmed deliberately (queue 20)",
     "## 40.12 The VSC tile counter is a per-session switch, and that decides what 40.11 measured",
     "## 40.13 What the 22.11 additions do not show",
-    "## 40.14 The varyings counters were programmed on 21.11, and they close the payload half of that branch (queue 15)"
+    "## 40.14 The varyings counters were programmed on 21.11, and they close the payload half of that branch (queue 15)",
+    "## 40.15 The render-mode decision is two functions, and its stated reason never reaches a log (queue 22)",
+    "## 40.16 Forcing GMEM plus HW binning costs a third of the frame rate; the flip happens inside one session (queue 22)",
+    "## 40.17 UBWC carries 2 % of RE4's DRAM reads, and turning it off from the translation layer does not move the frame rate (queue 23)"
    ],
    "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
    "verdict_source": "journal 40"

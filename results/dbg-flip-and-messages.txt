@@ -1,0 +1,124 @@
+# TU_DEBUG render-mode arms, journal 40.16/40.17 (queues 22, 23).  Regenerate:
+#   scripts/dbg-flip-table.py > results/dbg-flip-and-messages.txt
+# Driver build: build/out/libvulkan_freedreno.so, sha256 4c3cdb210082 (ship stack).
+# Sampler: tools/fdperf/fdperf.cfg-tse3 for the four dbg arms.
+
+===== dbg-perf
+  log lines: 31481
+  flag delivery (verbatim):
+    TU: info: TU_DEBUG=0x30001
+  message counts, substring match (0 means the string never appears in this arm):
+      8628  Disabling LRZ because 'FS writes depth or has side-effects
+      8628  Disabling LRZ because 'Depth write + ALWAYS/NOT_EQUAL'
+      4318  Skipping LRZ due to ALWAYS/NOT_EQUAL
+      1084  Disabling UBWC on 
+       176  [GMEM] loads total: 0
+       176  [GMEM] loads total:
+         0  Disabling gmem
+         0  VK_IMAGE_COMPRESSION_DISABLED_EXT
+         0  force_render_mode
+         0  Can't fit attachments into gmem
+         0  Uses tessellation shaders
+         0  Render area is empty
+         0  Non-framebuffer-space barrier
+         0  Too many tiles and HW binning is not possible
+
+===== dbg-file
+  log lines: 16923
+  flag delivery (verbatim):
+    TU: info: TU_DEBUG=0x1
+    TU: info: Watching TU_DEBUG_FILE: /tmp/opencode/tu-dbg-file.txt
+  message counts, substring match (0 means the string never appears in this arm):
+      3724  Disabling LRZ because 'FS writes depth or has side-effects
+      3724  Disabling LRZ because 'Depth write + ALWAYS/NOT_EQUAL'
+       931  Skipping LRZ due to ALWAYS/NOT_EQUAL
+        86  [GMEM] loads total: 0
+        86  [GMEM] loads total:
+         0  Disabling UBWC on 
+         0  Disabling gmem
+         0  VK_IMAGE_COMPRESSION_DISABLED_EXT
+         0  force_render_mode
+         0  Can't fit attachments into gmem
+         0  Uses tessellation shaders
+         0  Render area is empty
+         0  Non-framebuffer-space barrier
+         0  Too many tiles and HW binning is not possible
+
+===== dbg-gmem
+  log lines: 26635
+  flag delivery (verbatim):
+    TU: info: TU_DEBUG=0x31011
+  message counts, substring match (0 means the string never appears in this arm):
+      6540  Disabling LRZ because 'FS writes depth or has side-effects
+      6540  Disabling LRZ because 'Depth write + ALWAYS/NOT_EQUAL'
+      3630  Skipping LRZ due to ALWAYS/NOT_EQUAL
+      1084  Disabling UBWC on 
+       177  [GMEM] loads total: 0
+       177  [GMEM] loads total:
+         0  Disabling gmem
+         0  VK_IMAGE_COMPRESSION_DISABLED_EXT
+         0  force_render_mode
+         0  Can't fit attachments into gmem
+         0  Uses tessellation shaders
+         0  Render area is empty
+         0  Non-framebuffer-space barrier
+         0  Too many tiles and HW binning is not possible
+
+===== dbg-sysmem
+  log lines: 33309
+  flag delivery (verbatim):
+    TU: info: TU_DEBUG=0x30009
+  message counts, substring match (0 means the string never appears in this arm):
+      9472  Disabling LRZ because 'FS writes depth or has side-effects
+      9472  Disabling LRZ because 'Depth write + ALWAYS/NOT_EQUAL'
+      4442  Skipping LRZ due to ALWAYS/NOT_EQUAL
+      1084  Disabling UBWC on 
+       177  [GMEM] loads total: 0
+       177  [GMEM] loads total:
+         0  Disabling gmem
+         0  VK_IMAGE_COMPRESSION_DISABLED_EXT
+         0  force_render_mode
+         0  Can't fit attachments into gmem
+         0  Uses tessellation shaders
+         0  Render area is empty
+         0  Non-framebuffer-space barrier
+         0  Too many tiles and HW binning is not possible
+
+===== the TU_DEBUG_FILE flip inside one session (arm dbg-file)
+# chain+ s, tiles, VSC busy cycles, median clock of that sample
+# flag file written at chain+85.0 s, blanked at chain+175.0 s (/tmp/opencode/chain22.sh)
+# sampler's first sample at chain+64.9 s; samples are ~2.1 s apart
+chain+  78.6  tiles=           0  vscbusy=   2,617,468  680 MHz
+chain+  80.7  tiles=           0  vscbusy=   2,601,514  680 MHz
+chain+  82.8  tiles=           0  vscbusy=   2,600,476  680 MHz
+chain+  85.0  tiles=  49,742,465  vscbusy=  79,269,695  680 MHz
+chain+  87.1  tiles=  53,804,849  vscbusy=  86,358,004  680 MHz
+chain+  89.2  tiles=  54,384,335  vscbusy=  86,402,687  680 MHz
+chain+  91.3  tiles=  54,337,299  vscbusy=  86,322,110  680 MHz
+chain+ 169.6  tiles=  52,973,848  vscbusy=  84,461,759  680 MHz
+chain+ 171.7  tiles=  53,825,794  vscbusy=  85,494,475  680 MHz
+chain+ 173.8  tiles=  42,993,860  vscbusy=  68,900,192  680 MHz
+
+===== p25 fps per window, seconds of MangoHud's own clock
+| arm | window | n | p25 fps |
+|---|---|---|---|
+| dbg-perf | 70-84 | 140 | 15.30 |
+| dbg-perf | 95-150 | 549 | 15.34 |
+| dbg-perf | 150-170 | 200 | 15.36 |
+| dbg-file | 70-84 | 139 | 10.23 |
+| dbg-file | 95-150 | 549 | 10.32 |
+| dbg-file | 150-170 | 199 | 15.20 |
+| dbg-gmem | 70-84 | 140 | 10.19 |
+| dbg-gmem | 95-150 | 549 | 10.27 |
+| dbg-gmem | 150-170 | 200 | 10.25 |
+| dbg-sysmem | 70-84 | 139 | 15.06 |
+| dbg-sysmem | 95-150 | 548 | 15.18 |
+| dbg-sysmem | 150-170 | 199 | 15.32 |
+
+===== steady-window tile and VSC columns (pinned-clock samples only)
+| arm | counter window, chain+ s | pinned samples | tiles median/s | windows with tiles | VSC busy % of core |
+|---|---|---|---|---|---|
+| dbg-perf | whole run | 31/50 | 0 | 0 of 31 | 0.38 |
+| dbg-file | 85-175 | 42/42 | 53,769,704 | 42 of 42 | 12.58 |
+| dbg-gmem | whole run | 51/52 | 53,505,966 | 51 of 51 | 12.51 |
+| dbg-sysmem | whole run | 51/52 | 0 | 0 of 51 | 0.38 |
