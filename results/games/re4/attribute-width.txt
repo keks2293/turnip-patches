@@ -1,0 +1,72 @@
+# What one vertex costs, on the two measured frames (Resident Evil 4, re4.exe, D3D12 via
+# vkd3d-proton 3.1.0, 2560x1440; ship stack sha256 4c3cdb210082 in all three arms).
+# regenerate: scripts/attr-width-table.py > results/games/re4/attribute-width.txt
+# sampler tools/fdperf/fdperf.cfg-vpc; counters over t_rel 20-105 s, fps p25 over elapsed 95-150 s
+# ownership: the counter reading is scripts/fdperf-vpc-ratios.py (its `width` line), the fps
+#       window is scripts/fps-window.py; this file runs both and pastes the result.
+# the other eight cfg-vpc arms of 21.11 are driver-flag variants of the cache-off frame
+#       (fl111, fl121, cb1, nopref, lrz2, hpbase2, hp50, hp40): 40.14 tabulates their
+#       per-invocation figures, all 2.62 NUM_VPCRAM_WRITE and 0.89 SP_COMPONENTS.
+
+=== vpc-vpcbase1   (AppShadowCache=0; no env; 21.11, journal 40.14)
+results/games/re4/vpc-vpcbase1/fdperf-raw.txt: 40 of 51 samples, t_rel 20.0-105.0s, period 1 s, freq 680 MHz
+  only in the BV_* copy of the group (binning/visibility), so not the counter this cfg programmed: PC_RESERVED, PC_STALL_CYCLES_TESS, PC_STALL_CYCLES_UCHE, PC_STALL_CYCLES_VFD_ONLY, PC_WORKING_CYCLES, VFD_STALL_CYCLES_SP_ATTR, VFD_STALL_CYCLES_SP_INFO, VFD_STALL_CYCLES_UCHE, VPC_RESERVED_5, VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC, VPC_STALL_CYCLES_UCHE, VPC_STALL_CYCLES_VFD_WACK, VPC_WORKING_CYCLES
+  busy vs 680 MHz (divided by instances where the block has several):  VPC  90.5%  PC  89.9%  TP  77.7%  SP  92.6%  RB  79.8%
+  CP_BUSY   673.0 M/s   draws/s    12285
+  VPC       BUSY   615.5  VS_BUSY   570.8  PS_BUSY   567.1  LM_FULL_WAIT     6.6 M/s
+  VS/BUSY  92.74%   PS/BUSY  92.14%   LM_FULL_WAIT/BUSY   1.07%   STALL_UCHE/BUSY    nan%
+  VS_INV   248.0 M/s   SP_COMPONENTS   220.7 M/s =  0.89/invocation   NUM_VPCRAM_WRITE   650.3 M/s =  2.62/invocation
+  SP_EXPORT_VPC_TRANS   220.7 M/s   SP_STALL_VPC/SP_BUSY  1.22%
+  PC      IA_PRIM   239.7 M/s   VERTEX_HITS   471.0 M/s =  1.97/prim   IA_VERTICES/IA_PRIM  3.00
+  VFD     TOTAL_VERTICES/TSE_INPUT_PRIM 1.035   NUM_ATTRIBUTES/TOTAL_VERTICES  5.02   DECODED_ATTRIBUTE_BYTES  7.89 GB/s
+  width   TOTAL_VERTICES   248.0 M/s   attribute B/vertex  31.81   SP_COMPONENTS/vertex  0.89   NUM_VPCRAM_WRITE/vertex  2.62
+  DRAM    reads 14.02 GB/s   TP 11.41 GB/s =  81.4%   SP  0.06 GB/s
+  UCHE    WRITE_REQUESTS_SP    47.0 M/s   WRITE_REQUESTS_VPC     0.0 M/s   STALL_ARBITER/BUSY  44.48%
+  starve  VFD_STARVE_UCHE/VFD_BUSY  56.07%   VFD_STALL_VPC_ALLOC/VFD_BUSY  12.44%   TP_STALL_UCHE/TP_BUSY  23.30%
+  PC      BUSY   611.3 M/s   STALL_VPC/PC_BUSY  68.05%   STALL_VFD/PC_BUSY  12.26%   STALL_UCHE/PC_BUSY    nan%
+  UCHE    BUSY  1191.9 M/s   VBIF latency  161.4 cycles/access over  438.0 M samples/s
+fps-vpcbase1.csv: span 1.0..161.3s, window 95-150s
+  n=549 p25=14.19 mean=14.64 min=12.6 max=103.4
+  frametime=69.0ms clocks=[680] gpu_load=95% swap=0.00GiB
+
+=== vpc-vpcbase2   (AppShadowCache=0; no env; 21.11, journal 40.14)
+results/games/re4/vpc-vpcbase2/fdperf-raw.txt: 39 of 50 samples, t_rel 20.0-105.0s, period 1 s, freq 680 MHz
+  only in the BV_* copy of the group (binning/visibility), so not the counter this cfg programmed: PC_RESERVED, PC_STALL_CYCLES_TESS, PC_STALL_CYCLES_UCHE, PC_STALL_CYCLES_VFD_ONLY, PC_WORKING_CYCLES, VFD_STALL_CYCLES_SP_ATTR, VFD_STALL_CYCLES_SP_INFO, VFD_STALL_CYCLES_UCHE, VPC_RESERVED_5, VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC, VPC_STALL_CYCLES_UCHE, VPC_STALL_CYCLES_VFD_WACK, VPC_WORKING_CYCLES
+  busy vs 680 MHz (divided by instances where the block has several):  VPC  91.0%  PC  94.4%  TP  80.2%  SP  94.0%  RB  80.0%
+  CP_BUSY   674.9 M/s   draws/s    12360
+  VPC       BUSY   618.5  VS_BUSY   599.0  PS_BUSY   568.2  LM_FULL_WAIT     7.3 M/s
+  VS/BUSY  96.84%   PS/BUSY  91.86%   LM_FULL_WAIT/BUSY   1.18%   STALL_UCHE/BUSY    nan%
+  VS_INV   262.0 M/s   SP_COMPONENTS   233.1 M/s =  0.89/invocation   NUM_VPCRAM_WRITE   686.9 M/s =  2.62/invocation
+  SP_EXPORT_VPC_TRANS   233.1 M/s   SP_STALL_VPC/SP_BUSY  1.25%
+  PC      IA_PRIM   253.0 M/s   VERTEX_HITS   497.0 M/s =  1.96/prim   IA_VERTICES/IA_PRIM  3.00
+  VFD     TOTAL_VERTICES/TSE_INPUT_PRIM 1.035   NUM_ATTRIBUTES/TOTAL_VERTICES  5.08   DECODED_ATTRIBUTE_BYTES  8.40 GB/s
+  width   TOTAL_VERTICES   262.0 M/s   attribute B/vertex  32.07   SP_COMPONENTS/vertex  0.89   NUM_VPCRAM_WRITE/vertex  2.62
+  DRAM    reads 15.56 GB/s   TP 12.65 GB/s =  81.3%   SP  0.05 GB/s
+  UCHE    WRITE_REQUESTS_SP    48.1 M/s   WRITE_REQUESTS_VPC     0.0 M/s   STALL_ARBITER/BUSY  42.40%
+  starve  VFD_STARVE_UCHE/VFD_BUSY  56.11%   VFD_STALL_VPC_ALLOC/VFD_BUSY  12.43%   TP_STALL_UCHE/TP_BUSY  20.20%
+  PC      BUSY   642.2 M/s   STALL_VPC/PC_BUSY  68.87%   STALL_VFD/PC_BUSY  12.07%   STALL_UCHE/PC_BUSY    nan%
+  UCHE    BUSY  1227.9 M/s   VBIF latency  146.6 cycles/access over  486.4 M samples/s
+fps-vpcbase2.csv: span 0.3..176.5s, window 95-150s
+  n=548 p25=15.25 mean=27.08 min=7.5 max=511.7
+  frametime=60.3ms clocks=[680] gpu_load=98% swap=0.00GiB
+
+=== vpc-cacheon   (AppShadowCache=1; no env; 22.11, journal 40.21)
+results/games/re4/vpc-cacheon/fdperf-raw.txt: 41 of 52 samples, t_rel 20.0-105.0s, period 1 s, freq 680 MHz
+  only in the BV_* copy of the group (binning/visibility), so not the counter this cfg programmed: PC_RESERVED, PC_STALL_CYCLES_TESS, PC_STALL_CYCLES_UCHE, PC_STALL_CYCLES_VFD_ONLY, PC_WORKING_CYCLES, VFD_STALL_CYCLES_SP_ATTR, VFD_STALL_CYCLES_SP_INFO, VFD_STALL_CYCLES_UCHE, VPC_RESERVED_5, VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC, VPC_STALL_CYCLES_UCHE, VPC_STALL_CYCLES_VFD_WACK, VPC_WORKING_CYCLES
+  busy vs 680 MHz (divided by instances where the block has several):  VPC  85.5%  PC  91.9%  TP  82.5%  SP  94.5%  RB  72.2%
+  CP_BUSY   680.0 M/s   draws/s    13670
+  VPC       BUSY   581.7  VS_BUSY   548.4  PS_BUSY   523.4  LM_FULL_WAIT    13.6 M/s
+  VS/BUSY  94.28%   PS/BUSY  89.98%   LM_FULL_WAIT/BUSY   2.34%   STALL_UCHE/BUSY    nan%
+  VS_INV   240.2 M/s   SP_COMPONENTS   248.6 M/s =  1.03/invocation   NUM_VPCRAM_WRITE   716.3 M/s =  2.98/invocation
+  SP_EXPORT_VPC_TRANS   248.6 M/s   SP_STALL_VPC/SP_BUSY  1.24%
+  PC      IA_PRIM   225.9 M/s   VERTEX_HITS   437.4 M/s =  1.94/prim   IA_VERTICES/IA_PRIM  3.00
+  VFD     TOTAL_VERTICES/TSE_INPUT_PRIM 1.063   NUM_ATTRIBUTES/TOTAL_VERTICES  5.29   DECODED_ATTRIBUTE_BYTES  7.93 GB/s
+  width   TOTAL_VERTICES   240.2 M/s   attribute B/vertex  33.03   SP_COMPONENTS/vertex  1.03   NUM_VPCRAM_WRITE/vertex  2.98
+  DRAM    reads 15.20 GB/s   TP 12.46 GB/s =  81.9%   SP  0.08 GB/s
+  UCHE    WRITE_REQUESTS_SP    85.5 M/s   WRITE_REQUESTS_VPC     0.0 M/s   STALL_ARBITER/BUSY  47.11%
+  starve  VFD_STARVE_UCHE/VFD_BUSY  55.89%   VFD_STALL_VPC_ALLOC/VFD_BUSY  16.31%   TP_STALL_UCHE/TP_BUSY  22.78%
+  PC      BUSY   625.1 M/s   STALL_VPC/PC_BUSY  57.35%   STALL_VFD/PC_BUSY  16.70%   STALL_UCHE/PC_BUSY    nan%
+  UCHE    BUSY  1221.3 M/s   VBIF latency  152.4 cycles/access over  475.1 M samples/s
+fps-vpc-cacheon.csv: span 0.3..175.9s, window 95-150s
+  n=548 p25=26.74 mean=27.62 min=22.7 max=36.4
+  frametime=36.3ms clocks=[680] gpu_load=99% swap=0.00GiB

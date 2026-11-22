@@ -1469,3 +1469,61 @@ and no `<desc>`, so "its own RAM could not take a write" stays a reading of the 
 (`docs/fdperf-a7xx.md`). Whether that counter is a cause of the wall or an artefact of a block that is
 busy anyway - 40.9 says the same thing about its own pair, and 40.21's removal experiment is still the
 only causal evidence. And how wide the attribute stream actually is per vertex, which is queue 30.
+
+## 40.27 What one vertex costs is the same on both frames, so the VPC's RAM pressure is a volume problem and not a width problem (queue 30, no run)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** 40.26 left one vertex-side quantity that could still connect the wall to something a driver
+could change. The VPC's own RAM refuses writes for 71.19 % of the block's busy time on the ship frame
+(40.26), that share did not move when the attribute-buffer sizes were forced to the a750 values (40.9),
+and it did not move when the fp16 lowering of varyings was switched off (40.26). What is left is neither
+the buffer nor the encoding but the stream: how much attribute data one vertex brings with it. Queue 30
+named the pair for it - `VPC_SP_COMPONENTS` over `VFD_TOTAL_VERTICES` - and both counters are programmed
+by `tools/fdperf/fdperf.cfg-vpc`, which has already been run on both of this title's frames, so the
+question was answerable from committed dumps without starting the game.
+
+**Method.** No run. `scripts/fdperf-vpc-ratios.py` gained a `width` line (attribute bytes per vertex,
+components per vertex, `NUM_VPCRAM_WRITE` per vertex, over `VFD_TOTAL_VERTICES`), and
+`scripts/attr-width-table.py` -&gt; `results/games/re4/attribute-width.txt` pastes it with the fps window for
+the three arms: `vpc-vpcbase1`, `vpc-vpcbase2` (`AppShadowCache=0`, the 21.11 pair of 40.14) and
+`vpc-cacheon` (`AppShadowCache=1`, the ship frame of 40.21). Same ship stack `4c3cdb210082` in all three,
+one-second windows, counters over `t_rel` 20-105 s with the core pinned at 680 MHz.
+
+**Numbers.**
+
+| arm | frame | p25 fps | `VFD_TOTAL_VERTICES` | attribute B/vertex | attributes/vertex | `SP_COMPONENTS`/vertex | `NUM_VPCRAM_WRITE`/vertex |
+|---|---|---|---|---|---|---|---|
+| `vpc-vpcbase1` | Shadow Cache off | 14.19 | 248.0 M/s | 31.81 | 5.02 | 0.89 | 2.62 |
+| `vpc-vpcbase2` | Shadow Cache off | 15.25 | 262.0 M/s | 32.07 | 5.08 | 0.89 | 2.62 |
+| `vpc-cacheon` | Shadow Cache on | 26.74 | 240.2 M/s | 33.03 | 5.29 | 1.03 | 2.98 |
+
+The two candidate dividers are the same quantity on these windows: `PC_VS_INVOCATIONS` and
+`VFD_TOTAL_VERTICES` print 248.0/248.0, 262.0/262.0 and 240.2/240.2 M/s, which is also what the line above
+them says from the other side (`VFD_TOTAL_VERTICES / TSE_INPUT_PRIM` = 1.035 and 1.063, the 1.032-1.035 of
+the 17.11 runs in journal 38), so it makes no difference which one a per-vertex figure is divided by.
+
+**Verdict.** Per vertex, the two frames are the same workload: the attribute width differs by 3.8 %
+between the slowest arm and the fastest (31.81 against 33.03), the attribute count by 5.4 % (5.02 against
+5.29), while the frame rate differs by 74 % and the submitted primitive volume by a factor of two
+(16.69 M against 8.49 M prims/frame, 40.19). The per-vertex payload is also the same in all eight other
+`cfg-vpc` arms of 21.11 - 40.14 tabulates 2.62 writes and 0.89 components per invocation for every flag
+combination tried there. So the "make each vertex cheaper in the VPC" family has no measured opening in
+this title: the encoding is already fp16-capable and has nothing to lower (40.26), the interpolator setup
+is sized from what the fragment stage reads (40.25, `tu_pipeline.cc:744`), and the width itself does not
+distinguish a 15 fps frame from a 27 fps one. What the wall depends on is volume, which the game decides.
+
+One caveat belongs to the reading rather than the verdict: `SP_COMPONENTS` per vertex is 0.89 and 1.03,
+below one, for a counter whose name says components handed to the fragment stage. `a7xx_perfcntrs.xml`
+gives it no `<desc>` (`docs/fdperf-a7xx.md`), so it cannot be a per-vertex count of varyings in the
+literal sense, and no byte saving can be computed from it - the same reason 40.14 refused to turn
+`PS_BUSY` into a varying claim. The two per-vertex figures used above as *width* are used only as ratios
+between frames, where the unit cancels.
+
+**Does not show.** That the two frames run the same shader programs - no shader identity was measured;
+40.22 showing the rasterizer-discard shape unchanged across the cache switch is adjacent evidence, not
+identity. Whether halving the attribute width would halve `VPCRAM_FULL`: this is an observation that
+width does not differ between two frames of different speed, not a manipulation, and a manipulation would
+need a driver that packs varyings, which this tree does not have. And what the 31.8-33.0 "bytes per
+vertex" is in absolute terms - a ratio of a counter named `..._BYTES` over a vertex count, with no unit
+and no per-format breakdown in the XML.

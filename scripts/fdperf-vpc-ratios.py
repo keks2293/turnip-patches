@@ -88,6 +88,17 @@ def main(path, lo, hi, period_s=1.0, freq_mhz=680.0):
     print(f"  VFD     TOTAL_VERTICES/TSE_INPUT_PRIM {q('PERF_VFD_TOTAL_VERTICES','PERF_TSE_INPUT_PRIM'):5.3f}   "
           f"NUM_ATTRIBUTES/TOTAL_VERTICES {q('PERF_VFD_NUM_ATTRIBUTES','PERF_VFD_TOTAL_VERTICES'):5.2f}   "
           f"DECODED_ATTRIBUTE_BYTES {(g('PERF_VFD_DECODED_ATTRIBUTE_BYTES') or float('nan'))/1e9:5.2f} GB/s")
+    # Queue 30 (journal 40.27): the *width* of the streams, i.e. what one vertex costs, as opposed to
+    # the volume on the lines above (how many vertices per second).  Both dividers are programmed by
+    # cfg-vpc, and in the steady window of all three arms of that cfg the two candidate dividers print
+    # the same value (VS_INV above and TOTAL_VERTICES here: 248.0/248.0, 262.0/262.0, 240.2/240.2 M/s in
+    # vpc-vpcbase1, vpc-vpcbase2, vpc-cacheon), so it makes no difference which of the two is used.
+    # The XML gives these counters no unit, so "attribute B/vertex" is a ratio of a counter named
+    # DECODED_ATTRIBUTE_BYTES over a vertex count, not a decoded byte count (docs/fdperf-a7xx.md).
+    print(f"  width   TOTAL_VERTICES {m('PERF_VFD_TOTAL_VERTICES'):7.1f} M/s   attribute B/vertex "
+          f"{q('PERF_VFD_DECODED_ATTRIBUTE_BYTES','PERF_VFD_TOTAL_VERTICES'):6.2f}   SP_COMPONENTS/vertex "
+          f"{q('PERF_VPC_SP_COMPONENTS','PERF_VFD_TOTAL_VERTICES'):5.2f}   NUM_VPCRAM_WRITE/vertex "
+          f"{q('PERF_VPC_NUM_VPCRAM_WRITE','PERF_VFD_TOTAL_VERTICES'):5.2f}")
     rd = (g('PERF_UCHE_VBIF_READ_BEATS_CH0') or 0) + (g('PERF_UCHE_VBIF_READ_BEATS_CH1') or 0)
     tp = g('PERF_UCHE_VBIF_READ_BEATS_TP')
     print(f"  DRAM    reads {rd*16/1e9:5.2f} GB/s   TP {(tp or float('nan'))*16/1e9:5.2f} GB/s "

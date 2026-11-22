@@ -805,14 +805,6 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
     `VK_KHR_ray_tracing_pipeline` occurs zero times in `src/freedreno/`, so it is not implemented for
     any generation and gen2 loses nothing an A750 has. Nothing here needs it for RE4.
 
-30. **How wide is the attribute stream per vertex** (no build, one arm, `tools/fdperf/fdperf.cfg-vpc`,
-    which already carries `VPC_SP_COMPONENTS` (10) and `VFD_TOTAL_VERTICES` (17)). Why: 40.26 found the
-    VPC's own RAM refusing writes for 71.19 % of its busy time on the ship frame, and 40.9 showed that
-    share does not respond to the attribute-buffer size, so the only vertex-side quantity left is bytes
-    per vertex. Components per vertex on both frames (cache off and on) says whether a width reduction
-    could be worth looking for at all; the fp16 route is already out (40.26) and the dead-output route is
-    closed by the FS-driven layout (`tu_pipeline.cc:744`). `NOT MEASURED`.
-
 29. **The outside "geometry plan" for the 40.21 wall - closed by inspection, recorded so it is not
     re-investigated** (journal 40.25, no build, no run). Its four items: VSC/VPC/PC limits "under-set on
     gen2" - `num_vsc_pipes = 32` in every A7XX entry including FD740's, the VPC sizes that do differ
