@@ -1029,11 +1029,18 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
     belong to - Turnip's per-image lines need `TU_DEBUG=perf`, and whether `0014`'s images are inside
     that class is queue 16's A/B. `tr-noupload` needs a second session (its first ran a light scene).
 
-24. **Re-run the render-mode ladder with the game's Shadow Cache on** (no build; journal 40.19).
-    `sysmem` / `gmem` / `gmem+forcebin` were compared on a frame carrying 16.7 M primitives; with the
-    cache on the same frame carries 8.5 M and `VPC_BUSY` is 85.6 % instead of 91.7 %. What it decides:
-    whether "GMEM is worse in both forms" (40.18) survives when the shadow redraw is gone - if
-    binning wins there, the sysmem default is tuned to the game's worst setting, not to the game.
+24. Closed by journal 40.20 (chain27, `results/games/re4/render-mode-two-frames.txt`): on the cached-
+    shadow frame - half the primitives, `VPC_BUSY` 85.6 % - GMEM is still -14.4 % and forced binning
+    -29.3 % against the default, the same as the -10.4 % / -33.1 % on the heavy frame. The sysmem
+    default is not tuned to the game's worst shadow setting, it is right on both frames, and forced
+    sysmem ties the default again (-0.7 %).
+
+25. **Re-measure the block occupancy on the cached-shadow frame** (open question 21; no build).
+    One 210 s session with `AppShadowCache=1` and `tools/fdperf/fdperf.cfg-vpc`, the sampler that
+    produced 40.14's occupancy table (`VPC` 91.6 / `VS_BUSY` 88.7 / `PS_BUSY` 84.1 %), so the VS/PS
+    occupancy of the 26.7 fps frame exists as a measurement instead of as an assumption carried over
+    from the 15.3 fps frame. It is the input any "what is the wall now" answer needs, and it is the
+    cheapest remaining measurement in this file.
 
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
@@ -1073,6 +1080,7 @@ instead of against a build.
 | 18 | is any of the 22 shading-rate images ever attached to a render pass, and at what rates | NOT MEASURED. Journal 35.1 counts the images and journal 35.2 measures the capability, but a usage bit is a declaration: the driver has no log line for `subpass->fsr_attachment != VK_ATTACHMENT_UNUSED`, so the check needs one added `if` plus a build, then a game run. Without it, "the game uses VRS" stays an inference, and not even the driver's own per-subpass register write can be observed from a log |
 | 19 | what did the 2450.3 MiB that `0014` v1 moved out of linear buy in traffic or fps | NOT MEASURED, queue 16 (no new patch: a B build without `0014` made in a copy of the tree - `git apply -R` does not work, open question 20 - then one A/B session). Journal 39 sizes what no rule can move (the 1630.8 MiB residue, required linear by the Vulkan class rule plus `fd6_pipe2swap()`), so this is the only no-list number left. The committed profile that looks like an answer - `results/games/re4/mesa27-vertex/steady-state.txt`, TP 12.0 GB/s and 81 % of DRAM reads - was sampled 17.11, and `0014` is journal 21.12, dated 18.11: that run is a with-everything-linear baseline, not a before/after |
 | 20 | does the committed `patches/0014-turnip-mutable-no-list-tiling.patch` describe the tree that built the shipped `c17d02bcaae9…` | NOT SETTLED. Journal 39.7: `git apply -R --check` of that file fails on the recorded ship-stack tree at `tu_formats.cc:261`, and the texts differ by function names (`tu6_mutable_compat_class` vs the tree's static `mutable_compat_class`/`mutable_views`) and by comment wording. The difference cannot change a result, so no verdict in journal 39 depends on it - but it decides how queue 16 makes its B build, and a shipped patch file that is not the built text is a reference-table error worth fixing once, by regenerating the file from the tree and recording in `docs/release.md` which hash it belongs to |
+| 21 | what is the wall at 26.7 fps, i.e. with the game's Shadow Cache on | NOT MEASURED. Every block-occupancy number in journals 38-40 (VPC 91.7 %, VS 88.7 %, PS 84.1 %) was sampled with the cache off (journal 40.19); on the cached frame `VPC_BUSY` is 85.5 % and MangoHud's `gpu_load` column is a median of 99.0 over 549 samples in `fps-sc-default.csv` (95-150 s), so the frame is still GPU-bound and quotable numbers for the other blocks are simply missing for this regime. Queue 25 is one session with the full-block sampler and `AppShadowCache=1`. What it decides: whether the "+9…13 % ceiling for any non-geometry driver fix" of 40.10/40.15 is still the right ceiling when the shadow redraw is gone |
 
 ## Pitfalls (reminder)
 

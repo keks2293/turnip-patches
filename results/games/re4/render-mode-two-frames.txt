@@ -1,0 +1,21 @@
+# Render-mode ladder measured on two frames of Resident Evil 4 Gold Edition (re4.exe,
+#       D3D12 via vkd3d-proton 3.1.0, 2560x1440).  Registry: results/games/README.md
+# driver: build/out/libvulkan_freedreno.so sha256 4c3cdb210082 (ship stack) in every arm;
+#       frame 'cache off' = AppShadowCache=0 (journals 40.16/40.18), 'cache on' = 1 (chain27)
+# sampler: tools/fdperf/fdperf.cfg-tse3; counter window t_rel 20-105 s at the pinned clock;
+#       fps = p25 over MangoHud elapsed 95-150 s
+# regenerate: scripts/render-mode-cache-table.py > results/games/re4/render-mode-two-frames.txt
+
+| frame | mode | TU_DEBUG as delivered | p25 fps | TSE in M/s | prims/frame | VSC tiles /s | VSC busy % | VPC busy % | windows |
+|---|---|---|---|---|---|---|---|---|---|
+| cache off | forced sysmem | 0x30009 |   15.18 |   253.81 |  16.72 M |      n/a |   0.38 |  91.63 | 40 |
+| cache off | driver default | 0x30001 (raw log, not in git) |   15.34 |   254.06 |  16.56 M |     0.00 |   0.38 |  91.51 | 28 |
+| cache off | GMEM, binning not forced | 0x31001 |   13.74 |   245.52 |  17.87 M |      n/a |   0.08 |  91.98 | 40 |
+| cache off | GMEM + forced binning | 0x31011 (raw log, not in git) |   10.27 |   215.36 |  20.96 M |    53.22 |  12.47 |  93.12 | 40 |
+| cache on | forced sysmem | 0x30009 |   26.54 |   224.91 |   8.47 M |      n/a |   0.59 |  85.59 | 39 |
+| cache on | driver default | NOT RECORDED |   26.73 |   225.03 |   8.42 M |     0.00 |   0.59 |  85.47 | 40 |
+| cache on | GMEM, binning not forced | 0x31001 |   22.89 |   220.44 |   9.63 M |      n/a |   0.18 |  86.85 | 40 |
+| cache on | GMEM + forced binning | 0x31011 |   18.90 |   192.43 |  10.18 M |    33.51 |   9.57 |  87.47 | 40 |
+
+`prims/frame` divides the per-second TSE input rate by the p25 fps of the same arm; the VSC
+tile counter has no verified unit (journal 40.13), it is here as a yes/no on binning starting.

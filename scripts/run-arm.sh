@@ -31,7 +31,19 @@ GPID=$!
 
 echo "game launched $(date +%T)"
 sleep 60
+# The screenshot is recorded with the panel state it was taken in.  A powered-off output yields a
+# black frame (a capture with the panel on has thousands of distinct colours, one with it off has
+# 1), so without this line a black shot cannot be told apart from a black screen.
+DPMS="$(cat /sys/class/drm/card*-*/dpms 2>/dev/null | paste -sd/ -)"
 python3 scripts/shot.py "$RAW/shot-$TAG.png" 30 > /dev/null 2>&1
+SHOT_COLS="$(python3 - "$RAW/shot-$TAG.png" <<'PY' 2>/dev/null
+import sys
+from PIL import Image
+im = Image.open(sys.argv[1]).convert("RGB").resize((160, 90))
+px = im.get_flattened_data() if hasattr(im, "get_flattened_data") else im.getdata()
+print(len(set(px)))
+PY
+)"
 scripts/fdperf-sample.sh 110 1000 "$RAW/fdperf-$TAG.txt" \
     "${SAMPCFG:-tools/fdperf/fdperf.cfg-vpc}" > "/tmp/opencode/sampler-$TAG.out" 2>&1
 
@@ -54,6 +66,9 @@ SO_SHA="$(sha256sum "$ICD_JSON" 2>/dev/null | cut -c1-12)"
   echo "# driver:  ${ICD_JSON:-<unresolved>} sha256=${SO_SHA:-unknown}"
   echo "# cfg:     ${SAMPCFG:-tools/fdperf/fdperf.cfg-vpc}"
   echo "# env:     ${GAMEARGS[*]:-<none>}   (delta against the plain ship stack)"
+  echo "# shot:    $RAW/shot-$TAG.png, ${SHOT_COLS:-?} distinct colours at 160x90; panel dpms=$DPMS"
+  echo "#           (a capture of this compositor with the panel off is black; the content check is"
+  echo "#            counter reproduction between arms, see docs/howto-measure.md)"
   echo "# chain:   $(basename "${CHAIN:-interactive}")"
   echo "# source:  results/raw/game-patched-$TAG.log (gitignored), fps: $OUT/fps-$TAG.csv"
 } > "$OUT/$TAG/meta.txt"

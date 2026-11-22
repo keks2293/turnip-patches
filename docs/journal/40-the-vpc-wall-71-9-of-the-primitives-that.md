@@ -1056,3 +1056,56 @@ the geometry side). And one method note: the `shot-*.png` of these runs are byte
 other and show a black screen with a cursor - `scripts/shot.py` through the portal does not capture
 this game on this compositor - so the content check in this entry is the counter reproduction, not a
 screenshot.
+
+**Correction, 22.11 21:20, of that screenshot note.** The wording above says the capture path "does not
+capture this game on this compositor". It does capture: a screenshot taken on 21.11 with the same script
+contains the desktop (11 654 distinct colours), and the black frames here were taken with the panel
+powered off (`/sys/class/drm/card0-DP-1/dpms` = `Off`) - a capture in that state is pure black with no
+cursor (1 distinct colour), and with a game presenting it is black plus the ~12x20 cursor sprite. While
+the panel is off nothing else can capture either: `ffmpeg -f kmsgrab` fails with `No usable planes found`
+because the compositor holds no framebuffer at all (`/dev/dri/card0`: `connectors=3 crtcs=3 fbs=0`). The
+method conclusion stands - the content check is the counter reproduction - but for a different, cheaper
+reason: leave the panel on and the screenshot is a content check again. `scripts/run-arm.sh` now records
+the panel's dpms state and the shot's colour count in every `meta.txt`, and `docs/howto-measure.md` owns
+the details.
+
+## 40.20 The render-mode ladder measured on the light frame: the verdict survives, so the sysmem default is not tuned to the game's worst setting (queue 24, chain27)
+
+**Question.** 40.16 and 40.18 settled the three render modes (forced sysmem, driver default, GMEM,
+GMEM + forced binning) and 40.19 showed that all of it was measured with the game's Shadow Cache off,
+that is, on a frame carrying 16.7 M primitives instead of 8.4 M and with `VPC_BUSY` at 91.7 % instead
+of 85.6 %. If binning or GMEM won on the cheaper frame, the shipped sysmem default would be a
+compromise made against the game's worst setting rather than against the game. What does the ladder
+look like on the light frame?
+
+**Method.** `/tmp/opencode/chain27.sh`, 20:33-20:49 on 22.11, ship stack `4c3cdb210082` in every arm,
+game Resident Evil 4 Gold Edition (`re4.exe`, D3D12 -> vkd3d-proton 3.1.0, 2560x1440), sampler
+`tools/fdperf/fdperf.cfg-tse3`, one 210 s session per arm. `AppShadowQuality=1 AppShadowCache=1` is
+written into `local_config.ini` before each launch and the file is restored after the chain
+(`/tmp/opencode/local_config.re4.orig3`), and the settings line is appended to each arm's `meta.txt`,
+so the arms cannot be quoted without their game setting. Arms and the flag as the driver reported it:
+`sc-default` (no `TU_DEBUG`), `sc-sysmem` (`TU_DEBUG=0x30009`), `sc-gmem` (`0x31001`), `sc-forcebin`
+(`0x31011`).
+
+**Numbers.** `results/games/re4/render-mode-two-frames.txt` - both ladders side by side, regenerate
+with `scripts/render-mode-cache-table.py`; raw dumps `results/games/re4/sc-{default,sysmem,gmem,forcebin}/`,
+fps `results/games/re4/fps-sc-*.csv`. On the light frame: default 26.73 p25 / 8.42 M prims per frame /
+`VPC_BUSY` 85.47 %; forced sysmem 26.54 / 8.47 M / 85.59 %; GMEM without binning 22.89 / 9.63 M /
+86.85 %; GMEM with forced binning 18.90 / 10.18 M / 87.47 %, with `VSC_INPUT_TILES` 33.51 M/s against
+0.00 in the other three. Against the default arm, forced binning is -29.3 % on the light frame and
+-33.1 % on the heavy one, GMEM without binning -14.4 % and -10.4 %; the primitives forced binning adds
+over the default are 1.24x on both frames.
+
+**Verdict.** The order does not change and neither does the size of the penalty: on a frame with half
+the geometry, GMEM is still the slower mode and forced binning still costs about a third of the frame
+rate. So the sysmem default is not an artefact of the game's worst shadow setting - it is right on
+both frames, and no render-mode change follows from 40.19. The forced-sysmem arm again ties the
+default (-0.7 % light, -1.0 % heavy), which is 40.16's "the game is already where sysmem puts it"
+result reproduced a second time on a different frame.
+
+**Does not show.** Whether the driver's own reason for refusing to bin is the *right* reason - the
+histogram of `force_render_mode_reason` is still unmeasured (queue 22, and its patch still unrun), so
+this entry says GMEM loses, not why the driver's choice to stay in sysmem cannot be improved by
+binning a subset of passes. And the same caveat as 40.19 for the absolute numbers: these are the
+game's cached-shadow frame, so 26.7 is not the 15.3 of journals 38-40 and the two sets are only
+comparable within their own frame.

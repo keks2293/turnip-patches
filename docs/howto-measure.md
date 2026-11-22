@@ -78,11 +78,21 @@ measured steady state: `docs/fdperf-a7xx.md`.
 ## What a session records, and what it cannot
 
 `scripts/run-arm.sh` keeps three things per arm: the counter dump, the MangoHud csv and `meta.txt`
-(what this arm changed). It also saves `shot-<tag>.png` - and on this rig that file is **not** a
-content check: `scripts/shot.py` goes through the desktop portal, and the capture comes back black
-with a cursor, byte-identical from run to run (journal 40.19). So "is this the same scene" is answered
-by the counters reproducing between arms (journal 40.19: 24.36 and 24.37 p25, 8.44 and 8.46 M
-primitives per frame, four minutes apart), never by the picture.
+(what this arm changed). It also saves `shot-<tag>.png`, and whether that file is a content check
+depends on the **panel**: a capture of this compositor taken with the output powered off
+(`cat /sys/class/drm/card0-DP-1/dpms` -> `Off`) is black - 1 distinct colour, no cursor - and with
+the panel on the same path returns the real scene (11 654 distinct colours, 21.11). So a black shot
+usually means "the screen was off", not "the game is broken", and `run-arm.sh` now writes the panel
+state and the colour count into every `meta.txt`.
+
+While the panel is off, nothing else can capture either: ffmpeg's `kmsgrab` fails with `No usable
+planes found`, because the compositor holds **0 framebuffers** (`/dev/dri/card0`: connectors=3
+crtcs=3 fbs=0). A capture taken while a game presents, panel off, is black plus a ~12x20 cursor
+sprite - the cursor plane, not the scene.
+
+So the content check in this repository is the counters reproducing between arms (journal 40.19:
+24.36 and 24.37 p25, 8.44 and 8.46 M primitives per frame, four minutes apart), never the picture.
+A screenshot is only usable if someone leaves the panel on for the run.
 
 ## Driver builds
 

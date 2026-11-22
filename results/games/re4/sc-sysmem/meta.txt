@@ -1,0 +1,10 @@
+# game:    Resident Evil 4 Gold Edition - /run/media/armada/Slim/Games/Resident.Evil.4.Gold.Edition-InsaneRamZes/re4.exe
+# title:   re4
+# tag:     sc-sysmem
+# date:    2026-11-22T20:40:53+08:00
+# driver:  /var/home/armada/opencode/build/out/libvulkan_freedreno.so sha256=4c3cdb210082
+# cfg:     tools/fdperf/fdperf.cfg-tse3
+# env:     TU_DEBUG=startup,sysmem,perf,log_skip_gmem_ops   (delta against the plain ship stack)
+# chain:   interactive
+# source:  results/raw/game-patched-sc-sysmem.log (gitignored), fps: results/games/re4/fps-sc-sysmem.csv
+# game settings: AppShadowQuality=1 AppShadowCache=1
