@@ -1,6 +1,6 @@
 # Plan: what to check (new patch candidates + re-check of the "dead ends")
 
-Updated 22.11.2026. Two things are live here: the **queue** below, ordered by what unblocks what, and
+Updated 23.11.2026. Two things are live here: the **queue** below, ordered by what unblocks what, and
 the **open questions** table at the end. A closed branch is not repeated - it has an ADR in
 `docs/decisions/` or a journal entry, and the queue line says so in two sentences. The four
 "re-check the dead end" blocks of 17-18.11 are closed and moved to
@@ -806,6 +806,16 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
     provide in software; if the answer is "a dispatch path we do not have", close it as not our work.
     `NOT MEASURED`, and it is not on the fps path.
 
+29. **The outside "geometry plan" for the 40.21 wall - closed by inspection, recorded so it is not
+    re-investigated** (journal 40.25, no build, no run). Its four items: VSC/VPC/PC limits "under-set on
+    gen2" - `num_vsc_pipes = 32` in every A7XX entry including FD740's, the VPC sizes that do differ
+    (`has_gmem_vpc_attr_buf`, `0x20000`/`0xc000`) measured as a zero twice (15.2, 40.9), and no geometry
+    tuning register is written by the driver at all; DGC - Turnip has no implementation and the shipped
+    `d3d12core.dll` names the extension (`results/vkd3d-ext-strings.txt`), so the gap is real but it is
+    CPU-side work against a GPU-side wall; async compute via `tu_knl_kgsl.cc` - there is no compute-only
+    queue family here and no `/dev/kgsl-3d0` (`results/queues-a740.txt`); `VK_EXT_descriptor_heap` - the
+    name occurs zero times in the shipped D3D12 layer, so RE4 cannot use it through this stack.
+
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
 (ADR-0010), BC + UBWC (ADR-0004), any 8bpp UBWC patch (ADR-0007), removing any shipped patch
@@ -847,6 +857,7 @@ instead of against a build.
 | 21 | what is the wall at 26.7 fps, i.e. with the game's Shadow Cache on | ANSWERED 22.11, journal 40.21 (`results/games/re4/occupancy-two-frames.txt`): the same wall with 6 points of slack - `VPC_BUSY` 85.54 % against 91.57 %, `VS_BUSY` 80.65 %, `PS_BUSY` 76.97 %, and the primitive collector waits on the vertex path 12.7 points less. No block goes from idle to busy, so the "+9…13 % for a non-geometry driver fix" ceiling of 40.10/40.15 stands on this frame too |
 | 22 | what do `LRZ_BUSY_CYCLES`, `RAS_STALL_CYCLES_LRZ` and `RB_STARVE_CYCLES_LRZ_TILE` actually count on A7XX | NOT ANSWERED, and 40.23 is the reason it is a question: two arms with `TU_DEBUG=nolrz` (mask `0x81`, `LRZ_PRIM_KILLED_BY_LRZ` 0.00 against 1.21 M/s) read 74.82 % and 74.99 % `LRZ_BUSY`, i.e. indistinguishable from LRZ on. Deciding it needs a workload where LRZ demonstrably rejects - a synthetic depth-overdraw pass in the rig with and without `nolrz`, watching the killed counter and the busy counter together - not another RE4 session. Until then no document in this repository may quote those three counters as a cost |
 | 23 | is `alias.rt` correct on A740, given that its two registers are declared for A7XX | NOT MEASURED, queue 26. `ir3_alias.c:768` refuses on `props.has_alias_rt`, which only `a7xx_gen3` sets, while `tu_shader.cc:2890` programs `SP_PS_OUTPUT_CONST_CNTL`/`SP_PS_OUTPUT_CONST_MASK` for any A7XX and `a6xx.xml:4242`/`:4245` declare both `variants="A7XX-"`. Needs one line in the `TU_FORCE_PROPS` table (queue 16's build), then an fps A/B and a picture check with the panel on |
+| 24 | does RE4's shader set push varyings through the VPC that the fragment stage never reads (the one live sub-point of the outside geometry note of 23.11) | NOT MEASURED, journal 40.25. The rest of that note is closed, and the CPU-side part of it is closed by a measurement rather than by an argument: halving the game's own geometry halves the work - 16.69 M prims/frame at 15.26 fps against 8.49 M at 26.57 fps (`results/games/re4/shadow-cache-ab.txt`) - so the frame is geometry-limited and CPU-side work (DGC, `descriptor_heap`) has no room in it. A check of the varyings would count declared against read varying components per program from a one-off dump of the game's shader programs, which needs the driver's shader cache, not another fps run |
 
 ## Pitfalls (reminder)
 

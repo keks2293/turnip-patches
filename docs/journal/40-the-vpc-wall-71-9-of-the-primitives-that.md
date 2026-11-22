@@ -1334,3 +1334,71 @@ notes): no artifact here can confirm or refute those, and the ship stack's own W
 was measured in journals 38-40 as a zero. And what the game asks for: `results/device-features-a740.txt`
 is one `vulkaninfo` instance from a shell, with no wine and no vkd3d-proton, so it says what the driver
 offers and nothing about what RE4 requests.
+
+## 40.25 The outside geometry plan, item by item: the VSC runs nothing on this frame, the VPC knobs are shared or already swept, and none of the three driver features it asks for is reachable from RE4 (queue 29, no run)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** A third outside analysis, forwarded 23.11, reads the 40.21 wall correctly as geometry and
+then proposes four things to build: (1) audit what `a7xx_gen2` allegedly runs lower than `a7xx_gen3` in
+the vertex/binning path (`num_vsc_pipes`, `VSC_BIN_SIZE`, `PRIM_ALLOC_THRESHOLD`, `VPC_RAST_STREAM_CNTL`,
+"cull before VPC"); (2) finish `VK_EXT_device_generated_commands` so RE Engine's GPU culling stops
+feeding the vertex path; (3) async compute on a second queue, "the RADV ACE layout", via
+`tu_queue.cc` + `tu_knl_kgsl.cc`; (4) implement `VK_EXT_descriptor_heap`, "Adreno is ready and the common
+NIR part is already written". Decided by inspection against the tree and against the binaries this stand
+runs, with no build: each item is either already measured, or cannot be reached from this game.
+
+**Method.** `grep` over `../mesa27-src/src/freedreno/`; the queue families of both drivers in
+`results/queues-a740.txt` (`scripts/queues-a740.sh`, which also records the kernel nodes and the absence
+of `/dev/kgsl-3d0`); the D3D12 layer's own binaries in `results/vkd3d-ext-strings.txt`
+(`scripts/vkd3d-ext-strings.py`, a byte search for extension names); the counter table of 40.21 in
+`results/games/re4/occupancy-two-frames.txt`.
+
+**Numbers.** (1) *VSC*: the measured frame runs no binning or visibility pass at all - 40.12 has the VSC
+at ~0.4 % of the core with the BV banks at 0 primitives/s, and 40.16 that forcing GMEM plus HW binning
+takes the frame from 15.3 to 10.2 fps - so there is no stream to overflow; and `num_vsc_pipes = 32` in
+all four A7XX device entries, FD740's own included (`freedreno_devices.py:1246`, `:1266`, `:1326`,
+`:1348`), so there is no per-generation value to raise. *VPC*: the only VPC-named properties that differ
+between the generations are `has_gmem_vpc_attr_buf` with `sysmem_vpc_attr_buf_size = 0x20000` and
+`gmem_vpc_attr_buf_size = 0xc000` (`:854-856`), which are forceable through a special case in the force
+table (`tu_device.cc:1799-1805`) and were measured twice: 15.2 gives vkmark noise of 0-4 %, and 40.9
+gives RE4 "delivers, the driver logs the a750 sizes, moves nothing". `prim_alloc_threshold = 0x7` and
+`has_pc_dgen_so_cntl` live in `a7xx_base` (`:751`, `:792`), so gen2 has them today. *PC/VFD registers*:
+`PC_MODE_CNTL 0x1f1f`, `PC_DBG_ECO_CNTL 0x20080000`, `A7XX_PC_UNKNOWN_9E24 0x21fc7f00` and
+`A7XX_VFD_DBG_ECO_CNTL 0` exist in exactly one table, `a730_raw_magic_regs` (`:885-905`), used by the
+three A730 entries (`:1129`, `:1149`, `:1168`) and by no gen2 or gen3 part, and
+`grep -rn "PC_MODE_CNTL\|PC_DBG_ECO\|VFD_DBG_ECO\|VPC_CNTL\|RB_VSC_CNTL" src/freedreno/vulkan/` returns
+nothing - the driver writes no geometry tuning register, gated or otherwise. (2) *DGC*: defined in
+`vk.xml` once, implemented in `src/amd/` (2 files) and `src/intel/` (1) and in `src/freedreno/` (0), and
+the layer here knows the name - `lib/wine/vkd3d-proton/x86_64-windows/d3d12core.dll` carries
+`VK_EXT_device_generated_commands` once, `VK_EXT_descriptor_buffer` twice,
+`VK_EXT_mutable_descriptor_type` twice. (4) *descriptor_heap*: same picture in the tree (amd 4, intel 1,
+freedreno 0), but the name occurs zero times in all 12 scanned binaries, including the `d3d12core.dll`
+that carries the other three. (3) *queues*: both drivers expose two families with `queueCount = 1` each,
+family 0 `GRAPHICS | COMPUTE | TRANSFER | SPARSE_BINDING`, family 1 `SPARSE_BINDING` only
+(`results/queues-a740.txt`) - there is no compute-only family for a D3D12 compute queue to land on, and
+`/dev/kgsl-3d0` is absent while `/dev/dri/renderD128` and `/dev/dri/card0` are present with driver name
+`msm`, so `tu_knl_kgsl.cc` is not code this machine executes.
+
+**Verdict.** Items (3) and (4) cannot reach RE4 on this stand: there is no second queue to hand out and
+the shipped D3D12 layer never names `VK_EXT_descriptor_heap`. Item (2) is a real gap that both sides
+would meet in - the layer names DGC, Turnip has no implementation - but it is CPU- and CP-side work,
+while the limiter of this frame is geometry by the game's own measure: 16.69 M prims/frame at 15.26 fps
+against 8.49 M at 26.57 fps (`results/games/re4/shadow-cache-ab.txt`), with `VPC_BUSY` 91.57 % and 85.54 %
+and the primitive collector waiting on it 65.46 pp and 52.72 pp
+(`results/games/re4/occupancy-two-frames.txt`). Item (1) is the one the 40.24 audit already
+answered in general and this entry answers for the vertex path specifically: the gen2 table is not
+missing a geometry limit - the values are shared in `a7xx_base` or identical across A7XX, and the single
+property that does differ was measured as a zero twice. Nothing here changes the wall of 40.21 or the
+queue 26 candidate.
+
+**Does not show.** Whether a second queue would overlap with the graphics queue on this GPU: that is
+scheduler and firmware behaviour, and `results/queues-a740.txt` records only what the driver offers an
+application. Whether RE4 issues `ExecuteIndirect` at all - the binary scan shows that the layer knows the
+DGC name, not that the game uses it. Whether the byte scan sees every name (a name kept only in a
+compressed table would be missed); the three names found in `d3d12core.dll` show the method reaches that
+file, which is why the fourth name's absence is quoted as a measurement. Nothing about how much CPU time
+the frame leaves unused - the geometry dependence above names the limiter, it does not measure the CPU.
+And whether RE4's shaders push
+varyings the fragment stage never reads through the VPC - the one sub-point of the note with no artifact
+either way, kept as open question 24.

@@ -1003,7 +1003,7 @@
     "results/games/re4/mesa27-vertex/fdperf-raw.txt",
     "results/games/re4/game-patched-algopg.log"
    ],
-   "lines": 1337,
+   "lines": 1405,
    "headings": [
     "## 40.1 What was run",
     "## 40.2 The discard, and what kind of discard it is",
@@ -1028,7 +1028,8 @@
     "## 40.21 On the cached-shadow frame the vertex path is still the busiest block, with 6 points of slack it cannot use (queue 25, chain28)",
     "## 40.22 The primitives the cache removed were mostly ones that survive the rasterizer, and the discard reasons keep their shape (queue 18 continued, chain29)",
     "## 40.23 Turning LRZ off changes nothing, and the counters that made it look expensive do not follow the switch (queues: the LRZ question, chains 30-34)",
-    "## 40.24 An outside list of features supposedly \"locked behind a7xx_gen3\" for A740: every A8XX gate in the tree is a register difference, and the one software candidate left is `has_alias_rt` (no run)"
+    "## 40.24 An outside list of features supposedly \"locked behind a7xx_gen3\" for A740: every A8XX gate in the tree is a register difference, and the one software candidate left is `has_alias_rt` (no run)",
+    "## 40.25 The outside geometry plan, item by item: the VSC runs nothing on this frame, the VPC knobs are shared or already swept, and none of the three driver features it asks for is reachable from RE4 (queue 29, no run)"
    ],
    "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
    "verdict_source": "journal 40"

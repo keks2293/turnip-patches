@@ -1,0 +1,38 @@
+# Queue families and command submission on this Adreno A740 (FD740, a7xx_gen2)
+# date: 2026-11-23T04:34:31+08:00
+# regenerate: scripts/queues-a740.sh > results/queues-a740.txt
+# run 'system': the distribution's driver   libvulkan_freedreno.so
+# run 'ours'  : VK_ICD_FILENAMES=/var/home/armada/opencode/build/out/freedreno_icd.json  (ship stack sha256 4c3cdb210082)
+# note: 'vulkaninfo --show-all' on this machine dies with SIGSEGV part way through its own dump
+#       (exit 139, same with both drivers, and at a different line each run), so it is run here
+#       through a pipe and its stdout is taken as far as it goes. The queue-family section always
+#       lands: it is early, and it ends at VkPhysicalDeviceMemoryProperties. Nothing below this
+#       script's own section headers comes from the crashing tool.
+
+
+=== system
+    queueProperties[0]:
+    queueCount                  = 1
+    queueFlags                  = QUEUE_GRAPHICS_BIT | QUEUE_COMPUTE_BIT | QUEUE_TRANSFER_BIT | QUEUE_SPARSE_BINDING_BIT
+    timestampValidBits          = 48
+    queueProperties[1]:
+    queueCount                  = 1
+    queueFlags                  = QUEUE_SPARSE_BINDING_BIT
+    timestampValidBits          = 48
+
+=== ours
+    queueProperties[0]:
+    queueCount                  = 1
+    queueFlags                  = QUEUE_GRAPHICS_BIT | QUEUE_COMPUTE_BIT | QUEUE_TRANSFER_BIT | QUEUE_SPARSE_BINDING_BIT
+    timestampValidBits          = 48
+    queueProperties[1]:
+    queueCount                  = 1
+    queueFlags                  = QUEUE_SPARSE_BINDING_BIT
+    timestampValidBits          = 48
+
+=== kernel interfaces available to the driver
+    /dev/dri/renderD128    /dev/dri/renderD128
+    /dev/dri/card0         /dev/dri/card0
+    /dev/kgsl-3d0          absent
+    DRM driver name: msm dev=ae01000.display-controller unique=ae01000.display-controller
+    driver backend in use: tu_knl_drm_msm.cc (DRM/msm); tu_knl_kgsl.cc needs /dev/kgsl-3d0

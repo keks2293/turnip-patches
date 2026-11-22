@@ -1,0 +1,26 @@
+# Extension and feature names present in the shipped vkd3d-proton / vkd3d binaries
+# regenerate: python3 scripts/vkd3d-ext-strings.py > results/vkd3d-ext-strings.txt
+# searched: every regular file under /var/home/armada/opencode/proton-patched/files/lib*/{vkd3d,wine/vkd3d-proton}/**
+# method: byte search for the ASCII and UTF-16LE form of each name; see the script header
+# for what a hit and a miss each mean
+# 12 files, 17 MiB total
+
+                                                     descriptor_heap           descriptor_buffer         device_generated_commands mutable_descriptor_type   shader_object             
+lib/vkd3d/i386-windows/libvkd3d-1.dll                0                         0                         0                         1                         0                         
+lib/vkd3d/i386-windows/libvkd3d-shader-1.dll         0                         0                         0                         0                         0                         
+lib/vkd3d/i386-windows/libvkd3d-utils-1.dll          0                         0                         0                         0                         0                         
+lib/vkd3d/x86_64-windows/libvkd3d-1.dll              0                         0                         0                         1                         0                         
+lib/vkd3d/x86_64-windows/libvkd3d-shader-1.dll       0                         0                         0                         0                         0                         
+lib/vkd3d/x86_64-windows/libvkd3d-utils-1.dll        0                         0                         0                         0                         0                         
+lib/wine/vkd3d-proton/aarch64-windows/d3d12.dll      0                         0                         0                         0                         0                         
+lib/wine/vkd3d-proton/aarch64-windows/d3d12core.dll  0                         2                         1                         2                         0                         
+lib/wine/vkd3d-proton/i386-windows/d3d12.dll         0                         0                         0                         0                         0                         
+lib/wine/vkd3d-proton/i386-windows/d3d12core.dll     0                         2                         1                         2                         0                         
+lib/wine/vkd3d-proton/x86_64-windows/d3d12.dll       0                         0                         0                         0                         0                         
+lib/wine/vkd3d-proton/x86_64-windows/d3d12core.dll   0                         2                         1                         2                         0                         
+
+# other names, same table, printed only where non-zero:
+   lib/vkd3d/i386-windows/libvkd3d-1.dll  sparseResidencyImage3D = 1
+   lib/vkd3d/i386-windows/libvkd3d-1.dll  sparseResidencyImage2D = 1
+   lib/vkd3d/x86_64-windows/libvkd3d-1.dll  sparseResidencyImage3D = 1
+   lib/vkd3d/x86_64-windows/libvkd3d-1.dll  sparseResidencyImage2D = 1
