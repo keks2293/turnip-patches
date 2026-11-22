@@ -1,0 +1,17 @@
+# Shadow Cache A/B in Resident Evil 4 Gold Edition (re4.exe), D3D12 via vkd3d-proton 3.1.0,
+#       2560x1440 display mode; proton-cachyos-11.0-arm64.  Registry: results/games/README.md
+# driver: build/out/libvulkan_freedreno.so sha256 4c3cdb210082 (ship stack) in all four arms;
+#       the delta between arms is the game's own local_config.ini, not the driver or the env
+# sampler: tools/fdperf/fdperf.cfg-tse3, counter window t_rel 20-105 s at the pinned clock
+# chains: /tmp/opencode/chain25.sh (sh-q0, sh-q3), /tmp/opencode/chain26.sh (sh-c0, sh-c1)
+# regenerate: scripts/shadow-cache-table.py > results/games/re4/shadow-cache-ab.txt
+
+| arm | game settings | p25 fps 70-84s | p25 fps 95-150s | prims/frame (TSE in / p25) | TSE in M/s | TSE vis % | TSE 0-pixel M/s | VPC busy % | PC stall on VPC % | DRAM read GB/s | windows kept/dropped |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| sh-c0 | AppShadowQuality=1 AppShadowCache=0 (as shipped here) |  15.13 (n=140) |  15.26 (n=549) |  16.69 M |   254.79 |   28.12 |    69.03 |  91.68 |  68.82 |    15.66 | 38 / 2 |
+| sh-c1 | AppShadowQuality=1 AppShadowCache=1 |  26.41 (n=140) |  26.57 (n=548) |   8.49 M |   225.44 |   20.18 |    82.41 |  85.57 |  57.21 |    15.19 | 41 / 0 |
+| sh-q0 | AppShadowQuality=0 AppShadowCache=1 |  23.91 (n=140) |  24.36 (n=548) |   8.44 M |   205.63 |   30.25 |    55.71 |  86.58 |  62.02 |    13.96 | 40 / 0 |
+| sh-q3 | AppShadowQuality=3 AppShadowCache=1 |  24.15 (n=140) |  24.37 (n=548) |   8.46 M |   206.11 |   30.32 |    56.14 |  86.55 |  62.13 |    13.97 | 37 / 3 |
+
+prims/frame is a quotient (per-second TSE input over p25 fps of the same arm), not a counter;
+it is the column that compares two arms whose frame rates differ.

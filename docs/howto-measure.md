@@ -75,6 +75,15 @@ RB `/4`; fdperf silently ignores config rows beyond the group's table size, whic
 the UBWC counters are missing from every old run. Details, clock domains and the
 measured steady state: `docs/fdperf-a7xx.md`.
 
+## What a session records, and what it cannot
+
+`scripts/run-arm.sh` keeps three things per arm: the counter dump, the MangoHud csv and `meta.txt`
+(what this arm changed). It also saves `shot-<tag>.png` - and on this rig that file is **not** a
+content check: `scripts/shot.py` goes through the desktop portal, and the capture comes back black
+with a cursor, byte-identical from run to run (journal 40.19). So "is this the same scene" is answered
+by the counters reproducing between arms (journal 40.19: 24.36 and 24.37 p25, 8.44 and 8.46 M
+primitives per frame, four minutes apart), never by the picture.
+
 ## Driver builds
 
 ```sh

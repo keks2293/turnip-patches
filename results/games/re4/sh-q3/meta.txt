@@ -1,0 +1,10 @@
+# game:    Resident Evil 4 Gold Edition - /run/media/armada/Slim/Games/Resident.Evil.4.Gold.Edition-InsaneRamZes/re4.exe
+# title:   re4
+# tag:     sh-q3
+# date:    2026-11-22T11:01:31+08:00
+# driver:  /var/home/armada/opencode/build/out/libvulkan_freedreno.so sha256=4c3cdb210082
+# cfg:     tools/fdperf/fdperf.cfg-tse3
+# env:     <none>   (delta against the plain ship stack)
+# chain:   interactive
+# source:  results/raw/game-patched-sh-q3.log (gitignored), fps: results/games/re4/fps-sh-q3.csv
+# game settings: AppShadowQuality=3 AppShadowCache=1

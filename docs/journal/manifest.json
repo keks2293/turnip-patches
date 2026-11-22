@@ -1003,7 +1003,7 @@
     "results/games/re4/mesa27-vertex/fdperf-raw.txt",
     "results/games/re4/game-patched-algopg.log"
    ],
-   "lines": 995,
+   "lines": 1059,
    "headings": [
     "## 40.1 What was run",
     "## 40.2 The discard, and what kind of discard it is",
@@ -1022,7 +1022,8 @@
     "## 40.15 The render-mode decision is two functions, and its stated reason never reaches a log (queue 22)",
     "## 40.16 Forcing GMEM plus HW binning costs a third of the frame rate; the flip happens inside one session (queue 22)",
     "## 40.17 UBWC carries 2 % of RE4's DRAM reads, and turning it off from the translation layer does not move the frame rate (queue 23)",
-    "## 40.18 The third render mode is also slower than sysmem, and depth is where RE4's compressed traffic lives (queues 22, 23)"
+    "## 40.18 The third render mode is also slower than sysmem, and depth is where RE4's compressed traffic lives (queues 22, 23)",
+    "## 40.19 With the game's own Shadow Cache on, the frame carries half the primitives and runs 74 % faster (chain25, chain26)"
    ],
    "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
    "verdict_source": "journal 40"

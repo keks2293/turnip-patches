@@ -996,3 +996,63 @@ global, the switch is per-image-class). Whether `disable_color_compression` alon
 all in this game: with depth compression on and colour off, the UBWC traffic would stay, so that arm is
 pointless here. Which images *keep* UBWC and why - a per-image log line is one `perf_debug()` away but
 needs a build, and the answer would not change any number measured so far.
+
+## 40.19 With the game's own Shadow Cache on, the frame carries half the primitives and runs 74 % faster (chain25, chain26)
+
+**Question.** The operator's two observations - about 15 fps in every part of the level, and resolution
+barely mattering - say the frame is dominated by a cost that does not depend on what the camera sees.
+Which cost is it, and is it inside anything this repository can change? The test was aimed at the
+shadow pass, because the pass that a tiler cannot amortise and a player can switch off is the shadow
+cascade redraw.
+
+**Method.** Ship stack `4c3cdb210082`, no env, no driver change: the delta between arms is the game's
+own `local_config.ini`, edited before launch and restored afterwards (`/tmp/opencode/local_config.re4.orig[.2]`,
+and `diff` shows the file came back byte-identical). Game: Resident Evil 4 Gold Edition (`re4.exe`,
+D3D12 through vkd3d-proton 3.1.0, 2560x1440 display mode), one 210 s session per arm through
+`scripts/run-arm.sh`, sampler `tools/fdperf/fdperf.cfg-tse3`.
+
+| arm | game setting | chain |
+|---|---|---|
+| `sh-c0` | `AppShadowQuality=1 AppShadowCache=0` - as this install ships | 26 |
+| `sh-c1` | `AppShadowQuality=1 AppShadowCache=1` | 26 |
+| `sh-q0` | `AppShadowQuality=0 AppShadowCache=1` | 25 |
+| `sh-q3` | `AppShadowQuality=3 AppShadowCache=1` | 25 |
+
+`/tmp/opencode/chain25.sh`, `/tmp/opencode/chain26.sh`. Chain25 turned the cache on in *both* of its
+arms, so it measures the quality knob and nothing else; the cache itself is isolated by chain26.
+
+**Numbers.** `results/games/re4/shadow-cache-ab.txt` (regenerate: `scripts/shadow-cache-table.py`),
+raw dumps `results/games/re4/{sh-c0,sh-c1,sh-q0,sh-q3}/fdperf-raw.txt`, fps
+`results/games/re4/fps-sh-*.csv`, per-arm settings `results/games/re4/<arm>/meta.txt`. In the
+pinned-clock windows: cache off 15.26 p25 with 16.69 M primitives per frame, `VPC_BUSY` 91.68 % and
+`PC_STALL_CYCLES_VPC/PC_BUSY` 68.82 %; cache on 26.57 p25 with 8.49 M primitives per frame,
+`VPC_BUSY` 85.57 %, `PC` stall 57.21 %. DRAM read is where it was (15.66 -&gt; 15.19 GB/s). Chain25's two
+arms, four minutes apart, give 24.36 and 24.37 p25 and 8.44 / 8.46 M primitives per frame - the scene
+reproduces to 0.04 %, and the cache-off arm reproduces the 15.1-15.3 cluster of 40.16 to within 1 %,
+so 15.26 -&gt; 26.57 is the setting and not the camera.
+
+**Verdict.** The wall has a component that is neither the driver nor vkd3d: with the Shadow Cache off,
+RE4 redraws the static shadow casters every frame, and that redraw is 49 % of the primitives the frame
+submits. Turning the cache on removes it and buys +74 % frame rate on the same build with the same
+environment - the largest single effect measured in this repository, and larger than every driver knob
+tried in journals 38-40 combined. Shadow *quality* inside the cached state changes nothing: quality 0
+and quality 3 differ by 0.01 fps and 0.02 M primitives per frame, so what costs is the per-frame
+redraw, not the map resolution. No consequence for the shipped driver follows from this - the draws are
+the application's, and a driver that skipped them would be rendering something else.
+
+Two things follow for how the rest of this entry is read. Every driver A/B in journals 38-40 ran with
+the cache off, so their absolute frame rates are the worst setting this game has; the comparisons
+within those journals are unaffected, because every arm shared the setting. And the cost structure has
+changed under the render-mode question: `VPC_BUSY` is 85.6 % and not 91.7 %, so the GMEM/binning ladder
+of 40.16 and 40.18 was measured on the heavy frame and needs re-running on this one before its verdict
+is quoted as general.
+
+**Does not show.** Whether the cached shadows are correct in motion (stale or late shadows on moving
+casters is a picture question, and nothing here looks at the picture). Why quality 1 runs 8 % faster
+than quality 0 and 3 while submitting the same primitives per frame - between-chain variation is the
+honest answer, which is why only the within-chain pairs are quoted. Whether some other block becomes
+the wall at 24-27 fps (`gpu_load` is still 97-99 %, so the answer is "something", and it is again on
+the geometry side). And one method note: the `shot-*.png` of these runs are byte-identical to each
+other and show a black screen with a cursor - `scripts/shot.py` through the portal does not capture
+this game on this compositor - so the content check in this entry is the counter reproduction, not a
+screenshot.

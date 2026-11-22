@@ -1029,6 +1029,12 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
     belong to - Turnip's per-image lines need `TU_DEBUG=perf`, and whether `0014`'s images are inside
     that class is queue 16's A/B. `tr-noupload` needs a second session (its first ran a light scene).
 
+24. **Re-run the render-mode ladder with the game's Shadow Cache on** (no build; journal 40.19).
+    `sysmem` / `gmem` / `gmem+forcebin` were compared on a frame carrying 16.7 M primitives; with the
+    cache on the same frame carries 8.5 M and `VPC_BUSY` is 85.6 % instead of 91.7 %. What it decides:
+    whether "GMEM is worse in both forms" (40.18) survives when the shadow redraw is gone - if
+    binning wins there, the sysmem default is tuned to the game's worst setting, not to the game.
+
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
 (ADR-0010), BC + UBWC (ADR-0004), any 8bpp UBWC patch (ADR-0007), removing any shipped patch

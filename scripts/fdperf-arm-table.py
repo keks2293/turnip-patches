@@ -55,6 +55,19 @@ COLS = [
 # None means the run has no CSV at all - `tse1` lost its CSV to the runner bug (journal 40.7) and
 # `cbforce` was a counter-only arm.
 FPS = {
+    "sh-c0":             "results/games/re4/fps-sh-c0.csv",
+    "sh-c1":             "results/games/re4/fps-sh-c1.csv",
+    "sh-q0":             "results/games/re4/fps-sh-q0.csv",
+    "sh-q3":             "results/games/re4/fps-sh-q3.csv",
+    "dbg-perf":          "results/games/re4/fps-dbg-perf.csv",
+    "dbg-file":          "results/games/re4/fps-dbg-file.csv",
+    "dbg-gmem":          "results/games/re4/fps-dbg-gmem.csv",
+    "dbg-sysmem":        "results/games/re4/fps-dbg-sysmem.csv",
+    "tr-base":           "results/games/re4/fps-tr-base.csv",
+    "tr-nocomp":         "results/games/re4/fps-tr-nocomp.csv",
+    "tr-nocomp-perf":    "results/games/re4/fps-tr-nocomp-perf.csv",
+    "tr-noupload2":      "results/games/re4/fps-tr-noupload2.csv",
+    "gmem-nobin":        "results/games/re4/fps-gmem-nobin.csv",
     "mesa27":            "results/games/re4/mesa27/fps.csv",
     "mesa27-vertex":     "results/games/re4/mesa27-vertex/fps.csv",
     "tse-algo-bandwidth":    "results/games/re4/fps-algo-bandwidth.csv",
