@@ -796,15 +796,22 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
     be the shape of that gate. What is left of the claim is a real but different question, and it is
     queue 26.
 
-28. **`VK_KHR_ray_tracing_pipeline` on a device that answers ray queries** (no build; decide from
-    inspection first). `VK_KHR_ray_query` and `VK_KHR_acceleration_structure` are exposed
-    (`results/device-features-a740.txt`, both runs) and `VK_KHR_ray_tracing_pipeline` is not, with the
-    features behind `props.has_ray_intersection` and `has_sw_fuse` (`tu_device.cc:214-216`, `:1844`).
-    Nothing in this repository needs it for RE4 - the game does not ask for RT - so the only reason to
-    open this is another title. What to run: read the upstream gating of the pipeline feature in
-    Turnip (upstream file, not the shallow clone) and write five lines on what gen2 would have to
-    provide in software; if the answer is "a dispatch path we do not have", close it as not our work.
-    `NOT MEASURED`, and it is not on the fps path.
+28. **`VK_KHR_ray_tracing_pipeline` on a device that answers ray queries** - CLOSED 23.11 by inspection,
+    journal 40.26, no build. `VK_KHR_ray_query` and `VK_KHR_acceleration_structure` are exposed
+    (`results/device-features-a740.txt:13`, `:15`), gated on `has_raytracing =
+    props.has_ray_intersection && (!props.has_sw_fuse || kernel_fuse)` (`tu_device.cc:214-216`) with
+    `has_ray_intersection` set for `a7xx_gen2` already (`freedreno_devices.py:825`) and `has_sw_fuse`
+    only for `a7xx_gen3` (`:868`); the driver's comment names A740 explicitly (`tu_device.cc:209-213`).
+    `VK_KHR_ray_tracing_pipeline` occurs zero times in `src/freedreno/`, so it is not implemented for
+    any generation and gen2 loses nothing an A750 has. Nothing here needs it for RE4.
+
+30. **How wide is the attribute stream per vertex** (no build, one arm, `tools/fdperf/fdperf.cfg-vpc`,
+    which already carries `VPC_SP_COMPONENTS` (10) and `VFD_TOTAL_VERTICES` (17)). Why: 40.26 found the
+    VPC's own RAM refusing writes for 71.19 % of its busy time on the ship frame, and 40.9 showed that
+    share does not respond to the attribute-buffer size, so the only vertex-side quantity left is bytes
+    per vertex. Components per vertex on both frames (cache off and on) says whether a width reduction
+    could be worth looking for at all; the fp16 route is already out (40.26) and the dead-output route is
+    closed by the FS-driven layout (`tu_pipeline.cc:744`). `NOT MEASURED`.
 
 29. **The outside "geometry plan" for the 40.21 wall - closed by inspection, recorded so it is not
     re-investigated** (journal 40.25, no build, no run). Its four items: VSC/VPC/PC limits "under-set on
@@ -857,7 +864,7 @@ instead of against a build.
 | 21 | what is the wall at 26.7 fps, i.e. with the game's Shadow Cache on | ANSWERED 22.11, journal 40.21 (`results/games/re4/occupancy-two-frames.txt`): the same wall with 6 points of slack - `VPC_BUSY` 85.54 % against 91.57 %, `VS_BUSY` 80.65 %, `PS_BUSY` 76.97 %, and the primitive collector waits on the vertex path 12.7 points less. No block goes from idle to busy, so the "+9…13 % for a non-geometry driver fix" ceiling of 40.10/40.15 stands on this frame too |
 | 22 | what do `LRZ_BUSY_CYCLES`, `RAS_STALL_CYCLES_LRZ` and `RB_STARVE_CYCLES_LRZ_TILE` actually count on A7XX | NOT ANSWERED, and 40.23 is the reason it is a question: two arms with `TU_DEBUG=nolrz` (mask `0x81`, `LRZ_PRIM_KILLED_BY_LRZ` 0.00 against 1.21 M/s) read 74.82 % and 74.99 % `LRZ_BUSY`, i.e. indistinguishable from LRZ on. Deciding it needs a workload where LRZ demonstrably rejects - a synthetic depth-overdraw pass in the rig with and without `nolrz`, watching the killed counter and the busy counter together - not another RE4 session. Until then no document in this repository may quote those three counters as a cost |
 | 23 | is `alias.rt` correct on A740, given that its two registers are declared for A7XX | NOT MEASURED, queue 26. `ir3_alias.c:768` refuses on `props.has_alias_rt`, which only `a7xx_gen3` sets, while `tu_shader.cc:2890` programs `SP_PS_OUTPUT_CONST_CNTL`/`SP_PS_OUTPUT_CONST_MASK` for any A7XX and `a6xx.xml:4242`/`:4245` declare both `variants="A7XX-"`. Needs one line in the `TU_FORCE_PROPS` table (queue 16's build), then an fps A/B and a picture check with the panel on |
-| 24 | does RE4's shader set push varyings through the VPC that the fragment stage never reads (the one live sub-point of the outside geometry note of 23.11) | NOT MEASURED, journal 40.25. The rest of that note is closed, and the CPU-side part of it is closed by a measurement rather than by an argument: halving the game's own geometry halves the work - 16.69 M prims/frame at 15.26 fps against 8.49 M at 26.57 fps (`results/games/re4/shadow-cache-ab.txt`) - so the frame is geometry-limited and CPU-side work (DGC, `descriptor_heap`) has no room in it. A check of the varyings would count declared against read varying components per program from a one-off dump of the game's shader programs, which needs the driver's shader cache, not another fps run |
+| 24 | does RE4's shader set push varyings through the VPC that the fragment stage never reads (the one live sub-point of the outside geometry note of 23.11) | ANSWERED IN BOTH HALVES 23.11, journal 40.26: the fp16 half is a measured zero (`IR3_SHADER_DEBUG=nofp16` moves `VPCRAM_FULL` by 0.38 points of busy and p25 fps by 1.0 %, delivery of the flag unproven), and the dead-output half is closed by the code - the driver sizes the interpolators from what the FS reads (`tu_pipeline.cc:744`, `:683`, `:802`), so an unmatched VS output gets no slot. What remains is not "dead varyings" but the width itself: queue 30 |
 
 ## Pitfalls (reminder)
 

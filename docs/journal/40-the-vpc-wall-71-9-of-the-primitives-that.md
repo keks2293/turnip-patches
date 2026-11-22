@@ -1402,3 +1402,70 @@ the frame leaves unused - the geometry dependence above names the limiter, it do
 And whether RE4's shaders push
 varyings the fragment stage never reads through the VPC - the one sub-point of the note with no artifact
 either way, kept as open question 24.
+
+## 40.26 On the ship frame the VPC's own RAM is 71 % of its busy time, and switching off the fp16 lowering of varyings moves nothing (chain35, question 24 continued, queue 28 closed)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** An outside note proposed cutting VPC pressure in two ways: stop sending varyings the
+fragment stage never reads, and lower varyings to fp16. Both are about the one counter this repository
+already found to dominate the block - `VPC_VPCRAM_FULL_CYCLES`, ~51 % of the VPC's busy time on the
+shadow-cache-off frame (40.9) - and both were untested here. Two sub-questions, one measured and one
+read: does the volume of attribute data behave like the constraint, and does the driver's mediump-to-fp16
+lowering currently reduce that volume in this title? The same entry closes queue 28
+(`VK_KHR_ray_tracing_pipeline`), which was the last inspection item on the queue.
+
+**Method.** Three arms, ship stack `4c3cdb210082`, sampler `tools/fdperf/fdperf.cfg-vpc3` (the six-slot
+VPC budget on `VPCRAM_FULL`/`WIT_FULL`/`STALL_VPCRAM_POS`/`STALL_LM_ACK`/`LM_REQ_HIT` + `BUSY`), one
+second windows, counters over `t_rel` 20-105 s, p25 fps over 95-150 s; `/tmp/opencode/chain35.sh`,
+curation in `results/games/re4/vr4-*/` with `meta.txt` per arm, table
+`scripts/vpcram-fp16-table.py` -&gt; `results/games/re4/vpcram-fp16.txt`. Arms: `vr4-c0-base`
+(`AppShadowCache=0`, the frame 40.9 measured, so its own reproduction control comes free),
+`vr4-c0-nofp16` (same frame, `IR3_SHADER_DEBUG=nofp16` - the switch that *disables* the fp16 lowering of
+mediump fragment inputs, `ir3_nir.c:1062`, named at `ir3_compiler.c:30`), `vr4-c1-base`
+(`AppShadowCache=1`, the ship frame, first `cfg-vpc3` run on it).
+
+**Numbers.** The control holds: `VPC_BUSY` 623.3 Mc/s = 91.67 % against the 623.5 Mc/s = 91.70 % of
+40.9's `vpc3base`. On that frame `VPCRAM_FULL` is 324.9 Mc/s = 47.78 % of the core = 52.12 % of busy
+(40.9: 317.0 / 46.62 % / 50.84 %), and turning the fp16 lowering off moves it to 322.0 Mc/s = 47.36 % =
+51.74 % of busy with `VPC_BUSY` at 91.53 % - inside the spread of identical arms - and p25 fps 15.00
+against 15.15. On the ship frame the picture is different in one respect worth naming: `VPC_BUSY` falls
+to 566.3 Mc/s = 83.29 % (the Shadow Cache takes 8.4 points off the block, 40.21), while
+`VPCRAM_FULL` rises to 403.2 Mc/s = 59.29 % of the core = **71.19 % of busy** - the largest share of a
+block's own time this repository has measured - at p25 fps 26.54, inside the ship cluster of
+26.53-26.68. `WIT_FULL` stays at 1.3-1.6 % of busy and `STALL_CYCLES_LM_ACK`/`NUM_LM_REQ_HIT` again read
+exactly 0.0 in all 114 kept windows.
+
+**Verdict.** The fp16 lever has nothing to bite on in RE4: the flag that switches fp16 varyings off
+changes neither the VPC counters nor the frame rate, which is what the translation layer predicts -
+RE4's shaders come from DXBC/DXIL, where there is no medium-precision qualifier to turn into
+`RelaxedPrecision`, so the lowering at `ir3_nir.c:1062` has no varying to lower. The dead-varying idea
+is aimed at the wrong side of the same block: this driver sizes the interpolator setup from what the
+fragment stage *reads*, not from what the vertex stage writes - `tu6_emit_vpc_varying_modes()` walks
+`ir3_next_varying(fs, i)` over `fs->inputs_count` (`tu_pipeline.cc:744`), takes the mode from
+`fs->inputs[i].compmask` (`:683`), and the linkage is built by
+`ir3_link_shaders(&linkage, last_shader, fs, true)` (`:802`) - so a VS output no FS input matches does
+not get a slot, whatever the pipeline was linked from (GPL is on here: `.EXT_graphics_pipeline_library =
+true` and `graphicsPipelineLibraryFastLinking = true`, `tu_device.cc:351`, `:1473`). What 40.26 does
+establish is that the saturated thing inside the VPC is its own RAM accepting writes - 71.19 % of busy on
+the ship frame, and 40.9 already showed it immune to the attribute-buffer size. The remaining quantity
+that could connect that to the vertex path is attribute *width*, which is directly countable
+(`VPC_SP_COMPONENTS` over `VFD_TOTAL_VERTICES`, both already in `fdperf.cfg-vpc`), and it is queue 30.
+Queue 28 closes on the same day's inspection: `VK_KHR_ray_tracing_pipeline` occurs zero times in
+`src/freedreno/`, while `KHR_acceleration_structure`/`KHR_ray_query` are gated on
+`has_raytracing = props.has_ray_intersection && (!props.has_sw_fuse || kernel_fuse)`
+(`tu_device.cc:214-216`), with `has_ray_intersection` set already for `a7xx_gen2`
+(`freedreno_devices.py:825`) and `has_sw_fuse` only for `a7xx_gen3` (`:868`) - the driver's own comment
+names our chip ("a device doesn't have a fuse (i.e. a740)", `:209-213`), and the device answers
+`VK_KHR_acceleration_structure` rev 13 and `VK_KHR_ray_query` rev 1
+(`results/device-features-a740.txt:13`, `:15`). Nothing is withheld from gen2 there: no generation gets
+the pipeline extension.
+
+**Does not show.** That `IR3_SHADER_DEBUG=nofp16` was read by the driver: no driver line proves it, only
+`meta.txt`'s `# env:` row, so the arm is a measured zero whose delivery is unproven - a synthetic shader
+with a real `RelaxedPrecision` varying, disassembled with and without the flag, is the control this
+repository does not have. What the `VPCRAM_FULL` counter counts: `a7xx_perfcntrs.xml` gives it a select
+and no `<desc>`, so "its own RAM could not take a write" stays a reading of the name, not a quote
+(`docs/fdperf-a7xx.md`). Whether that counter is a cause of the wall or an artefact of a block that is
+busy anyway - 40.9 says the same thing about its own pair, and 40.21's removal experiment is still the
+only causal evidence. And how wide the attribute stream actually is per vertex, which is queue 30.

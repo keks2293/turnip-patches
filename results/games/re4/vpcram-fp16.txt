@@ -1,0 +1,55 @@
+# The VPC's own RAM, with and without the mediump-to-fp16 lowering (Resident Evil 4, re4.exe,
+# D3D12 via vkd3d-proton 3.1.0, 2560x1440; driver sha256 4c3cdb210082 in all three arms).
+# regenerate: scripts/vpcram-fp16-table.py > results/games/re4/vpcram-fp16.txt
+# chain: /tmp/opencode/chain35.sh; sampler tools/fdperf/fdperf.cfg-vpc3;
+#       counters over t_rel 20-105 s, fps p25 over elapsed 95-150 s
+# ownership: the counter reading is scripts/fdperf-vpcram-ratios.py, the fps window is
+#       scripts/fps-window.py; this file runs both and pastes the result.
+
+=== vr4-c0-base   (AppShadowCache=0; no env)
+results/games/re4/vr4-c0-base/fdperf-raw.txt: 40 of 52 samples, t_rel 20.0-105.0s
+  only in the BV_* copy of the group (binning/visibility), so not the counter this cfg programmed: VPC_RESERVED_5, VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC, VPC_STALL_CYCLES_UCHE, VPC_STALL_CYCLES_VFD_WACK, VPC_WORKING_CYCLES
+  counter                               M/s   /680MHz    %BUSY   meaning (a reading, not a quote)
+  VPC_BUSY_CYCLES                     623.3    91.67%  100.00%   busy of the block
+  VPC_WORKING_CYCLES                      -                      not sampled by this cfg
+  VPC_VPCRAM_FULL_CYCLES              324.9    47.78%   52.12%   VPC's own RAM could not take a write
+  VPC_WIT_FULL_CYCLES                   8.0     1.17%    1.28%   write/completion table full
+  VPC_STALL_CYCLES_VPCRAM_POS           2.8     0.42%    0.45%   waiting for a position slot in VPCRAM
+  VPC_STALL_CYCLES_LM_ACK               0.0     0.00%    0.00%   waiting for an acknowledge from LM
+  VPC_NUM_LM_REQ_HIT                    0.0                       LM request hits
+  anchor (must stay where the cfg-vpc runs put it): VPC busy  91.7%
+fps-vr4-c0-base.csv: span 0.3..177.7s, window 95-150s
+  n=548 p25=15.15 mean=15.54 min=13.6 max=18.5
+  frametime=64.5ms clocks=[680] gpu_load=98% swap=0.00GiB
+
+=== vr4-c0-nofp16   (AppShadowCache=0; IR3_SHADER_DEBUG=nofp16)
+results/games/re4/vr4-c0-nofp16/fdperf-raw.txt: 40 of 51 samples, t_rel 20.0-105.0s
+  only in the BV_* copy of the group (binning/visibility), so not the counter this cfg programmed: VPC_RESERVED_5, VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC, VPC_STALL_CYCLES_UCHE, VPC_STALL_CYCLES_VFD_WACK, VPC_WORKING_CYCLES
+  counter                               M/s   /680MHz    %BUSY   meaning (a reading, not a quote)
+  VPC_BUSY_CYCLES                     622.4    91.53%  100.00%   busy of the block
+  VPC_WORKING_CYCLES                      -                      not sampled by this cfg
+  VPC_VPCRAM_FULL_CYCLES              322.0    47.36%   51.74%   VPC's own RAM could not take a write
+  VPC_WIT_FULL_CYCLES                   7.8     1.15%    1.26%   write/completion table full
+  VPC_STALL_CYCLES_VPCRAM_POS           2.7     0.40%    0.44%   waiting for a position slot in VPCRAM
+  VPC_STALL_CYCLES_LM_ACK               0.0     0.00%    0.00%   waiting for an acknowledge from LM
+  VPC_NUM_LM_REQ_HIT                    0.0                       LM request hits
+  anchor (must stay where the cfg-vpc runs put it): VPC busy  91.5%
+fps-vr4-c0-nofp16.csv: span 0.4..177.6s, window 95-150s
+  n=549 p25=15.00 mean=28.26 min=7.5 max=346.1
+  frametime=61.4ms clocks=[680] gpu_load=97% swap=0.00GiB
+
+=== vr4-c1-base   (AppShadowCache=1; no env)
+results/games/re4/vr4-c1-base/fdperf-raw.txt: 39 of 51 samples, t_rel 20.0-105.0s
+  only in the BV_* copy of the group (binning/visibility), so not the counter this cfg programmed: VPC_RESERVED_5, VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC, VPC_STALL_CYCLES_UCHE, VPC_STALL_CYCLES_VFD_WACK, VPC_WORKING_CYCLES
+  counter                               M/s   /680MHz    %BUSY   meaning (a reading, not a quote)
+  VPC_BUSY_CYCLES                     566.3    83.29%  100.00%   busy of the block
+  VPC_WORKING_CYCLES                      -                      not sampled by this cfg
+  VPC_VPCRAM_FULL_CYCLES              403.2    59.29%   71.19%   VPC's own RAM could not take a write
+  VPC_WIT_FULL_CYCLES                   9.3     1.36%    1.64%   write/completion table full
+  VPC_STALL_CYCLES_VPCRAM_POS           3.2     0.47%    0.56%   waiting for a position slot in VPCRAM
+  VPC_STALL_CYCLES_LM_ACK               0.0     0.00%    0.00%   waiting for an acknowledge from LM
+  VPC_NUM_LM_REQ_HIT                    0.0                       LM request hits
+  anchor (must stay where the cfg-vpc runs put it): VPC busy  83.3%
+fps-vr4-c1-base.csv: span 0.3..177.5s, window 95-150s
+  n=549 p25=26.54 mean=78.22 min=12.1 max=562.3
+  frametime=28.4ms clocks=[680] gpu_load=93% swap=0.00GiB

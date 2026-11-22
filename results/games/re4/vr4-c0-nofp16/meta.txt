@@ -1,0 +1,13 @@
+# game:    Resident Evil 4 Gold Edition - /run/media/armada/Slim/Games/Resident.Evil.4.Gold.Edition-InsaneRamZes/re4.exe
+# title:   re4
+# tag:     vr4-c0-nofp16
+# date:    2026-11-23T05:20:52+08:00
+# driver:  /var/home/armada/opencode/build/out/libvulkan_freedreno.so sha256=4c3cdb210082
+# cfg:     tools/fdperf/fdperf.cfg-vpc3
+# env:     IR3_SHADER_DEBUG=nofp16   (delta against the plain ship stack)
+# shot:    results/games/re4/raw/shot-vr4-c0-nofp16.png, 3 distinct colours at 160x90; panel dpms=Off/Off/On
+#           (a capture of this compositor with the panel off is black; the content check is
+#            counter reproduction between arms, see docs/howto-measure.md)
+# chain:   chain35.sh
+# source:  results/raw/game-patched-vr4-c0-nofp16.log (gitignored), fps: results/games/re4/fps-vr4-c0-nofp16.csv
+# game settings: AppShadowQuality=1 AppShadowCache=0
