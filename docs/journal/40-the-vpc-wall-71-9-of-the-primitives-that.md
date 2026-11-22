@@ -1195,3 +1195,142 @@ saves the vertex path any work: the two frames show only that `VPC_BUSY` fell 6.
 fell 11.8 % (40.21) while the discard share *rose* 8 points, which is what a "the reject is not worth
 vertex work" reading predicts but is not a measurement of pipeline order - 40.2's caveat about
 `TSE_INPUT_PRIM` and `PC_IA_PRIMITIVES` being the same counter twice covers that ground.
+
+## 40.23 Turning LRZ off changes nothing, and the counters that made it look expensive do not follow the switch (queues: the LRZ question, chains 30-34)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** The operator asked two things: does disabling LRZ buy anything here, and is LRZ's fast
+clear faster than an ordinary clear. The framing came from this repository's own counters: on the
+cached-shadow frame `PERF_LRZ_BUSY_CYCLES` is 74.8 % of the core clock and `RAS_STALL_CYCLES_LRZ` is
+28.4 %, which reads like an expensive unit - while 40.22 says 36.5 % of the frame's primitives produce
+no pixel, the exact class of work a depth reject before pixel shading is supposed to remove.
+
+**Method.** Five chains, 22.11 evening into 23.11, all with the game's `AppShadowQuality=1
+AppShadowCache=1`, ship stack `4c3cdb210082`, one 210 s session per arm (`/tmp/opencode/chain3{0,1,2,3,4}.sh`):
+chain30 the driconf option `tu_disable_conservative_lrz` through `DRIRC_CONFIGDIR` (`lrz-base`,
+`lrz-nocons`, delivery in `results/lrz-drirc-delivery.log`); chain31 two `TU_DEBUG` switches and a
+repeat of the base - and chain31 failed, because it used the names `nolz` and `nolzfc`, which do not
+exist in this tree (`tu_util.cc:31-32` names them `nolrz` and `nolrzfc`, bits 7 and 18 of
+`tu_util.h:47`/`:58`); chain32 the corrected names (`lrz-nolrz`, `lrz-nolrzfc`); chain33 repeats of both;
+chain34 the same fast-clear pair with the traffic sampler. Delivery is printed, not assumed: every
+arm's `TU_DEBUG` mask is taken from the driver's own line in its run log (`0x81` for `nolrz`, `0x40001`
+for `nolrzfc`, `0x1` for the two mis-spelled arms), and the hardware-side check is
+`PERF_LRZ_PRIM_KILLED_BY_LRZ` itself.
+
+**Numbers.** `results/games/re4/lrz-killed.txt` (regenerate: `scripts/lrz-table.py >
+results/games/re4/lrz-killed.txt`), raw dumps under `results/games/re4/{lrz-*,tr-lrzfc-*}/`.
+LRZ kills 1.16-1.25 M prim/s in the five arms where it is on = 0.51-0.56 % of the TSE input, and 0.00 in
+both `nolrz` arms. Its busy counter does not move: 74.79 % (base), 74.82 % and 74.99 % (the two `nolrz`
+arms), 74.89 % (`nolrzfc` repeat); `RAS_STALL_CYCLES_LRZ` 28.22-28.69 % in all nine arms;
+`RB_STARVE_CYCLES_LRZ_TILE` 209-223 % in all nine. p25 fps: the six default-configured arms span
+26.53-26.67, `lrz-nolrz` 26.63, `lrz-nolrz2` 26.68, `lrz-nocons` 27.13 over 14 kept windows. The traffic
+pair, which is the tightest control in this entry (two arms, back to back, 41 and 40 windows): depth
+writes 19.59 -&gt; 19.48 M/s (-0.54 %), DRAM write 0.50 -&gt; 0.51 GB/s (+0.11 %), DRAM read
+15.18 -&gt; 15.23 GB/s (+0.35 %), UBWC write 64.37 -&gt; 64.38 MB/s, p25 26.62 -&gt; 26.67 (+0.20 %).
+
+**Verdict.** Three answers. (1) Disabling LRZ is a zero: 26.63 and 26.68 against a same-configuration
+cluster of 26.53-26.67, with the switch demonstrably delivered. So is turning off *conservative* LRZ,
+which is what chain30 asked. (2) The three LRZ counters that motivated the question cannot be read as
+the price of depth rejection, because they are unchanged in the arms where rejection is measurably off.
+Either the unit keeps servicing the RB's depth interface when the driver stops using it for reject, or
+`LRZ_BUSY` counts something else - this run does not decide, and the counters carry no description in
+`a7xx_perfcntrs.xml` to decide it (the same position 40.2 took on `TSE_INPUT_PRIM` versus
+`PC_IA_PRIMITIVES`). Any wording in this repository that quoted 74.8 % as "what LRZ costs the frame" is
+withdrawn here. (3) LRZ fast clear is on for this chip already (`enable_lrz_fast_clear` in `a7xx_base`,
+40.24), and taking it away moves no byte this game writes and no frame of its rate: +0.11 % DRAM write,
++0.20 % p25. So neither direction of the fast-clear question has anything in it, and the 36.5 % of
+primitives that produce no pixel (40.22) are not being missed by LRZ - LRZ's entire kill count is
+0.54 % of the input. The reading rule that follows from (2) is [ADR-0012](../decisions/ADR-0012-lrz-is-not-a-lever-and-its-busy-counter-is-not-a-cost.md).
+
+**Does not show.** Whether LRZ matters in a title that draws overlapping opaque geometry: RE4's frame
+rejects almost everything for other reasons, so this is an answer about this game. What
+`LRZ_PRIM_KILLED_BY_LRZ` and `LRZ_TOTAL_PIXEL` mean as units - the XML gives a `sel` and no `<desc>`, so
+the kill count is quoted as a count and `LRZ_TOTAL_PIXEL` (520-534 M/s in every arm, including the ones
+with LRZ off, which is itself a reason not to convert it to anything) is not converted at all. The
+traffic pair has no LRZ counters in its cfg, so its delivery evidence is the mask line only. And one
+method note worth keeping: an unknown `TU_DEBUG` name is skipped without a word - chain31 cost four
+sessions to learn what `TU_FORCE_PROPS` would have said out loud (`mesa_logw`, `tu_device.cc:1816`), so
+from now on a `TU_DEBUG` arm is quoted together with the mask the driver printed, which
+`scripts/lrz-table.py` now does by itself.
+
+## 40.24 An outside list of features supposedly "locked behind a7xx_gen3" for A740: every A8XX gate in the tree is a register difference, and the one software candidate left is `has_alias_rt` (no run)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** Two outside analyses were forwarded to this repository on 22.11 with the same shape: A740
+allegedly has hardware that Turnip cuts off "by inertia", specifically (a) `sparseResidencyImage3D` and
+`sparseResidencyAliased` said to sit behind the same `ubwc_all_formats_compatible` lock that patch
+`0004` removed for `sparseResidencyImage2D`; (b) raster and descriptor extensions
+(`VK_EXT_descriptor_buffer`, `VK_KHR_fragment_shader_barycentric`, `VK_EXT_post_depth_coverage`,
+`VK_EXT_attachment_feedback_loop_layout`) said to be switched on with a `gen >= 3` test because the
+maintainers had A750 boards; (c) LRZ, fast clear and softfloat32 said to be reset more aggressively on
+gen2 than the hardware needs; and (d) ray-tracing pipelines said to be withheld from a chip that has
+the intersection unit. Our own open thread is the same question from the other side: is any behaviour
+this A740 could use hidden behind a generation test?
+
+**Method.** No build, no run: three passes over `../mesa27-src` as it stands (our patches applied, four
+files uncommitted - `freedreno_devices.py`, `tu_cmd_buffer.cc`, `tu_clear_blit.cc`, `tu_device.cc` - none
+of them at a site quoted here). (1) All 80 `CHIP >= A8XX`, `CHIP < A8XX`, `CHIP == A8XX` and
+`CHIP > A7XX` sites in `src/freedreno/**.{c,cc,h}` (register XML excluded), each read together with the
+register it guards, and "does A740 have that register" answered from the tree's own `variants=`
+attributes in `registers/adreno/a6xx.xml` and `adreno_pm4.xml`. (2) The properties that only
+`a7xx_gen3` or `a8xx_base` sets (`freedreno_devices.py:849-880`, `:1401`), and every site that reads
+them. (3) What the device actually answers, `scripts/device-features-a740.sh` -&gt;
+`results/device-features-a740.txt`: `vulkaninfo --show-all` twice, once with the distribution's driver
+and once with the ship stack `4c3cdb210082`, so a row can be attributed to upstream or to one of our
+patches.
+
+**Numbers.** The 80 sites sort into: 74 register, bitfield, packet or descriptor-format differences,
+with the XML as the witness (`tu_descriptor_set.h` contributes 20 of them, all the A8XX descriptor
+re-encoding, first at `:267`; `tu_cmd_buffer.cc:455` picks `SUBPASS_SLICE_FENCE` 0x36 `variants="A8XX-"`
+over `SUBPASS_FENCE` 0x35 `variants="A7XX-`; `tu_lrz.cc:131` and `:157` add
+`GRAS_LRZ_BUFFER_SLICE_PITCH`, `variants="A8XX-"`, because gen8 splits LRZ per UCHE slice); 2
+workarounds for A8XX-only bugs (`tu_cmd_buffer.cc:10193` needs a WFI before `CP_REG_RMW`,
+`common/freedreno_gpu_event.h:135` is a separate event table); and 4 sites this pass could not classify
+(`tu_cmd_buffer.cc:2296`, `tu_cmd_buffer.cc:8770` with `tu_device.h:523`, `tu_shader.cc:2164` - all four
+are gen8 CP behaviour derived from the blob, with no register difference to point at). **Zero** sites
+where an A8XX test hides a software improvement. The software-strategy differences are all property
+gates, listed per property in [`docs/a7xx-gen-props.md`](../a7xx-gen-props.md); ten of them are
+runtime-forceable through the fixed list at `tu_device.cc:1750-1770` and were swept in journals 15.7 and
+34, and an unknown name there is *not* silent (`mesa_logw` at `tu_device.cc:1816`). Not forceable and
+not gen2-relevant: `has_sw_fuse` (a raytracing fuse), `new_control_regs` (crashdec naming),
+`subpass_fence_cleans_resolve` (a gen8 resolve-wait), `gs_vpc_adjacency_quirk` (an A750 hang). The one
+exception is `has_alias_rt`: the gate is `ir3_alias.c:768`, the pass "replace[s] const and immediate
+components of the RT sources of end with alias.rt instructions in the preamble"
+(`ir3_alias.c:762-764`), and the driver side already programs `SP_PS_OUTPUT_CONST_CNTL` and
+`SP_PS_OUTPUT_CONST_MASK` for any A7XX (`tu_shader.cc:2890`), both registers `variants="A7XX-"`
+(`a6xx.xml:4242`, `:4245`) - so the gate is a per-chip blob observation, not a missing register. That is
+queue 26. On the claims: `sparseResidencyImage3D` is `false` in both runs of the artifact and the name
+does not occur in `src/freedreno/` at all (`sparseResidencyStandard3DBlockShape = false`,
+`tu_device.cc:1349`), so no generation is being locked out; `sparseResidencyAliased` is `true` in both
+runs and comes from `has_sparse_prr` (`tu_device.cc:495-509`), not from UBWC;
+`VK_EXT_descriptor_buffer` and `VK_EXT_attachment_feedback_loop_layout` are exposed on this device
+already; barycentric and post-depth-coverage are absent in both runs because the driver carries no
+extension-table entry for them, and `grep -rn "gen >= 3\|a7xx_gen3" src/freedreno/vulkan/` returns two
+lines, a comment at `tu_lrz.cc:60` and the force-props table - there is no generation test in the
+driver to remove. `VK_KHR_ray_tracing_pipeline` is absent while `VK_KHR_ray_query` and
+`VK_KHR_acceleration_structure` are present, behind `props.has_ray_intersection` (`tu_device.cc:214-216`)
+- queue 28. Fast clear has no generation gate at all: `fdl/freedreno_lrz_layout.h:252` and `:260` key it
+on `props.enable_lrz_fast_clear`, which `a7xx_base` sets, so A740 runs the full A7XX FC path (1024-byte
+flag RAM, two buffers, bidirectional: `common/freedreno_lrz.h:70-79`) - measured in 40.23. Softfloat32
+is a driconf switch (`tu_device.cc:1059-1064`, "FP32 denorm preserve has to be emulated via soft-float")
+and its price is journals 10 and 11, not this audit.
+
+**Verdict.** "Written for A750, never looked at A740" is not the shape of this code. A `CHIP >= A8XX`
+test in Turnip is a different register, packet or descriptor encoding, and the tree says so in its own
+XML; the gen2-versus-gen3 gap is a *properties* gap, it is documented, ten of those properties have
+already been swept at runtime on this chip, and of the rest only `alias.rt` is a feature A740 is
+plausibly losing rather than a bug workaround or a naming change. For RE4's frame rate this entry finds
+nothing: the wall in 40.21 is the volume of geometry the game submits, and none of the claimed locks is
+on the path of that geometry.
+
+**Does not show.** Whether `variants=` in the XML is complete for this chip revision - it is the tree's
+own statement, not hardware documentation, and this repository has no Qualcomm register manual. Whether
+`alias.rt` is *correct* on A740, which is what queue 26 exists to find out (a build plus a picture
+check, and the panel has to be on for the picture). Anything about the proprietary driver's behaviour
+(the "blob uses more prefetch", "aggressive WFI" and "RT pipeline works there" parts of the outside
+notes): no artifact here can confirm or refute those, and the ship stack's own WFI and barrier behaviour
+was measured in journals 38-40 as a zero. And what the game asks for: `results/device-features-a740.txt`
+is one `vulkaninfo` instance from a shell, with no wine and no vkd3d-proton, so it says what the driver
+offers and nothing about what RE4 requests.

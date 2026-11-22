@@ -20,6 +20,7 @@ a queue bullet and a plan file - which is how a correction failed to reach all o
 | [ADR-0009](ADR-0009-withdraw-0015-mutableen-on-gen2.md) | 0015 (MUTABLEEN on gen2) withdrawn as a game fix | accepted |
 | [ADR-0010](ADR-0010-no-ubwc-coherency-quirk-on-gen2.md) | `ubwc_coherency_quirk` not set on gen2 | accepted |
 | [ADR-0011](ADR-0011-feature-level-ceiling.md) | 12_0 through the tiling tier; 12_1 out of reach | accepted |
+| [ADR-0012](ADR-0012-lrz-is-not-a-lever-and-its-busy-counter-is-not-a-cost.md) | LRZ is not an RE4 lever; its busy/stall counters are not a cost meter | accepted |
 
 Every ADR points at the journal section that owns the numbers; it does not restate a
 measurement that the journal already carries.

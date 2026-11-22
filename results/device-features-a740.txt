@@ -1,0 +1,72 @@
+# What Turnip exposes on this Adreno A740 (FD740, a7xx_gen2): extensions and features
+# date: 2026-11-22T23:41:11+08:00
+# regenerate: scripts/device-features-a740.sh > results/device-features-a740.txt
+# command in both runs: vulkaninfo --show-all (text), grepped for the rows named below
+# run 'system': the distribution's driver   libvulkan_freedreno.so
+# run 'ours'  : VK_ICD_FILENAMES=/var/home/armada/opencode/build/out/freedreno_icd.json  (ship stack sha256 4c3cdb210082)
+
+## system
+$ vulkaninfo --show-all | grep -E 'VK_(KHR|EXT)_(fragment_shader_barycentric|post_depth_coverage|descriptor_buffer|attachment_feedback_loop(_layout|_dynamic_state)?|ray_tracing_pipeline|ray_query|acceleration_structure|shader_float_controls|fragment_shader_interlock|fragment_shading_rate|sparse_binding|sparse_buffer|shader_object_controls)'   (device extension lines)
+VK_EXT_attachment_feedback_loop_dynamic_state : extension revision 1
+VK_EXT_attachment_feedback_loop_layout        : extension revision 2
+VK_EXT_descriptor_buffer                      : extension revision 1
+VK_KHR_acceleration_structure                 : extension revision 13
+VK_KHR_fragment_shading_rate                  : extension revision 2
+VK_KHR_ray_query                              : extension revision 1
+VK_KHR_shader_float_controls                  : extension revision 4
+VK_KHR_shader_float_controls2                 : extension revision 1
+
+$ vulkaninfo --show-all | grep -E 'sparseResidency[A-Za-z0-9]*|shaderDenormPreserveFloat32|shaderDenormFlushToZeroFloat32|shaderSignedZeroInfNanPreserveFloat32|shaderResourceResidency[A-Za-z0-9]*|fragmentShaderBarycentric|postDepthCoverage|descriptorBuffer|rayTracingPipeline|rayQuery|fragmentShaderInterlock'
+descriptorBuffer                   = true
+rayQuery = true
+shaderDenormFlushToZeroFloat32                       = true
+shaderDenormFlushToZeroFloat32        = true
+shaderDenormPreserveFloat32                          = false
+shaderDenormPreserveFloat32           = false
+shaderResourceResidency                 = true
+shaderSignedZeroInfNanPreserveFloat32                = true
+shaderSignedZeroInfNanPreserveFloat32 = true
+sparseResidency16Samples                = false
+sparseResidency2Samples                 = false
+sparseResidency4Samples                 = false
+sparseResidency8Samples                 = false
+sparseResidencyAliased                  = true
+sparseResidencyBuffer                   = true
+sparseResidencyImage2D                  = false
+sparseResidencyImage3D                  = false
+
+## ours
+$ vulkaninfo --show-all | grep -E 'VK_(KHR|EXT)_(fragment_shader_barycentric|post_depth_coverage|descriptor_buffer|attachment_feedback_loop(_layout|_dynamic_state)?|ray_tracing_pipeline|ray_query|acceleration_structure|shader_float_controls|fragment_shader_interlock|fragment_shading_rate|sparse_binding|sparse_buffer|shader_object_controls)'   (device extension lines)
+VK_EXT_attachment_feedback_loop_dynamic_state       : extension revision 1
+VK_EXT_attachment_feedback_loop_layout              : extension revision 2
+VK_EXT_descriptor_buffer                            : extension revision 1
+VK_KHR_acceleration_structure                       : extension revision 13
+VK_KHR_fragment_shading_rate                        : extension revision 2
+VK_KHR_ray_query                                    : extension revision 1
+VK_KHR_shader_float_controls                        : extension revision 4
+VK_KHR_shader_float_controls2                       : extension revision 1
+
+$ vulkaninfo --show-all | grep -E 'sparseResidency[A-Za-z0-9]*|shaderDenormPreserveFloat32|shaderDenormFlushToZeroFloat32|shaderSignedZeroInfNanPreserveFloat32|shaderResourceResidency[A-Za-z0-9]*|fragmentShaderBarycentric|postDepthCoverage|descriptorBuffer|rayTracingPipeline|rayQuery|fragmentShaderInterlock'
+descriptorBuffer                   = true
+rayQuery = true
+shaderDenormFlushToZeroFloat32                       = true
+shaderDenormFlushToZeroFloat32        = true
+shaderDenormPreserveFloat32                          = false
+shaderDenormPreserveFloat32           = false
+shaderResourceResidency                 = true
+shaderSignedZeroInfNanPreserveFloat32                = true
+shaderSignedZeroInfNanPreserveFloat32 = true
+sparseResidency16Samples                = false
+sparseResidency2Samples                 = true
+sparseResidency4Samples                 = true
+sparseResidency8Samples                 = true
+sparseResidencyAliased                  = true
+sparseResidencyBuffer                   = true
+sparseResidencyImage2D                  = true
+sparseResidencyImage3D                  = false
+
+## Reading
+- Equal rows in both runs are upstream's state; a row that differs is one of our patches.
+- A missing extension line means it is not offered at all for this device.
+- Nothing here says the game uses or could use the feature; RE4's own requests are in the
+  vkd3d-proton logs (docs/journal/, queue for the feature-level story).

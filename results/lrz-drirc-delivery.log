@@ -1,0 +1,56 @@
+# drirc delivery smoke: how the conservative-LRZ arm is delivered (no game, no build)
+# date: 2026-11-22T22:14:47+08:00
+# driver that answers: the system Turnip (/usr/lib64/libvulkan_freedreno.so), same Mesa 27 base as
+#   the ship stack build/out sha256 4c3cdb210082
+# command in every section: TU_DEBUG=startup vulkaninfo --summary   (grep 'TU:')
+# mechanism under test: Mesa reads a drirc directory from $DRIRC_CONFIGDIR, and setting it
+#   REPLACES $datadir/drirc.d (src/util/xmlconfig.c:1543-1552), which is why the distro file is
+#   copied into the directory next to the experiment file.
+# limit of this proof: it shows a device-level <option> is parsed and applied. It does not name
+#   tu_disable_conservative_lrz, which has no log line; for that option the same file, the same
+#   section and the same name spelling as the generator declares is all the evidence there is.
+
+## A - default config dir (no DRIRC_CONFIGDIR): expect the Mesa default BANDWIDTH
+TU: info: TU_DEBUG=0x1
+TU: info: Created an instance
+TU: info: Found compatible device '/dev/dri/renderD128' (msm).
+TU: info: TU_AUTOTUNE: Algorithm: BANDWIDTH, Mod Flags: 0x0 (), Metric Flags: 0x2 (SAMPLES )
+
+## B - DRIRC_CONFIGDIR with a file that sets tu_autotune_algorithm=prefer_sysmem at device level
+directory contents:
+00-turnip-defaults.conf
+90-experiment.conf
+TU: info: TU_DEBUG=0x1
+TU: info: Created an instance
+TU: info: Found compatible device '/dev/dri/renderD128' (msm).
+TU: info: TU_AUTOTUNE_ALGO=3 (prefer_sysmem)
+TU: info: TU_AUTOTUNE: Algorithm: PREFER_SYSMEM, Mod Flags: 0x0 (), Metric Flags: 0x0 ()
+
+## C - the file the game arm uses: the LRZ option only, in the same device-level form
+    <device driver="turnip">
+        <option name="tu_disable_conservative_lrz" value="true" />
+    </device>
+TU: info: TU_DEBUG=0x1
+TU: info: Created an instance
+TU: info: Found compatible device '/dev/dri/renderD128' (msm).
+TU: info: TU_AUTOTUNE: Algorithm: BANDWIDTH, Mod Flags: 0x0 (), Metric Flags: 0x2 (SAMPLES )
+(BANDWIDTH again: this file sets no autotune option.  It loads without an error line, but see D:
+ below - an unknown option name is silent too, so "no error line" is not proof of recognition.)
+
+## D - control: the same directory with a deliberately unknown option name
+unknown knob, expect a Mesa error line naming it
+TU: info: TU_DEBUG=0x1
+TU: info: Created an instance
+TU: info: Found compatible device '/dev/dri/renderD128' (msm).
+TU: info: TU_AUTOTUNE: Algorithm: BANDWIDTH, Mod Flags: 0x0 (), Metric Flags: 0x2 (SAMPLES )
+
+## What this does and does not prove
+- Proved: a device-level <option> in a $DRIRC_CONFIGDIR directory reaches Turnip (B against A).
+- Proved: the experiment file is the same shape and loads without an error line (C).
+- NOT proved: that tu_disable_conservative_lrz specifically took effect. D shows this Mesa build
+  ignores an unrecognised option name in silence, so a misspelling and an applied option look
+  identical in a log. The only evidence for the name is that it is copied from
+  src/freedreno/vulkan/tu_drirc_gen.py:48 (declared name and c_name are identical), and the
+  measurement itself is the check: if the LRZ counters do not move at all between the arms,
+  the honest reading is 'no effect or not delivered', and the tie-breaker is a built driver
+  with the flag flipped in code, not another log line.

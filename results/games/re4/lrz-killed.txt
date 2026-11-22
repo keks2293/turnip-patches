@@ -1,0 +1,68 @@
+# Does LRZ kill primitives in Resident Evil 4 Gold Edition, and does conservative LRZ stop it
+#       (re4.exe, D3D12 via vkd3d-proton 3.1.0, 2560x1440, game's Shadow Cache on in every arm)
+# driver: build/out/libvulkan_freedreno.so sha256 4c3cdb210082 (ship stack) in every arm.
+#       `lrz-nocons` differs by DRIRC_CONFIGDIR only (delivery and its limits:
+#       results/lrz-drirc-delivery.log); every other non-base arm differs by TU_DEBUG, and the
+#       mask the driver printed is the first row of each table
+# sampler: tools/fdperf/fdperf.cfg-lrz for the first table,
+#       tools/fdperf/fdperf.cfg-traffic for the second; counter window t_rel 20-105 s at the
+#       pinned clock; fps = p25 over MangoHud elapsed 95-150 s
+# regenerate: scripts/lrz-table.py > results/games/re4/lrz-killed.txt
+
+| counter | lrz-base | lrz-nocons | lrz-base2 | lrz-nolz | lrz-nolzfc | lrz-nolrz | lrz-nolrzfc | lrz-nolrz2 | lrz-nolrzfc2 |
+|---|---|---|---|---|---|---|---|---|---|
+| `TU_DEBUG` mask in the run log |      none |      none |      none | `0x1` | `0x1` | `0x81` | `0x40001` | `0x81` | `0x40001` |
+| LRZ busy, % of the core |   74.79 % |   74.53 % |   74.90 % |   74.80 % |   74.83 % |   74.82 % |   73.97 % |   74.99 % |   74.89 % |
+| RAS busy, % of the core |   63.53 % |   63.27 % |   63.38 % |   63.46 % |   63.52 % |   63.53 % |   62.85 % |   63.71 % |   63.56 % |
+| RAS stall on LRZ, % of the core |   28.41 % |   28.26 % |   28.22 % |   28.40 % |   28.44 % |   28.50 % |   27.53 % |   28.69 % |   28.45 % |
+| LRZ intf working (RAS), % of the core |    7.33 % |    7.34 % |    7.29 % |    7.32 % |    7.32 % |    7.33 % |    7.24 % |    7.34 % |    7.34 % |
+| RB busy (sums sub-units), % of the core |  288.99 % |  286.79 % |  287.44 % |  289.16 % |  289.10 % |  288.89 % |  275.46 % |  289.64 % |  288.92 % |
+| RB starve on LRZ tile (sums sub-units), % of the core |  222.74 % |  220.52 % |  222.02 % |  222.70 % |  222.63 % |  221.99 % |  209.45 % |  222.32 % |  222.45 % |
+| RB stall on HLSQ (sums sub-units), % of the core |   45.79 % |   45.13 % |   45.22 % |   46.14 % |   46.15 % |   45.29 % |   45.14 % |   45.84 % |   45.80 % |
+| CCU stall on depth return (sums sub-units), % of the core |   14.75 % |   14.82 % |   14.63 % |   14.66 % |   14.60 % |   15.31 % |   14.98 % |   15.27 % |   14.67 % |
+| VPC busy, % of the core |   85.58 % |   85.39 % |   85.70 % |   85.50 % |   85.55 % |   85.57 % |   85.06 % |   85.60 % |   85.55 % |
+| TSE busy, % of the core |   70.83 % |   70.58 % |   70.97 % |   70.84 % |   70.89 % |   70.87 % |   70.06 % |   71.04 % |   70.93 % |
+| TSE input prim |  225.09 M/s |  224.61 M/s |  223.83 M/s |  225.10 M/s |  225.21 M/s |  225.45 M/s |  222.58 M/s |  225.66 M/s |  225.50 M/s |
+| TSE visible prim |   45.43 M/s |   45.43 M/s |   45.18 M/s |   45.38 M/s |   45.39 M/s |   45.43 M/s |   44.86 M/s |   45.48 M/s |   45.47 M/s |
+| TSE zero-pixel prim |   82.62 M/s |   83.82 M/s |   81.72 M/s |   81.70 M/s |   81.89 M/s |   81.82 M/s |   81.23 M/s |   82.10 M/s |   81.87 M/s |
+| LRZ killed prim |    1.21 M/s |    1.20 M/s |    1.23 M/s |    1.16 M/s |    1.20 M/s |    0.00 M/s |    1.25 M/s |    0.00 M/s |    1.24 M/s |
+| LRZ total pixel |  525.23 M/s |  534.49 M/s |  521.32 M/s |  523.25 M/s |  522.93 M/s |  522.11 M/s |  520.27 M/s |  523.83 M/s |  523.99 M/s |
+| visible share of input |   20.18 % |   20.23 % |   20.18 % |   20.16 % |   20.15 % |   20.15 % |   20.15 % |   20.16 % |   20.16 % |
+| zero-pixel share of input |   36.71 % |   37.32 % |   36.51 % |   36.30 % |   36.36 % |   36.29 % |   36.50 % |   36.38 % |   36.30 % |
+| LRZ-killed share of input |    0.54 % |    0.54 % |    0.55 % |    0.51 % |    0.53 % |    0.00 % |    0.56 % |    0.00 % |    0.55 % |
+| p25 fps |    26.58 |    27.13 |    26.53 |    26.61 |    26.67 |    26.63 |    26.53 |    26.68 |    26.85 |
+| 1 s windows kept |          38 |          14 |          40 |          40 |          41 |          40 |          10 |          40 |          40 |
+| dump median clock |      680 MHz |      680 MHz |      680 MHz |      680 MHz |      680 MHz |      680 MHz |      678 MHz |      680 MHz |      680 MHz |
+
+`lrz-base` - chain30, no env: LRZ and its fast clear as the driver configures them
+`lrz-nocons` - chain30, DRIRC_CONFIGDIR with tu_disable_conservative_lrz=true
+`lrz-base2` - chain31, no env again - the repeat that puts a number on the session spread
+`lrz-nolz` - chain31, TU_DEBUG=startup,nolz - the name does not exist, mask stayed 0x1
+`lrz-nolzfc` - chain31, TU_DEBUG=startup,nolzfc - the name does not exist, mask stayed 0x1
+`lrz-nolrz` - chain32, TU_DEBUG=startup,nolrz (mask 0x81): LRZ off for the device, tu_device.cc:3388
+`lrz-nolrzfc` - chain32, TU_DEBUG=startup,nolrzfc (mask 0x40001): LRZ on, fast clear off, tu_lrz.cc:291-292
+`lrz-nolrz2` - chain33, repeat of nolrz - the second observation of the kill counter at zero
+`lrz-nolrzfc2` - chain33, repeat of nolrzfc - the arm with a full set of pinned-clock windows
+
+## The fast clear needs the traffic sampler, because a fast clear is a bus event (chain34)
+
+None of the counters above can see the fast clear: it replaces a pixel write with a metadata
+write, so its price is on the bus and in the RB's write counters, not in a cycle counter.
+`tools/fdperf/fdperf.cfg-traffic` programs those (`RB_Z_WRITE`, the UBWC beats, both VBIF
+channels).  Same window and clock rules as the table above; beats are converted at 16 B per
+`docs/fdperf-a7xx.md`, the same conversion `scripts/fdperf-traffic-table.py` uses.
+
+| counter | tr-lrzfc-on | tr-lrzfc-off | off against on |
+|---|---|---|---|
+| `TU_DEBUG` mask in the run log |      none | `0x40001` |  |
+| depth writes (RB) |    19.59M/s |    19.48M/s |   -0.54 % |
+| depth reads (RB) |    97.25M/s |    96.90M/s |   -0.36 % |
+| colour writes (RB) |    18.07M/s |    18.15M/s |   +0.44 % |
+| colour reads (RB) |     1.55M/s |     1.55M/s |   +0.20 % |
+| DRAM read GB/s |    15.18 |    15.23 |   +0.35 % |
+| DRAM write GB/s |     0.50 |     0.51 |   +0.11 % |
+| UBWC read MB/s |   558.50 |   555.29 |   -0.57 % |
+| UBWC write MB/s |    64.37 |    64.38 |   +0.01 % |
+| p25 fps |       26.62 |       26.67 |   +0.20 % |
+| 1 s windows kept |          41 |          40 |  |
+| dump median clock |      680 MHz |      680 MHz |  |

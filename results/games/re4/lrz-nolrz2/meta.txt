@@ -1,0 +1,13 @@
+# game:    Resident Evil 4 Gold Edition - /run/media/armada/Slim/Games/Resident.Evil.4.Gold.Edition-InsaneRamZes/re4.exe
+# title:   re4
+# tag:     lrz-nolrz2
+# date:    2026-11-23T00:43:37+08:00
+# driver:  /var/home/armada/opencode/build/out/libvulkan_freedreno.so sha256=4c3cdb210082
+# cfg:     tools/fdperf/fdperf.cfg-lrz
+# env:     TU_DEBUG=startup,nolrz   (delta against the plain ship stack)
+# shot:    results/games/re4/raw/shot-lrz-nolrz2.png, 3 distinct colours at 160x90; panel dpms=Off/Off/On
+#           (a capture of this compositor with the panel off is black; the content check is
+#            counter reproduction between arms, see docs/howto-measure.md)
+# chain:   interactive
+# source:  results/raw/game-patched-lrz-nolrz2.log (gitignored), fps: results/games/re4/fps-lrz-nolrz2.csv
+# game settings: AppShadowQuality=1 AppShadowCache=1

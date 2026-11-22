@@ -1,0 +1,75 @@
+// fdperf.cfg-lrz - does LRZ kill anything in this game, and is conservative LRZ the reason if not.
+//
+// Why: with the game's Shadow Cache on, 79.9 % of the primitives the frame submits never produce a
+// pixel (results/games/re4/render-mode-two-frames.txt + arm `tse2-cacheon`): 18.4 % trivially
+// rejected, 17.1 % face-culled, and the remaining ~44 % reach the rasterizer and come back as
+// `TSE_ZERO_PIXEL_PRIM` - 44 % of the input is geometry that survives culling and wins no pixel.
+// That class is exactly what LRZ is for: depth rejection before pixel shading, counted by
+// `LRZ_PRIM_KILLED_BY_LRZ` (LRZ index 12). That counter exists in `fdperf.cfg` and in
+// `docs/fdperf-a7xx.md`, and no game run in this repository has ever programmed it, so the size of
+// the effect is unknown, not zero.
+//
+// The second half is the driver's own knob: `tu_lrz.cc:1524` and `:1533` fall back to *conservative*
+// LRZ (an upper-bound depth range) unless driconf's `tu_disable_conservative_lrz` is set, and the
+// option is documented for games "that do not have the problematic sequence of draws *and* suffer a
+// performance loss with conservative LRZ" (`tu_drirc_gen.py:44-50`). Never measured on this game.
+// There is no TU_DEBUG for it, but Mesa reads a drirc directory from `$DRIRC_CONFIGDIR`
+// (`src/util/xmlconfig.c:1543`), which makes the arm env-only. WARNING from the same source: setting
+// `DRIRC_CONFIGDIR` *replaces* `$datadir/drirc.d`, so an arm that sets it must copy
+// `/usr/share/drirc.d/00-turnip-defaults.conf` into the directory too or it silently changes the
+// distribution's per-application options as well (journal 40.16 measured that file's
+// `tu_autotune_algorithm = prefer_sysmem` as worth ~3 %).
+//
+// Group budgets (docs/fdperf-a7xx.md:231 - LRZ=4, RAS=4, TSE=4, CP=13, VPC=6; lines beyond a budget
+// are silently dropped), so this cfg gives up the memory cut to buy the depth-rejection one:
+//   LRZ  4 of 4, RAS 4 of 4, TSE 4 of 4, CP 4 of 13, VPC 1 of 6, PC 1 of ?, RBBM 3 of 4.
+// `LRZ_TOTAL_PIXEL` (17) and `LRZ_LRZ_READ/WRITE` are what make "killed" a rate: killed / (killed +
+// pixels that went on) is the share of the raster work LRZ removes.
+//
+// Run:
+//   SAMPCFG=tools/fdperf/fdperf.cfg-lrz scripts/run-arm.sh <TAG>                       # as the game ships
+//   SAMPCFG=tools/fdperf/fdperf.cfg-lrz scripts/run-arm.sh <TAG> DRIRC_CONFIGDIR=...   # conservative LRZ off
+
+FD740 = {
+  CP = {
+    counter0  = 0;    // reserved (ALWAYS_COUNT, frequency)
+    counter1  = 2;    // PERF_CP_BUSY_CYCLES
+    counter2  = 11;   // PERF_CP_CONTEXT_DONE
+    counter3  = 9;    // PERF_CP_MODE_SWITCH
+  }
+
+  RBBM = {
+    counter0 = 1;    // PERF_RBBM_ALWAYS_ON (divisor for the duty cycle)
+    counter1 = 9;    // PERF_RBBM_VBIF_BUSY
+    counter2 = 12;   // PERF_RBBM_UCHE_BUSY
+  }
+
+  TSE = {
+    counter0 = 0;    // PERF_TSE_BUSY_CYCLES
+    counter1 = 6;    // PERF_TSE_INPUT_PRIM
+    counter2 = 14;   // PERF_TSE_OUTPUT_VISIBLE_PRIM
+    counter3 = 12;   // PERF_TSE_ZERO_PIXEL_PRIM
+  }
+
+  RAS = {
+    counter0 = 0;    // PERF_RAS_BUSY_CYCLES
+    counter1 = 2;    // PERF_RAS_STALL_CYCLES_LRZ (the rasterizer waiting on LRZ)
+    counter2 = 3;    // PERF_RAS_STARVE_CYCLES_TSE
+    counter3 = 11;   // PERF_RAS_LRZ_INTF_WORKING_CYCLES
+  }
+
+  LRZ = {
+    counter0 = 0;    // PERF_LRZ_BUSY_CYCLES
+    counter1 = 12;   // PERF_LRZ_PRIM_KILLED_BY_LRZ   <- the number this cfg exists for
+    counter2 = 7;    // PERF_LRZ_LRZ_READ
+    counter3 = 17;   // PERF_LRZ_TOTAL_PIXEL
+  }
+
+  VPC = {
+    counter0 = 0;    // PERF_VPC_BUSY_CYCLES (keep the wall column comparable with the other arms)
+  }
+
+  PC = {
+    counter0 = 21;   // PERF_PC_IA_PRIMITIVES (the input rate independent of TSE's own counter)
+  }
+}
