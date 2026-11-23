@@ -1043,6 +1043,35 @@
    ],
    "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
    "verdict_source": "journal 40"
+  },
+  {
+   "id": "41",
+   "title": "The fdperf configs are budget splits, not duplicates; ten counters have never had a reading, and two slots have selected the wrong counter since they were written (23.11)",
+   "question": "The fdperf configs are budget splits, not duplicates; ten counters have never had a reading, and two slots have selected the wrong counter since they were written (23.11)",
+   "file": "journal/41-the-fdperf-configs-are-budget-splits-ten-counters-were-never-measured.md",
+   "date": "23.11",
+   "status": "closed",
+   "decision": "",
+   "verdict_first_line": "the fifteen `tools/fdperf/fdperf.cfg` cannot be merged into one config, because the union",
+   "artifacts": [
+    "scripts/fdperf-cfg-check.py",
+    "tools/fdperf/a7xx-budgets.json",
+    "results/fdperf-cfg-budgets.txt",
+    "build/out/fdperf",
+    "scripts/fdperf-analyze.py",
+    "results/games/re4/mesa27-vertex/fdperf-per-window.tsv",
+    "tools/fdperf/fdperf.cfg-gaps",
+    "results/games/re4/tr-base",
+    "scripts/fdperf_sections.py"
+   ],
+   "lines": 134,
+   "headings": [
+    "## 41.1 The audit: what the budgets are, what is lost, what has never been measured",
+    "## 41.2 Two slots have selected the wrong SP counters since the cfgs were written",
+    "## 41.3 The \"UBWC cannot be checked with counters\" passage was stale"
+   ],
+   "verdict_quote": "the fifteen tools/fdperf/fdperf.cfg cannot be merged into one config, because the union",
+   "verdict_source": "journal 41"
   }
  ]
 }

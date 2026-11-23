@@ -15,9 +15,11 @@ or geometry/vertices" with per-block kernel counters (not `VK_KHR_performance_qu
 | `tools/fdperf/fdperf.cfg-vpc3` | "is the VPC's own RAM the limit": `VPCRAM_FULL`, `WIT_FULL`, `STALL_CYCLES_VPCRAM_POS`, `STALL_CYCLES_LM_ACK`, `NUM_LM_REQ_HIT`. First runs 21.11 23:14 (`vpc3base`, `attrbuf`, queue 19) |
 | `tools/fdperf/fdperf.cfg-tse`, `tools/fdperf/fdperf.cfg-tse2`, `tools/fdperf/fdperf.cfg-tse3` | the TSE question in three cuts of one **4-counter** TSE budget plus the 2-counter VSC budget: how much geometry TSE throws away (`INPUT_PRIM`, `OUTPUT_VISIBLE_PRIM`, `ZERO_PIXEL_PRIM`), why (`TRIVAL_REJ`, `ZERO_AREA`, `FACENNESS_CULLED`, `CLIPPED`), and whether a binning pass exists at all (`VSC_BUSY` + `VSC_INPUT_TILES`). They cannot be merged into one run, and each header says so. Run 21.11 as `cbbase`, `cbforce`, and 22.11 as `tse3cb2`, `tse3cb3` |
 | `tools/fdperf/fdperf.cfg-bv`, `tools/fdperf/fdperf.cfg-bv2`, `tools/fdperf/fdperf.cfg-bv3` | written 22.11 for queue 20: the first cfgs in this repository to name the `BV_*` groups (`BV_VPC`, `BV_TSE`, and in `-bv` also `BV_PC`, `BV_TP`) instead of leaving them at their defaults, so the binning/visibility thread's own counters become readable. `-bv2` (no `BV_PC`/`BV_TP`) and `-bv3` (`BV_VPC` alone) were the trim test for why the VSC tile counter read 0 in those runs - the answer was the session, not the cfg (journal 40.12). Run 22.11 as `bvbase`, `bvforce`, `bvforce2`, `bvforce3`, `bvforce4`, `bvforce5` |
+| `tools/fdperf/fdperf.cfg-gaps` | written 23.11 from the budget audit: the ten counters that no dump in this repository has ever carried (`UCHE_EVICTS`, the two `UCHE_CCHE_*_QUEUE_FULL`, `PC_VPC_PRIMITIVES`, `RBBM_PC_DCALL/VSD_BUSY`, `LRZ_LRZ_WRITE`, `CCU_2D_RD/WR_REQ`, `CMPDECMP_VBIF_WRITE_REQUEST`), each placed inside its block's budget with a denominator kept beside it. **NOT RUN**; journal 41.1 |
 | `tools/fdperf/fdperf-windowed-delta.patch` | fix for the `-d` window in `fdperf.c` (see section Windows) |
 | `scripts/fdperf-sample.sh [sec] [window-ms] [file] [cfg]` | background sampler: loop `sudo fdperf -r <window> -d` |
 | `scripts/fdperf_sections.py` | the one loader for dumps, shared by every script that reads one: splits the ordinary groups from their `BV_*` twins (`load_sections()`; `load()` is the same call with the BV half discarded), drops `u64`-wrapped window deltas and `[invalid]`, and reports which names came only from the BV half |
+| `scripts/fdperf-cfg-check.py [--dumps] [--verbose] [--update-budgets <mesa a7xx_perfcntrs.json>]` | the budgets below, as an assertion: every cfg line at or past a block's `num`, and for each one whether any committed dump has the name at all; also lists, per cfg, names it asks for that no dump carries - which is how the mis-numbered `SP_GM_LOAD_LATENCY_CYCLES` id was found (journal 41.2). Reads `tools/fdperf/a7xx-budgets.json`; output in `results/fdperf-cfg-budgets.txt` |
 | `scripts/fdperf-vpc-ratios.py <dump> [lo] [hi]` | the vertex-path ratios (VPC split, PC/VFD/UCHE coupling, DRAM by client); a counter the cfg did not program prints as `nan`, never as 0 |
 | `scripts/fdperf-tse-ratios.py <dump> [lo] [hi]` | the TSE-discard ratios (visible/input, the reason counters, VSC busy and tiles fed) |
 | `scripts/fdperf-vpcram-ratios.py <dump> [lo] [hi]` | the VPC's own memory system (`VPCRAM_FULL`, `WIT_FULL`, `STALL_CYCLES_VPCRAM_POS`, `LM_ACK`, `LM_REQ_HIT`) - a table for the `cfg-vpc3` half of the budget, which no other script can read |
@@ -230,17 +232,33 @@ the size of the group's hw table (a7xx, from `a7xx_perfcntrs.json.h`): UCHE=12,
 CP=13, PC=8, VFD=8, VPC=6, TSE=4, RAS=4, HLSQ=6, TP=12, SP=24, RB=8, CCU=5,
 LRZ=4, UFC=4, CMP=4, RBBM=4, VSC=2. Lines beyond the limit are **silently
 ignored**: no error, no "reducing" in the output - the counter is simply absent
-from the dump.
+from the dump. (`a7xx_perfcntrs.json` gives CP `num` 14 with id 0 marked
+`reserved`; the 13 above is that figure minus the reserved one, and no cfg here
+uses a CP slot above 11, so nothing turns on the difference.)
 
-In the main `fdperf.cfg` the limit was exceeded: UCHE (19 of 12), PC (10 of 8),
-RBBM (6 of 4), CCU (9 of 5), LRZ (7 of 4), CMP (7 of 4). So these counters
-**were not measured at all** (there are no lines in `fdperf-raw.txt`, rather
-than "they read 0"): `UCHE_EVICTS`, `UCHE_UBWC_READ/WRITE_BEATS`,
-`UCHE_READ_REQUESTS_TP_UBWC/NONUBWC`, `UCHE_CCHE_TPH/DPH_QUEUE_FULL`,
-`PC_VPC_PRIMITIVES`, `PC_3D_DRAWCALLS`, `RBBM_PC_DCALL_BUSY`,
-`RBBM_PC_VSD_BUSY`, `CCU_DEPTH/COLOR_BLOCKS`, `CCU_2D_RD/WR_REQ`,
-`LRZ_LRZ_WRITE`, `LRZ_PRIM_KILLED_BY_LRZ`, `LRZ_TOTAL_PIXEL`,
-`CMP_VBIF_WRITE_DATA_CCU`, `CMP_VBIF_READ/WRITE_REQUEST`.
+This section is a rule, not a list to maintain: `scripts/fdperf-cfg-check.py`
+re-derives it from the cfg files (`--dumps` also asks, for each lost line, whether
+any dump in `results/` has the name), and its output is
+[`results/fdperf-cfg-budgets.txt`](../results/fdperf-cfg-budgets.txt) - journal
+41.1. Read it there for the per-cfg detail; what the audit confirmed and added:
+
+* In the main `fdperf.cfg` the limit was exceeded: UCHE (19 of 12), PC (10 of 8),
+  RBBM (6 of 4), CCU (9 of 5), LRZ (7 of 4), CMP (7 of 4) - the six the script
+  reports, so the figure was right. Of the names those lines name, most are in
+  dumps taken with another cfg (`UCHE_UBWC_READ/WRITE_BEATS` and
+  `UCHE_READ_REQUESTS_TP_*` from `fdperf.cfg-traffic`, `PC_3D_DRAWCALLS` and
+  `LRZ_TOTAL_PIXEL` from `fdperf.cfg-vertex`, `CCU_DEPTH/COLOR_BLOCKS` and
+  `LRZ_PRIM_KILLED_BY_LRZ` from the BV and LRZ sets); ten have **no reading in any
+  dump on this machine**, and they are listed in 41.1 and allocated inside the
+  budgets by `tools/fdperf/fdperf.cfg-gaps` (NOT RUN).
+* "Past the budget in one cfg" and "never measured" are different claims, and only
+  the second one closes a question. That is the reason the script cross-checks
+  dumps instead of reporting overruns.
+* A name can also be wrong rather than missing: `SP_GM_LOAD_LATENCY_CYCLES` is
+  asked for by `fdperf.cfg` and `fdperf.cfg-vertex` within SP's budget, and has
+  never been selected, because the id written for it belongs to the next counter in
+  the enum (journal 41.2; corrected 23.11).
+
 Within budget, but actually reading 0: `UCHE_GMEM_READ/WRITE_BEATS`.
 
 Two rules about the names themselves, both added 23.11 after a question could not be answered from
@@ -271,11 +289,16 @@ the dumps (evidence: journal 40.33):
   with the pair it came from, or nothing. Queue 34 is that calibration; until it runs, no per-vertex
   varying count may be quoted here.
 
-Conclusion: **the state of UBWC compression from hw counters on this chip has
-not been verified** (the GMEM-*_BEATS are dead; the UBWC counters never fit in
-the budget either). The per-client set, where all groups are within the hw
-budget: `tools/fdperf/fdperf.cfg-vertex` (it has no UBWC either - the UCHE
-budget is exhausted by per-client counters; UBWC needs a separate cfg/run).
+Conclusion: **UBWC compression on this chip is measurable and has been measured** -
+`tools/fdperf/fdperf.cfg-traffic` spends UCHE slots 6-9 on
+`UBWC_READ/WRITE_BEATS` and `READ_REQUESTS_TP_UBWC/NONUBWC`, and the 22.11 run
+`results/games/re4/tr-base` reads them (journal 40.17, which closed open question
+15: compressed bytes do move, 2.0 % of read bytes, 12.7 % of write bytes;
+journal 41.3 recomputes the same row from the dump). What is *not* measurable is
+the GMEM side: `UCHE_GMEM_*_BEATS` read 0 (dead). Neither `fdperf.cfg` nor
+`tools/fdperf/fdperf.cfg-vertex` can carry a UBWC counter at all - the UCHE budget
+(12) is exhausted by the per-client set in `cfg-vertex`, which is why the traffic
+cfg exists.
 
 ## Cross-check with the MangoHud CSV
 
@@ -364,11 +387,14 @@ optimizations:
   change the nature of the bottleneck;
 - batching draws (765/frame) - potential, but not the wall (CPU ~58%,
   PC starve_for_index 0.3%);
-- UBWC: hw counters on a740 give no answer - `UCHE_GMEM_*_BEATS` are dead
-  (they read 0), and the UBWC counters in both cfg did not fit in the UCHE hw
-  budget (12) - see section "hw budgets"; it can only be checked indirectly
-  (A/B of `TU_UBWC_*` options by fps) or with a separate cfg (evicting
-  per-client);
+- UBWC: measured directly, not inferred - `UCHE_GMEM_*_BEATS` are dead (they read
+  0), but `fdperf.cfg-traffic` carries `UCHE_UBWC_READ/WRITE_BEATS` and the TP
+  UBWC/non-UBWC request split, and `results/games/re4/tr-base` says compressed
+  bytes do move: 317 MB/s of reads, 37 MB/s of writes, 48.4 M/s of TP requests
+  UBWC against 1.95 G/s non-UBWC (40.17, recomputed in 41.3; question 15 closed).
+  What remains closed is the GMEM side, and the eviction side: `UCHE_EVICTS` has
+  no reading on this machine at all (41.1), so the ~73 % L2 share of vertex bytes
+  stays an inference from what does not reach DRAM;
 
 ## Reproducing the run
 

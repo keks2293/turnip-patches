@@ -1090,10 +1090,28 @@ instead of against a build.
     see which node and which request it reads GMEM with. Decided nothing while queue 35 is parked (23.11),
     and worth the ten minutes anyway: a GMEM figure is the kind of number a later script will want, and
     "the kernel answers EINVAL to a request the driver's own init sends successfully" is a fact about this
-    machine that no document here currently explains.
-    Decides: whether any script here may compute a
-    GMEM figure from the kernel at all - today the answer is no, which is why queue 35's arms are built
-    on absolute `TU_GMEM` budgets.
+    machine that no document here currently explains. It also says, in passing, that no script here may
+    take a GMEM figure from the kernel, which is why queue 35's arms are built on absolute `TU_GMEM`
+    budgets.
+
+37. **Sample the ten counters that have never had a reading on this machine** - `tools/fdperf/fdperf.cfg-gaps`,
+    written 23.11 from the budget audit (journal 41.1), **NOT RUN**. The arms are one 140 s sample of RE4 in
+    the usual scene (`scripts/fdperf-sample.sh 140 1000 /tmp/opencode/fdperf-gaps.txt
+    tools/fdperf/fdperf.cfg-gaps`), no build, and one control that costs nothing: `fdperf.cfg-traffic` or
+    `-vertex` beside it, since `EVICTS` and the two `UCHE_CCHE_*_QUEUE_FULL` have no unit in the XML and a
+    first reading is only meaningful against a window where the neighbouring traffic counters are known.
+    Decides three things at once: (a) whether the "L2 caches ~73 % of the vertex bytes" figure gets a direct
+    reading or stays an inference from what does not reach DRAM - `UCHE_EVICTS` is the only eviction counter
+    on the block, and `UCHE_GMEM_*_BEATS` is the precedent for a counter that reads 0 forever, so "flat 0 in
+    a scene that must evict" is itself the answer; (b) whether `PC_VPC_PRIMITIVES` (id 16, never selected
+    anywhere) is the denominator queue 34 could not find - its substitute `PC_TAG_CHECKED_VERTICES` reads 0
+    in a mesh where every vertex must pass the cache (40.35), and without a per-vertex or per-primitive
+    count the `VPC_SP_COMPONENTS` question cannot be closed by ratio; (c) whether LRZ writes its mask at all
+    (`LRZ_LRZ_WRITE` against the `LRZ_READ` that every run has). Note for whoever reads the output: three
+    columns of `scripts/fdperf-analyze.py` (`RBBM_PCDC`, `RBBM_PCVSD`, `SP_GM_CYC`) have been empty in every
+    committed table because the names were never selected - two of them are this cfg's lines, and the third
+    is the corrected id of 41.2, so they should fill in on the first run and an empty column afterwards
+    means dead, not missing.
 
 ## Open questions
 

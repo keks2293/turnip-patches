@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+"""Check every fdperf.cfg* against the hardware selection-counter budgets.
+
+    scripts/fdperf-cfg-check.py [--cfgs 'tools/fdperf/fdperf.cfg*']
+                               [--budgets tools/fdperf/a7xx-budgets.json]
+                               [--dumps] [--verbose]
+    scripts/fdperf-cfg-check.py --update-budgets ../mesa27-src/src/freedreno/registers/adreno/a7xx_perfcntrs.json
+
+What it asserts.  fdperf reads, from a config section, only `counter0` through
+`counter<num-1>`, where `num` is the size of that block's hardware selector table.  A line
+past the limit is not an error and is not reduced with a warning: the tool never emits the
+name, so the counter is absent from the dump.  `docs/fdperf-a7xx.md`, section "hw counter
+budgets and silent ignore in fdperf", records that `fdperf.cfg` lost six blocks' worth that
+way, listed by hand from a run.  This script re-derives that list from the cfg files, so an
+edit next month cannot quietly lose a counter again, and it checks the other twelve cfgs,
+which the prose never covered.
+
+Where the numbers come from.  `num` per block is committed as `tools/fdperf/a7xx-budgets.json`
+(generated from Mesa's `a7xx_perfcntrs.json` by `--update-budgets`, which writes its own
+provenance line).  The rule that a too-high slot is *silently* dropped is measured behavior
+of the sampler `../build/out/fdperf` - the binary is built from the turnip tree and is not
+vendored here, so the rule is not re-derived from its source: it came from comparing cfg
+lines against dumps, and `docs/fdperf-a7xx.md` is the record of that comparison.
+
+What the prose could not give.  For each line a cfg loses, does ANY committed dump have the
+name?  "Never measured on this machine" is a different claim from "measured as 0", and three
+journal entries have had to make it by hand because nothing checked it.  With `--dumps` the
+script answers it from the headers of `results/**/fdperf-raw.txt`.
+
+The name of a lost line is taken from the cfg's own comment, which every over-budget line in
+this repo carries; a line without a `PERF_*` comment is reported by id and said to be
+unannotated, rather than guessed at.
+"""
+
+import argparse
+import glob
+import json
+import os
+import re
+import sys
+
+SEC_RE = re.compile(r"^\s*([A-Za-z0-9_]+)\s*=\s*\{\s*$")
+CNT_RE = re.compile(r"^\s*counter(\d+)\s*=\s*(\d+)\s*;\s*(?://\s*(.*?))?\s*$")
+NAME_RE = re.compile(r"\b(PERF_[A-Z0-9_]+)")
+
+
+def read_cfg(path):
+    """-> {block: [(slot, id, comment), ...]} in file order."""
+    out, blk = {}, None
+    with open(path, errors="replace") as fh:
+        for line in fh:
+            if line.lstrip().startswith("//"):
+                continue          # the cfg's own header prose has `X = {` in it
+            m = SEC_RE.match(line)
+            if m:
+                blk = m.group(1)
+                out.setdefault(blk, [])
+                continue
+            if blk and line.lstrip().startswith("}"):
+                blk = None
+                continue
+            m = CNT_RE.match(line)
+            if m and blk:
+                out[blk].append((int(m.group(1)), int(m.group(2)), m.group(3) or ""))
+    return out
+
+
+def name_of(comment, blk, cid):
+    m = NAME_RE.search(comment or "")
+    return m.group(1) if m else None
+
+
+def dump_names(path):
+    """The counter names a dump carries.  fdperf prints only what it selected, so a name
+    present in any dump was measured somewhere; a name in no dump never was."""
+    with open(path, errors="replace") as fh:
+        return set(NAME_RE.findall(fh.read()))
+
+
+def table(rows, widths, header):
+    out = ["  ".join(h.ljust(w) for h, w in zip(header, widths)).rstrip(),
+           "  ".join("-" * w for w in widths)]
+    for r in rows:
+        out.append("  ".join(str(c).ljust(w) for c, w in zip(r, widths)).rstrip())
+    return "\n".join(out)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--cfgs", default="tools/fdperf/fdperf.cfg*")
+    ap.add_argument("--budgets", default="tools/fdperf/a7xx-budgets.json")
+    ap.add_argument("--dump-glob", default="results/**/fdperf-raw.txt")
+    ap.add_argument("--dumps", action="store_true",
+                    help="cross-check lost names against committed dumps (slower)")
+    ap.add_argument("--verbose", action="store_true", help="also list surviving lines")
+    ap.add_argument("--update-budgets", metavar="JSON",
+                    help="regenerate the committed budget table from Mesa's JSON and exit")
+    args = ap.parse_args()
+
+    if args.update_budgets:
+        src = json.load(open(args.update_budgets))
+        groups = []
+        for g in src["groups"]:
+            e = {k: g[k] for k in ("name", "num", "select_offset", "select",
+                            "counter", "countable_type") if k in g}
+            if g.get("reserved"):
+                e["reserved"] = g["reserved"]
+            groups.append(e)
+        note = ("Generated by scripts/fdperf-cfg-check.py --update-budgets %s.  `num` is the "
+                "number of selection counters the block has, so it is the highest slot fdperf "
+                "reads from a cfg section plus one: a `counterN` line with N >= num is ignored "
+                "without any message (docs/fdperf-a7xx.md, 'hw counter budgets and silent "
+                "ignore in fdperf').  A BV_* group is the same block's second selector set - "
+                "`select_offset` says where, and BV_CP has no separate offset, its selects live "
+                "in the CP block - which is why a dump can carry one name twice; see "
+                "scripts/fdperf_sections.py." % args.update_budgets)
+        with open(args.budgets, "w") as fh:
+            json.dump({"_note": note, "chip": src.get("chip"), "groups": groups}, fh, indent=1)
+            fh.write("\n")
+        print("wrote %s (%d groups)" % (args.budgets, len(groups)))
+        return 0
+
+    bj = json.load(open(args.budgets))
+    budget = {g["name"]: g["num"] for g in bj["groups"]}
+    reserved = {g["name"]: g.get("reserved", []) for g in bj["groups"]}
+
+    paths = sorted(glob.glob(args.dump_glob, recursive=True)) if args.dumps else []
+    seen = {}
+    for p in paths:
+        for n in dump_names(p):
+            seen.setdefault(n, p)
+
+    cfgs = sorted(glob.glob(args.cfgs))
+    if not cfgs:
+        print("no cfg files match %s" % args.cfgs, file=sys.stderr)
+        return 2
+
+    print("# fdperf cfg against hardware selection-counter budgets")
+    print("# budgets: %s (chip %s, %d groups)  rule: slot >= block's num is never read"
+          % (args.budgets, bj.get("chip"), len(budget)))
+    print("# cfgs: %d%s" % (len(cfgs), ""))
+    if args.dumps:
+        print("# dumps scanned: %d, distinct names seen: %d" % (len(paths), len(seen)))
+    print()
+
+    lost_total, never = 0, []
+    for cfg in cfgs:
+        secs = read_cfg(cfg)
+        rows, lost = [], []
+        for blk in sorted(secs):
+            lines = secs[blk]
+            num = budget.get(blk)
+            if num is None:
+                if not lines:
+                    continue          # the cfg's per-chip wrapper (FD740), no counters of its own
+                rows.append([blk, len(lines), "?", "", "UNKNOWN BLOCK"])
+                continue
+            keep = sorted(x for x in lines if x[0] < num)
+            lost += [x for x in lines if x[0] >= num]
+            slots = sorted(x[0] for x in keep)
+            note = []
+            if len(keep) < num:
+                note.append("uses %d of %d slots" % (len(keep), num))
+            res = sorted({i for _, i, _ in keep if i in reserved[blk]})
+            if res:
+                note.append("keeps id %s, which the JSON marks reserved"
+                            % ",".join(map(str, res)))
+            rows.append([blk, len(lines), num, ",".join(str(i) for _, i, _ in keep),
+                         "; ".join(note)])
+        lost_total += len(lost)
+        print("== %s" % os.path.basename(cfg))
+        print(table(rows, [10, 5, 4, 20, 34], ["block", "lines", "num", "ids kept", "note"]))
+        if lost:
+            print("   lines past the budget, which fdperf will not read:")
+            for slot, cid, comment in sorted(lost):
+                nm = name_of(comment, None, cid)
+                status = ""
+                if not nm:
+                    status = "the line carries no PERF_* name to check"
+                if nm and args.dumps:
+                    status = ("measured by another cfg: %s" % seen[nm] if nm in seen
+                              else "NEVER MEASURED on this machine")
+                    if nm not in seen:
+                        never.append(nm)
+                print("      counter%-2d = %-3s %-32s %s"
+                      % (slot, cid, nm or "(unannotated)", status))
+        if args.dumps:
+            new_names = sorted({name_of(c, b, i) for b in sorted(secs)
+                                for s, i, c in secs[b] if s < budget.get(b, 0)} - {None})
+            unseen = [n for n in new_names if n not in seen]
+            if unseen:
+                print("   names this cfg asks for that no committed dump carries (%d):"
+                      % len(unseen))
+                for n in unseen:
+                    print("      %s" % n)
+        if args.verbose:
+            print("   kept: " + ", ".join(
+                "%s%d=%d" % (b, s, i)
+                for b in sorted(secs) for s, i, _ in sorted(secs[b]) if s < budget.get(b, 99)))
+        print()
+
+    print("== one cfg cannot carry everything: the union over cfgs per block ==")
+    union = {}
+    for cfg in cfgs:
+        for blk, lines in read_cfg(cfg).items():
+            if blk not in budget and not lines:
+                continue
+            d = union.setdefault(blk, {})
+            for slot, cid, comment in lines:
+                nm = name_of(comment, blk, cid) or ("id%d" % cid)
+                d.setdefault(nm, []).append(os.path.basename(cfg))
+    rows = []
+    for blk in sorted(union):
+        n = len(union[blk])
+        b = budget.get(blk)
+        rows.append([blk, n, b if b else "?", max(0, n - (b or 0)),
+                     "over budget by %d: needs a cfg of its own" % (n - b)
+                     if b and n > b else "fits one cfg"])
+    print(table(rows, [10, 9, 5, 8, 34], ["block", "distinct", "num", "excess", "note"]))
+    print()
+    print("lines past a budget, all cfgs: %d%s"
+          % (lost_total,
+             ", %d of them distinct names that no dump carries (lost in %d places)"
+             % (len(set(never)), len(never)) if args.dumps else ""))
+    for nm in sorted(set(never)):
+        print("   NEVER MEASURED  %s" % nm)
+    print()
+    print("What this does NOT decide: whether a counter that fits the budget means what its\n"
+          "comment says (that is a unit question, see docs/fdperf-a7xx.md and queue 34), and\n"
+          "what fdperf does with a slot left out of a section - the binary is not vendored\n"
+          "here, so a gap is reported as a fact about the file, not about the hardware.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

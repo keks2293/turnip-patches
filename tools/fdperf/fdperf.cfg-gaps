@@ -1,0 +1,99 @@
+// fdperf.cfg-gaps - the ten counters that no committed dump on this machine has ever carried.
+//
+// Written 23.11 from `scripts/fdperf-cfg-check.py --dumps` (output:
+// results/fdperf-cfg-budgets.txt).  That script compares every cfg against the hardware
+// selection-counter budgets (`tools/fdperf/a7xx-budgets.json`, one selector set per block)
+// and then asks, for each cfg line past a budget, whether ANY dump in `results/` has the
+// name.  Ten names have it nowhere: they were written into `fdperf.cfg` at slots the sampler
+// never reads, and no other cfg had room for them either.  `docs/fdperf-a7xx.md` knew six of
+// them were "not measured at all" as a property of that one cfg; this cfg is the other half -
+// the same ten lines, placed inside the budget, so a run exists for them.
+//
+// This is also the honest answer to "merge the cfgs into one master config".  The union over
+// the fifteen cfgs needs UCHE 29 of 12 selectors, VPC 19 of 6, TSE 10 of 4, PC 14 of 8, CCU 9
+// of 5, LRZ 7 of 4, CMP 7 of 4, RBBM 6 of 4 (script, same table).  One config cannot hold the
+// union of eight blocks, so the cfgs are not duplicates of each other: each is a different
+// way to spend a budget.  What can be centralised is the *selection*, and that is what this
+// file is: the gaps, allocated once, with room left for a denominator in every block.
+//
+// WHAT EACH LINE IS FOR
+//   UCHE 18  EVICTS - the only eviction counter on the block.  The L2 share of the vertex
+//              fetch (docs/fdperf-a7xx.md: ~73 % of vertex bytes cached) is currently an
+//              inference from what does NOT go to DRAM; this would be the direct reading.
+//   UCHE 54/55  CCHE_TPH/DPH_QUEUE_FULL - whether the vertex/texture client's queue into L2
+//              is the limiter when UCHE is not at its ceiling.  Nothing measures this today,
+//              and the "L2 latency, fixed ~220 ns" figure in the traffic summary has no
+//              back-pressure counter behind it.
+//   PC 16    VPC_PRIMITIVES - the primitive count as the pixel converter sees it, i.e. the
+//              denominator queue 34 wanted and could not find (see 40.33: PC_TAG_CHECKED_VERTICES
+//              id 19 reads 0 in a mesh where every vertex must pass the cache).
+//   RBBM 4/5 PC_DCALL_BUSY / PC_VSD_BUSY - whether the draw-call front end is busy at all;
+//              the ~765 draws/frame figure is from `CP_CONTEXT_DONE`, and the doc notes
+//              `PC_3D_DRAWCALLS` "did not fit the PC budget" - it fits (cfg-vertex counter7),
+//              these two never had a slot anywhere.
+//   LRZ 8    LRZ_LRZ_WRITE - LRZ's own write side, against `LRZ_READ` id 7 which every run
+//              has: reads without writes would say the depth test never updates the mask.
+//   CCU 10/11 2D_RD_REQ / 2D_WR_REQ - 2D (blit/copy) traffic through the CCU.  Relevant to
+//              the 8bpp/NV12 work, where a copy path can be either 2D or 3D.
+//   CMP 5/6  VBIF_READ_REQUEST / VBIF_WRITE_REQUEST - the request half of the CCU path
+//              (the data half, id 3, is measured; requests are not, so no average burst size
+//              for GMEM<->LLC can be quoted today).
+//
+// Denominators kept, deliberately, so each arm is readable on its own: CP id 0 (the clock) and
+// id 2 (CP busy), RBBM id 1 (ALWAYS_ON, the duty-cycle divisor), UCHE ids 0/1/27/28 (busy,
+// arbiter stall, VBIF read beats - the DRAM denominator used elsewhere in this repo), PC id 0
+// (PC busy), CCU id 0 (CCU busy), LRZ id 0 (LRZ busy), CMP id 3 (the read-data bytes, so
+// 5 and 6 have a per-request size to divide into).
+//
+// BUDGETS SPENT: CP 2/14 (the JSON marks CP 14 with id 0 reserved; the doc's "13" is that
+// minus the reserved one - no cfg here uses a slot above 11, so nothing depends on it),
+// RBBM 3/4, PC 2/8, UCHE 6/12, CCU 3/5, LRZ 2/4, CMP 3/4.  Every other block is left alone:
+// a run of this cfg is meant to be paired with `fdperf.cfg-traffic` or `fdperf.cfg-vertex`,
+// not to replace them.
+//
+// NOT RUN.  Nothing in `results/` comes from this file.  Run it as
+//   scripts/fdperf-sample.sh 140 1000 /tmp/opencode/fdperf-gaps.txt tools/fdperf/fdperf.cfg-gaps
+// with the game already in the scene, the way the other cfgs are sampled, and note that
+// `EVICTS` and `*_QUEUE_FULL` are new names: their unit is undescribed in the XML, so the
+// first run's job is to establish that they move at all (a counter that reads 0 in a scene
+// where it must not is dead, the way `UCHE_GMEM_*_BEATS` are - see docs/fdperf-a7xx.md).
+
+FD740 = {
+  CP = {
+    counter0 = 0;    // reserved (ALWAYS_COUNT, the clock)
+    counter1 = 2;    // PERF_CP_BUSY_CYCLES
+  }
+  RBBM = {
+    counter0 = 1;    // PERF_RBBM_ALWAYS_ON (the duty-cycle divisor)
+    counter1 = 4;    // PERF_RBBM_PC_DCALL_BUSY     <- never measured on this machine
+    counter2 = 5;    // PERF_RBBM_PC_VSD_BUSY       <- never measured on this machine
+  }
+  UCHE = {
+    counter0 = 0;    // PERF_UCHE_BUSY_CYCLES
+    counter1 = 1;    // PERF_UCHE_STALL_CYCLES_ARBITER
+    counter2 = 27;   // PERF_UCHE_VBIF_READ_BEATS_CH0   (16 B per beat)
+    counter3 = 28;   // PERF_UCHE_VBIF_READ_BEATS_CH1
+    counter4 = 18;   // PERF_UCHE_EVICTS            <- never measured on this machine
+    counter5 = 54;   // PERF_UCHE_CCHE_TPH_QUEUE_FULL <- never measured (vertex/texture client)
+    counter6 = 55;   // PERF_UCHE_CCHE_DPH_QUEUE_FULL <- never measured (depth client)
+  }
+  PC = {
+    counter0 = 0;    // PERF_PC_BUSY_CYCLES
+    counter1 = 16;   // PERF_PC_VPC_PRIMITIVES      <- never measured on this machine
+  }
+  CCU = {
+    counter0 = 0;    // PERF_CCU_BUSY_CYCLES        (divisor: /6, num_ccu)
+    counter1 = 10;   // PERF_CCU_2D_RD_REQ          <- never measured on this machine
+    counter2 = 11;   // PERF_CCU_2D_WR_REQ          <- never measured on this machine
+  }
+  LRZ = {
+    counter0 = 0;    // PERF_LRZ_BUSY_CYCLES
+    counter1 = 8;    // PERF_LRZ_LRZ_WRITE          <- never measured on this machine
+  }
+  CMP = {
+    counter0 = 3;    // PERF_CMPDECMP_VBIF_READ_DATA_CCU (bytes, the denominator)
+    counter1 = 5;    // PERF_CMPDECMP_VBIF_READ_REQUEST  <- never measured on this machine
+    counter2 = 6;    // PERF_CMPDECMP_VBIF_WRITE_REQUEST <- never measured (fdperf.cfg slot 6
+                     // of 4, so it was dropped: see that cfg's note and cfg-traffic's header)
+  }
+}
