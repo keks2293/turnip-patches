@@ -2168,3 +2168,19 @@ compiled modules were checked at SPIR-V level to hold nine inputs in every arm a
 dump samples one window twice at a controlled boundary, and the same two off-cadence dumps hold all the
 large differences); whether the mode dependence is VSC-side or VPC-side, since the one committed contrast
 that moves mode also moves tile supply; and anything at all about selector 39.
+
+**Corrected 24.11 by journal 42, in three places.** All three were the same mistake - trusting the shader
+source instead of reading what the driver built from it. (1) "the compiled modules were checked at SPIR-V
+level to hold nine inputs in every arm and N outputs in arm N": SPIR-V is the wrong level to check, because
+the pass that decides the interface runs after it - at SPIR-V level every arm does hold N outputs, and the
+pipeline carried one. What checks an arm is `scripts/check-varyings-arms.py`, on the driver's own
+disassembly, and `results/synthetics/varyings/negative-controls.txt` shows the shape of the miss. (2) "the
+probe's own dump gives 2.00 VPCRAM writes per vertex, which is 40.35's figure reproduced from a committed
+file": the figure stands, its reading does not - 42.2 calibrates `VPC_NUM_VPCRAM_WRITE` at one write per 4
+components, so 2.00 writes per vertex is a stride of 8.00, one vec4 plus position, which is to say the
+attribute-buffer probe shipped an interface one varying wide and the interface is now a column of that
+table (`implied stride` 7.99 for its smoke run). (3) "whether the residue is *only* boundary skew" is no
+longer open: 42.2 runs a rig whose unit for the pair is identical by construction, and it reproduces the
+sign flip, the 3e-5 relative median and the low bit-identity rate while holding no window over 0.1 % apart,
+so the residue above is boundary skew and the two selectors are one signal. What stays unexplained in this
+corpus is the tail - the 26 windows over 1 % apart, in two arms - which that rig does not reproduce.

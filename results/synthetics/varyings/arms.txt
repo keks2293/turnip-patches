@@ -1,0 +1,125 @@
+attrbuf: directory says N=16, meta says 'arm:            attrbuf' - trusting the directory
+attrbuf: directory says N=16, meta says 'arm:            attrbuf' - trusting the directory
+# What the two export counters count: the interface sweep of tests/vpc-attrbuf.c --varyings=N
+# regenerate: scripts/varyings-table.py | tee results/synthetics/varyings/arms.txt
+# arms:       varyings1, varyings2, varyings4, varyings8, attrbuf, varyings16
+# values:     medians of per-second window deltas, millions per second, unless the column
+#               says otherwise.  n = windows kept of the sample.
+# clocks:     the arms ran at the governor's own clock (the printed clk column is
+#               CP_ALWAYS_COUNT / 1e6, 625-680 MHz here).  Nothing is filtered for it:
+#               an event counter over `fdperf -r 1000` is per wall second whatever the
+#               clock, and a duty column divides by that window's own ALWAYS_COUNT, so
+#               every column below is clock-free.  --min-clk exists if a reader wants
+#               the pinned subset (680 MHz is the ceiling of this part).
+# window:     --lo 0 --hi 10000 s from each arm's first sample
+# read with:  the rules of scripts/fdperf_sections.py (BV half discarded, wrapped deltas
+#               dropped); MISSING = the cfg did not program it, DROPPED = no usable window
+# expect:     VPC_SP_COMPONENTS / vertex ~ 4N+4 / k where k is the number of components
+#               per event; the `x stride` column is that measured over 4N+4, so 1.000
+#               says one per component, 0.500 two, 0.250 four, 0.125 eight; and
+#               SP_EXPORT_VPC_TRANS / pixel ~ flat across arms if it counts transactions,
+#               and equal to id 10 in every window if the two are the same traffic;
+# SP_PIXELS:  is per pixel INVOCATION and this mesh overdraws the 768x768 target
+#               thousands of times (32 G/s at 10.9 fps against 0.59 M pixels in the
+#               target), so a per-pixel export ratio is ~1e-4 and that is expected -
+#               what matters is whether it moves with N.
+
+controls - per FRAME (the arm's rate over its own fps), in millions, which must be equal
+across arms or nothing else here is comparable.  `spread` is max/min over the arms:
+1.00 is equality.  (The render-target hash cannot do this job: from N=4 up the colour
+saturates the UNORM target, so arms 4, 8 and 16 print one hash for different sums.)
+arm         N     fps      clk           vert    ia_vert     vs_inv    in_prim   vis_prim   vpc_prim        pix       cblk      tiles  n
+varyings1   1     10.87    680.0         0.20       0.20       0.20       0.07       0.07       0.07       2933     215.83       0.00  21
+varyings2   2     10.0     616.0         0.19       0.19       0.19       0.06       0.06       0.06       2873     211.36       0.00  21
+varyings4   4     5.17     605.1         0.20       0.20       0.20       0.07       0.07       0.07       2931     215.66       0.00  21
+varyings8   8     2.6      630.0         0.20       0.20       0.20       0.07       0.07       0.07       2937     216.08       0.00  21
+attrbuf     16    1.64     629.3         0.19       0.19       0.19       0.06       0.06       0.06       2883     212.16       0.00  22
+varyings16  16    0.92     680.0         0.20       0.20       0.20       0.07       0.07       0.07       2923     215.09       0.00  21
+spread                                   1.02       1.02       1.02       1.02       1.02       1.02       1.02       1.02      all 0
+
+the two counters, per unit of work the same dump measures
+arm         N     id10 M/s  /vertex   stride    x stride  /vpcram   id48 M/s  /pixel      id10 == id48
+                                      (4N+4)    (meas/exp)                     x 1e-6      windows    
+------------------------------------------------------------------------------------------------------------
+varyings1   1     2.140     1.0011    8         0.1251    0.5005    2.140     0.000067    7/21       
+varyings2   2     2.890     1.5002    12        0.1250    0.5001    2.890     0.000101    12/21      
+varyings4   4     2.541     2.5005    20        0.1250    0.5001    2.541     0.000168    14/21      
+varyings8   8     2.304     4.5008    36        0.1250    0.5001    2.304     0.000302    11/21      
+attrbuf     16    2.698     8.5110    68        0.1252    0.5006    2.698     0.000571    12/22      
+varyings16  16    1.535     8.5109    68        0.1252    0.5006    1.535     0.000571    16/21      
+
+the interface as the two ends of it see it - FS bary instructions per pixel, and the
+fp32 share of them (115 = 42 would mean nothing was packed to 16 bits)
+Read the two left columns only.  `SP instr/s` and `FS instr/s` are printed for
+completeness and are NOT interpreted: at 680 MHz they read 7 Mc/cycle-core (VS) and
+143 (FS), which cannot be instructions, so those selectors count per thread, per quad
+or per some wider group (docs/fdperf-a7xx.md gives no unit for them), and the FS/VS
+column is the ratio of two numbers whose unit is unknown.
+arm         N     SP42/pixel  SP115/pixel 115/42      VS instr/s  FS instr/s  FS/VS      
+----------------------------------------------------------------------------------------------------
+varyings1   1     1.017       1.017       1.000       17.115      97271       5683       
+varyings2   2     2.034       2.034       1.000       17.337      204477      11794      
+varyings4   4     4.068       4.068       1.000       13.210      231136      17496      
+varyings8   8     8.135       8.135       1.000       11.393      240695      21127      
+attrbuf     16    16.270      16.270      1.000       9.915       240423      24249      
+varyings16  16    16.270      16.270      1.000       7.173       172296      24020      
+
+the pair window by window - 40.36's question, asked where the interface is known: how
+often are the two counters the same integer, and how far apart are they when they are not
+(`d > 0.1 %` counts the windows further apart than that, the same cut
+`results/games/re4/vpc-sp-pair.txt` applies to its 1823 windows, where the median skew of
+two counters reading the same quantity shows up as 0.00295 % of id10)
+arm         N     windows identical median |d|  max |d|     med |d|/id10 d > 0.1 %   sign of d  
+----------------------------------------------------------------------------------------------------
+varyings1   1     21      7/21      64.0        128.0       0.00299     0/21        8+ 6-      
+varyings2   2     21      12/21     0.0         192.0       0.00000     0/21        4+ 5-      
+varyings4   4     21      14/21     0.0         160.0       0.00000     0/21        5+ 2-      
+varyings8   8     21      11/21     0.0         288.0       0.00000     0/21        7+ 3-      
+attrbuf     16    22      12/22     0.0         544.0       0.00000     0/22        4+ 6-      
+varyings16  16    21      16/21     0.0         544.0       0.00000     0/21        3+ 2-      
+
+the two exports per pixel: id 48 (to VPC) against id 49 (to RB, the colour side, which
+is one per pixel whatever N is) - if 48 moves with N and 49 does not, the movement in 48
+is the interface and not the export mechanism
+`id49 per quad` is the same constant expressed against quads, which is the unit the
+export is plausibly in; the point of the whole table is the column's flatness, not its value
+arm         N     id48/pixel   id49/pixel   id49/quad   id49 M/s    pix M/s     quads M/s  
+-----------------------------------------------------------------------------------------
+varyings1   1     0.000067     0.063811     0.2500      2035        31885       8138       
+varyings2   2     0.000101     0.063811     0.2500      1833        28726       7332       
+varyings4   4     0.000168     0.063818     0.2500      967.045     15153       3868       
+varyings8   8     0.000302     0.063833     0.2501      487.392     7635        1949       
+attrbuf     16    0.000571     0.063841     0.2501      301.873     4729        1207       
+varyings16  16    0.000571     0.063837     0.2501      171.685     2689        686.450    
+
+who waits for whom, and whether the pass was ever binned.  `VPC busy %` is printed here
+as a finding, not as a load measure: it sits at 100 % in every arm although the arms span
+12x in frame rate and 8.5x in payload per vertex, and `SP stall VPC` Mc/s over the same
+windows is 0.000-0.019 of a 680 Mc/s clock - the pixel pipe is never held up by the VPC,
+so a busy counter pinned at full cannot be read as saturation.  What the arms do disagree
+on is VPC_WORKING/BUSY, which falls as the interface widens.
+arm         N     VPC busy %  VPC work %  SP stall VPC VSC tiles   SP busy %  
+--------------------------------------------------------------------------------
+varyings1   1     99.99       49.88       0.002       0.000       1199.54    
+varyings2   2     99.99       55.47       0.000       0.000       1199.58    
+varyings4   4     99.99       40.35       0.004       0.000       1199.76    
+varyings8   8     100.00      24.50       0.000       0.000       1199.84    
+attrbuf     16    100.00      17.62       0.046       0.000       1199.90    
+varyings16  16    100.00      15.07       0.019       0.000       1199.64    
+
+the stride as the VPC's own RAM counter reports it: writes per delivered vertex x 4.
+Calibrated here, not assumed - `x stride` above puts id 10 at one event per 8 components
+and id10/VPCRAM is 0.5001-0.5006 in every arm, so VPCRAM is one write per 4 components
+(one 128-bit word), and 4 x writes-per-vertex is the stride.  The vertex rate is the
+probe's own `verts_per_s`, which is also why this reads directories sampled before this
+cfg existed: `smoke` is the attribute-buffer probe's 23.11 run, whose compiled interface
+is the open question of 42.1.
+directory            vtx M/s     VPCRAM/vtx  implied stride
+----------------------------------------------------------
+varyings1            2.137       2.001       8.00          
+varyings2            1.966       2.939       11.76         
+varyings4            1.016       5.001       20.00         
+varyings8            0.511       9.018       36.07         
+attrbuf              0.323       16.685      66.74         
+varyings16           0.180       17.031      68.12         
+smoke                1.354       1.997       7.99          

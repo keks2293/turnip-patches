@@ -1,0 +1,32 @@
+# What interface each --varyings arm compiles to, read from the driver's disassembly
+# regenerate: scripts/check-varyings-arms.py | tee results/synthetics/varyings/interface-check.txt
+# probe:      ../build/vpc-attrbuf sha256=a18c2fcb0129; one 1 s run per arm with IR3_SHADER_DEBUG=vs,fs and
+#               MESA_SHADER_CACHE_DISABLE=true (a cached pipeline is never compiled and
+#               so never disassembled). The debug flag does not perturb codegen
+#               (ir3_compiler.h:379-382). No hw counter is sampled here. The shader pairs
+#               are compiled into the probe (tests/varyings_spv.h), so the hash above is
+#               also the identity of the interface being read: a probe built from a
+#               FS_REDUCE=plain or =fract header is a different binary.
+# read:       the FS's input list (the VPC location pack_inlocs gave each varying,
+#               ir3_compiler_nir.c:5274-5290, printed at ir3_shader.c:1266) and the VS's
+#               output list, where `hr` would mean a 16-bit slot (ir3_shader.c:1259).
+# expect:     N VAR outputs from the VS, none half, plus POSITION; the same N read by
+#               the FS at il = 0,4,...,4(N-1) with compmask f and bary=1; and
+#               SP_VS_OUTPUT_CNTL.OUT = N+1, VPC_VS_CNTL.STRIDE_IN_VPC = 4N+4, derived
+#               from N here (tu_pipeline.cc:1092, :926-931) rather than read back.
+# why it matters: a plain sum of varyings is one of the operations nir_opt_varyings moves
+#               out of the FS and into the VS, which leaves a running pipeline whose
+#               interface is one vec4 whatever N is - journal 42.1, and
+#               results/synthetics/varyings/negative-controls.txt for the shape of it.
+
+arm       fps     VS outputs   FS reads     FS comp    FS inloc         expect   expect   verdict
+(N)               VAR (half)   VAR (bary)   mask       of the slots     OUT      stride   
+---------------------------------------------------------------------------------------------------------
+attrbuf   1.73    16 (0)       16 (16)      f          0..60 by 4       17       68       ok
+1         10.81   1 (0)        1 (1)        f          0..0 by 4        2        8        ok
+2         10.63   2 (0)        2 (2)        f          0..4 by 4        3        12       ok
+4         5.78    4 (0)        4 (4)        f          0..12 by 4       5        20       ok
+8         2.80    8 (0)        8 (8)        f          0..28 by 4       9        36       ok
+16        0.91    16 (0)       16 (16)      f          0..60 by 4       17       68       ok
+
+arms that do not build the interface they ask for: 0

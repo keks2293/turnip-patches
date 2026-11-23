@@ -1,0 +1,160 @@
+// fdperf.cfg-varyings - the varyings-interface sweep (tests/vpc-attrbuf.c --varyings=N, journal 42).
+//
+// Why a fifth vertex cfg.  Queue 34 asks what unit the two export counters have:
+// PERF_VPC_SP_COMPONENTS (VPC 10) and PERF_SP_EXPORT_VPC_TRANS (SP 48).  Journal 40.36 showed from
+// 26 in-game windows that they are not one signal window by window (44 of 1823 window pairs are
+// bit-identical, the sign of the difference flips in all 34 arms), so the question is what each of
+// them counts.  In-game that is unanswerable because N - the number of vec4 varyings crossing the
+// VS/FS interface - is not known.  This cfg is built for the synthetic where it is: the same
+// geometry, the same pixels, the same vertex buffer, and an interface of 1, 2, 4, 8 or 16 vec4.
+// Each arm's interface is read back from the driver's disassembly before its counters are believed
+// (scripts/check-varyings-arms.py, results/synthetics/varyings/interface-check.txt).
+//
+// WHAT THE ARMS PREDICT, which is what makes this a measurement and not a look:
+//   * if VPC 10 counts components handed to the pixel pipe, one per component, then "per delivered
+//     vertex" steps through 8, 12, 20, 36 and 68 - the stride of each arm, VPC_VS_CNTL.STRIDE_IN_VPC
+//     - because each vertex is shipped once and this mesh shares no vertices.  If it counts units of
+//     2, 4 or 8 components the same sequence is divided by 2, 4 or 8; the shape stays linear either
+//     way, so only the measured-over-expected ratio decides, and the sweep prints that ratio
+//     (`x stride`) rather than leaving the reader to divide;
+//   * SP 48 is the pixel side's export: one FS invocation per pixel, whatever N is, so per delivered
+//     pixel it should be flat across arms.  If it moves with N, "trans" means a per-component or
+//     per-bundle transfer and the two counters are the same traffic seen from each end.
+//   SP 42 (bary instructions) and SP 115 (fp32 bary instructions) are the FS side's own count of
+//   the same fetches, so the ratio between what VPC says it sent and what the FS says it fetched is
+//   in the same dump - and 115 against 42 is the fp32-vs-packed check journal 42.1 needed.
+//
+// WHAT EACH COLUMN IS FOR
+//   VPC 10      the counter under test.
+//   VPC 25      NUM_VPCRAM_WRITE - the denominator 40.36 chose as the flat one (1.24x across the
+//               in-game corpus while the counters themselves moved 2.28x).  Here it is also the
+//               check that the vertex volume is the same in every arm.
+//   VPC 0,1     busy and working: whether the block is loaded and computing, at each arm.
+//   VPC 16,17   VS_BUSY and PS_BUSY - the two VPC stages separately, so a movement in 10 can be
+//               placed on one side of the interface instead of being attributed to "VPC".
+//   SP 48       the other counter under test.  49 (EXPORT_RB_TRANS) is its twin on the colour side:
+//               if 48 moves with N and 49 does not, the movement is the interface and not the
+//               export mechanism.
+//   SP 42,115   the FS's bary instruction count, total and fp32-only.
+//   SP 43,44    VS and FS instructions - how much work each side actually did per arm.  This is the
+//               moving column of the rig, not a constant: a wider interface also means a bigger FS.
+//   SP 14,15    FS and VS stage duration cycles - time, to tell "more work" from "same work,
+//               slower".
+//   SP 97,98    FS_STAGE_1X and _2X waves, and SP 101 PIXELS, 108 OUTPUT_3D_PIXELS, 99 QUADS: the
+//               pixel volume, which is the other thing that must be equal between arms (40.36
+//               shows pixel duty is the negative control and render mode the confound).
+//   SP 3        STALL_CYCLES_VPC - does the pixel pipe wait on VPC more when the interface widens.
+//   VFD 17,9,8  TOTAL_VERTICES, NUM_ATTRIBUTES, DECODED_ATTRIBUTE_BYTES - the per-vertex
+//               denominators, and the check that all five arms fed the same 128 B/vertex geometry
+//               (40.36: PC 19/39 read 0 here, so these are the only live per-vertex counters).
+//   PC 16,20,21,25  VPC_PRIMITIVES, IA_VERTICES, IA_PRIMITIVES, VS_INVOCATIONS - the submitted
+//               volume, and with PC 16 the primitive count VPC itself saw, which is what components
+//               per primitive would be divided by.
+//   PC 2,4      stall on VFD and on VPC: who waits for whom as the interface widens.
+//   TSE 6,14    INPUT_PRIM and OUTPUT_VISIBLE_PRIM - the primitive conservation of the path, i.e.
+//               the check that no arm culled differently.
+//   UCHE 0,1,16 busy, arbiter stall, and WRITE_REQUESTS_VPC - the only counter in the corpus that
+//               40.34 found at 0.000 everywhere; a known workload with known vertex traffic is
+//               either a second reading of zero (the counter is dead) or a non-zero one (it is
+//               workload-dependent), and both are worth having.
+//   VSC 4       INPUT_TILES - the bin count.  40.35 found 0 in 11 of 11 windows of this probe: the
+//               pass is sysmem and never allocates a bin.  Kept so a reader can see the same is
+//               true of the arms, since a VPC counter read in a binned pass would be a different
+//               hardware path.
+//   CCU 4       COLOR_BLOCKS - the colour side's volume, equal across arms by construction.
+//
+// HW BUDGETS (a7xx, docs/fdperf-a7xx.md "hw budgets and silent-ignore"): CP 13, RBBM 4, UCHE 12,
+// VFD 8, PC 8, VPC 6, TSE 4, SP 24, VSC 2, CCU 5.  Every block is inside it (CP 2/13, RBBM 1/4,
+// UCHE 3/12, VFD 5/8, PC 7/8, VPC 6/6, TSE 2/4, SP 19/24, VSC 2/2, CCU 1/5) - checked by
+// scripts/fdperf-cfg-check.py, not by eye.  Selectors are the `value=` of the name in
+// src/freedreno/registers/adreno/a7xx_perfcntrs.xml.  CP counter0 is reserved by fdperf for
+// ALWAYS_COUNT, the GPU frequency; this synthetic is not clock-pinned (the governor's ceiling here is
+// 680 MHz and the FS-heavy arms never reach it), and the reader does NOT filter windows on it: an
+// event counter over `fdperf -r 1000` is a per-wall-second rate whatever the clock, and each duty
+// column divides by that window's own ALWAYS_COUNT, which is what keeps every column of
+// results/synthetics/varyings/arms.txt clock-free.  The clock is printed, not used.
+//
+// Run the arms with the sampler and curate them (the sweep checks each arm's compiled interface
+// before it samples it - see journal 42.1):
+//   scripts/run-varyings-sweep.sh                      # arms 1,2,4,8,16 and attrbuf
+//   scripts/run-varyings-sweep.sh --arms 8,16          # a subset
+
+FD740 = {
+  CP = {
+    counter0 = 0;    // reserved (ALWAYS_COUNT, frequency)
+    counter1 = 2;    // PERF_CP_BUSY_CYCLES
+  }
+
+  RBBM = {
+    counter0 = 1;    // PERF_RBBM_ALWAYS_ON (divisor for the duty cycle)
+  }
+
+  UCHE = {
+    counter0 = 0;    // PERF_UCHE_BUSY_CYCLES
+    counter1 = 1;    // PERF_UCHE_STALL_CYCLES_ARBITER
+    counter2 = 16;   // PERF_UCHE_WRITE_REQUESTS_VPC (0.000 in every in-game arm, 40.34)
+  }
+
+  VFD = {
+    counter0 = 0;    // PERF_VFD_BUSY_CYCLES
+    counter1 = 2;    // PERF_VFD_STALL_CYCLES_VPC_ALLOC
+    counter2 = 8;    // PERF_VFD_DECODED_ATTRIBUTE_BYTES
+    counter3 = 9;    // PERF_VFD_NUM_ATTRIBUTES
+    counter4 = 17;   // PERF_VFD_TOTAL_VERTICES
+  }
+
+  PC = {
+    counter0 = 0;    // PERF_PC_BUSY_CYCLES
+    counter1 = 16;   // PERF_PC_VPC_PRIMITIVES (the primitives VPC saw)
+    counter2 = 20;   // PERF_PC_IA_VERTICES
+    counter3 = 21;   // PERF_PC_IA_PRIMITIVES
+    counter4 = 25;   // PERF_PC_VS_INVOCATIONS
+    counter5 = 2;    // PERF_PC_STALL_CYCLES_VFD
+    counter6 = 4;    // PERF_PC_STALL_CYCLES_VPC
+  }
+
+  VPC = {
+    counter0 = 0;    // PERF_VPC_BUSY_CYCLES
+    counter1 = 1;    // PERF_VPC_WORKING_CYCLES
+    counter2 = 10;   // PERF_VPC_SP_COMPONENTS   <- under test
+    counter3 = 16;   // PERF_VPC_VS_BUSY_CYCLES
+    counter4 = 17;   // PERF_VPC_PS_BUSY_CYCLES
+    counter5 = 25;   // PERF_VPC_NUM_VPCRAM_WRITE
+  }
+
+  TSE = {
+    counter0 = 6;    // PERF_TSE_INPUT_PRIM
+    counter1 = 14;   // PERF_TSE_OUTPUT_VISIBLE_PRIM
+  }
+
+  VSC = {
+    counter0 = 0;    // PERF_VSC_BUSY_CYCLES
+    counter1 = 4;    // PERF_VSC_INPUT_TILES (expected 0: the pass is sysmem, 40.35)
+  }
+
+  CCU = {
+    counter0 = 4;    // PERF_CCU_COLOR_BLOCKS
+  }
+
+  SP = {
+    counter0 = 0;    // PERF_SP_BUSY_CYCLES
+    counter1 = 3;    // PERF_SP_STALL_CYCLES_VPC
+    counter2 = 14;   // PERF_SP_FS_STAGE_DURATION_CYCLES
+    counter3 = 15;   // PERF_SP_VS_STAGE_DURATION_CYCLES
+    counter4 = 42;   // PERF_SP_FS_STAGE_BARY_INSTRUCTIONS
+    counter5 = 43;   // PERF_SP_VS_INSTRUCTIONS
+    counter6 = 44;   // PERF_SP_FS_INSTRUCTIONS
+    counter7 = 46;   // PERF_SP_UCHE_READ_TRANS
+    counter8 = 48;   // PERF_SP_EXPORT_VPC_TRANS   <- under test
+    counter9 = 49;   // PERF_SP_EXPORT_RB_TRANS    (the colour-side twin)
+    counter10 = 50;  // PERF_SP_PIXELS_KILLED
+    counter11 = 74;  // PERF_SP_ANY_EU_WORKING_FS_STAGE
+    counter12 = 76;  // PERF_SP_ANY_EU_WORKING_VS_STAGE
+    counter13 = 97;  // PERF_SP_FS_STAGE_1X_WAVES
+    counter14 = 98;  // PERF_SP_FS_STAGE_2X_WAVES
+    counter15 = 99;  // PERF_SP_QUADS
+    counter16 = 101; // PERF_SP_PIXELS
+    counter17 = 108; // PERF_SP_OUTPUT_3D_PIXELS
+    counter18 = 115; // PERF_SP_BARY_FP32_INSTRUCTIONS
+  }
+}

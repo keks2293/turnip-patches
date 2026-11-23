@@ -11,7 +11,9 @@
  * variants="A7XX", a family tag that covers A740 as well as A750.
  *
  * What this probe contributes is a workload heavy enough that a vertex-attribute
- * carve-out could show itself: 8 vec4 attributes in, 16 vec4 varyings out, hundreds of
+ * carve-out could show itself: 8 vec4 attributes in, 16 vec4 varyings out (out only since
+ * journal 42.1 corrected the form of tests/vpc_attrbuf.frag - as committed on 23.11 its plain sum
+ * of all sixteen collapsed to one varying, and the arms of journal 40.35 measured that), hundreds of
  * thousands of vertices per frame, one binned render pass per frame.  It is run with the
  * prop off, with the prop on at several sizes, and - the part without which the run
  * would prove nothing - with `TU_GMEM` set so that GMEM is shrunk by the same number of
@@ -25,11 +27,25 @@
  * Build (no compiler on the device, see scripts/build-test.sh):
  *   podman run --rm -v "$PWD/tests:/work:Z" -v "$PWD/../build:/out:Z" \
  *     localhost/mesa-build-fedora44-wsi-glslang-vulkan \
- *     bash -c 'cd /work && gcc -O2 -Wall -o /out/vpc-attrbuf vpc-attrbuf.c -lvulkan'
+ *     bash -c 'cd /work && gcc -O2 -Wall -o /out/vpc-attrbuf vpc-attrbuf.c -lvulkan -lm'
+ *   (-lm since the --varyings arms added sqrt()/sin() to the vertex jitter; without it the link
+ *   fails with "undefined reference to sqrt", which reads like a missing library path)
  * Run (one arm; the sweep is scripts/run-attrbuf-sweep.sh):
  *   VK_DRIVER_FILES=../build/out/freedreno_icd.json \
  *   [TU_FORCE_PROPS=has_gmem_vpc_attr_buf] [FD_DEV_FEATURES=gmem_vpc_attr_buf_size=4096] \
  *   [TU_GMEM=3997696] ./build/vpc-attrbuf --seconds 60
+ *
+ * A second question lives in the same rig, added 23.11 for queue 34 (journal 40.36 states
+ * what the committed dumps already say about the two export counters): `--varyings=N`, with
+ * N in 1, 2, 4, 8, 16, swaps in the shader pair of tests/gen-varyings-spv.sh - the same
+ * vertex data, the same position expression, the same draw, and N vec4 outputs instead of 16.
+ * That is the known-interface arm the unit of PERF_VPC_SP_COMPONENTS (VPC 10) and
+ * PERF_SP_EXPORT_VPC_TRANS (SP 48) needs, and it is the same program on purpose: one rig means
+ * the arms cannot differ in geometry, instance count, target size or clear value, which is the
+ * property the parked sweep above also depends on.  Note that the *hash* is not the identity
+ * check between varyings arms - the fragment shader sums what it is given, so a different N is
+ * a different picture by construction; the identity checks there are VFD_TOTAL_VERTICES and
+ * SP_OUTPUT_3D_PIXELS in the counters.  Without `--varyings` nothing changes for queue 35.
  *
  * Output is one line per fact on stdout: a `#`-prefixed header (device, GMEM as the
  * kernel reports it, the env this process was given, the shape of the workload) and then
@@ -53,6 +69,7 @@
 #include <vulkan/vulkan.h>
 
 #include "vpc_attrbuf_spv.h"
+#include "varyings_spv.h"
 
 /* GMEM size as the kernel reports it.  Defined here rather than included, for the same
  * reason turnip defines it (vulkan/tu_knl_drm_msm.cc:7 includes a copy of the uapi
@@ -163,6 +180,41 @@ typedef struct {
    float attr[NUM_ATTRIBS - 1][4];
 } vertex_t;
 
+/* The interface arms of queue 34, from tests/gen-varyings-spv.h.  `out` and `stride` are what
+ * the driver has to write for an interface of N vec4 with no psize/layer/view/clip distance:
+ * SP_VS_OUTPUT_CNTL.OUT counts POSITION too ("number of VS outputs including pos",
+ * a6xx.xml:3677-3680, tu_pipeline.cc:1092) and VPC_VS_CNTL.STRIDE_IN_VPC is linkage.max_loc,
+ * four components per vec4 plus four for position (tu_pipeline.cc:926-931).  They are printed
+ * so that a run's own header carries the claim - this program cannot check them, it has no way
+ * to read its command stream back.  Check them with the disassembler instead, which prints the
+ * FS's bary immediates (the largest `vappro.x + k` plus 4 is the stride):
+ *   IR3_SHADER_DEBUG=fs ./build/vpc-attrbuf --varyings=4 --seconds=1 2>&1 |
+ *       grep -o 'vappro.x + [0-9]*' | sort -u -t+ -k2 -n | tail -1
+ * which is why the interface is five compiled shader pairs and not one shader and a spec
+ * constant: the constant would change the VS's work while the interface stayed 16 wide. */
+typedef struct {
+   uint32_t n;               /* vec4 varyings the vertex shader exports */
+   uint32_t out, stride;     /* the register values named above */
+   const uint32_t *vs;
+   size_t vs_words;
+   const uint32_t *fs;
+   size_t fs_words;
+} varying_arm_t;
+
+#define ARM(n_, out_, stride_, vs_, fs_)                                        \
+   {                                                                            \
+      n_, out_, stride_, vs_, sizeof(vs_) / sizeof(uint32_t), fs_,              \
+         sizeof(fs_) / sizeof(uint32_t)                                         \
+   }
+
+static const varying_arm_t varying_arms[] = {
+   ARM(1u, 2u, 8u, varyings1_vert_spv, varyings1_frag_spv),
+   ARM(2u, 3u, 12u, varyings2_vert_spv, varyings2_frag_spv),
+   ARM(4u, 5u, 20u, varyings4_vert_spv, varyings4_frag_spv),
+   ARM(8u, 9u, 36u, varyings8_vert_spv, varyings8_frag_spv),
+   ARM(16u, 17u, 68u, varyings16_vert_spv, varyings16_frag_spv),
+};
+
 int
 main(int argc, char **argv)
 {
@@ -170,6 +222,7 @@ main(int argc, char **argv)
    uint32_t width = 768, height = 768, verts = 24576, instances = 8;
    uint32_t loop_count = 0;
    int do_hash = 1;
+   const varying_arm_t *arm = NULL;   /* NULL: the vpc_attrbuf pair, 16 vec4 */
 
    for (int i = 1; i < argc; i++) {
       if (!strncmp(argv[i], "--seconds=", 10))
@@ -182,12 +235,27 @@ main(int argc, char **argv)
          instances = (uint32_t) atoi(argv[i] + 12);
       else if (!strncmp(argv[i], "--loop=", 7))
          loop_count = (uint32_t) atoi(argv[i] + 7);
-      else if (!strcmp(argv[i], "--no-hash"))
+      else if (!strncmp(argv[i], "--varyings=", 11)) {
+         /* A count we do not have must be an error and not a silent fall-back to the 16-wide
+          * pair: an arm that quietly became another arm is the failure mode of this rig. */
+         uint32_t want = (uint32_t) atoi(argv[i] + 11);
+         for (unsigned k = 0; k < sizeof varying_arms / sizeof varying_arms[0]; k++)
+            if (varying_arms[k].n == want)
+               arm = &varying_arms[k];
+         if (!arm) {
+            fprintf(stderr,
+                    "--varyings= takes one of 1 2 4 8 16 (the compiled pairs of"
+                    " tests/gen-varyings-spv.sh), not %u\n", want);
+            return 2;
+         }
+      } else if (!strcmp(argv[i], "--no-hash"))
          do_hash = 0;
       else {
          fprintf(stderr,
                  "usage: vpc-attrbuf [--seconds=N] [--size=PX] [--verts=N] "
-                 "[--instances=N] [--loop=N] [--no-hash]\n");
+                 "[--instances=N] [--loop=N] [--varyings=N] [--no-hash]\n"
+                 "  --varyings: 1 2 4 8 16, the interface arms of queue 34; without it, the"
+                 " 16-vec4 pair of tests/vpc_attrbuf.vert\n");
          return 2;
       }
    }
@@ -273,8 +341,22 @@ main(int argc, char **argv)
    printf("# env       TU_DEBUG=%s\n", env_or_unset("TU_DEBUG"));
    printf("# workload  %ux%u, %u verts x %u instances = %u verts/frame, FS loop %u\n",
           width, height, verts, instances, verts * instances, loop_count);
-   printf("# workload  %d attributes in (%zu B/vertex), %d vec4 varyings out\n",
-          NUM_ATTRIBS, sizeof(vertex_t), NUM_VARYINGS);
+   /* Names what the source asks for, not what the driver built.  How many vec4 the compiler leaves on
+    * the interface is a property of the fragment shader's form: nir_opt_varyings moves a plain sum up
+    * into the VS and one varying is all that survives.  Journal 42.1 found the default pair described
+    * by this line reading 16 while its pipeline carried 1.  What each arm really compiles to is what
+    * scripts/check-varyings-arms.py reads out of the disassembly, and scripts/run-varyings-sweep.sh
+    * refuses to sample an arm the check has not confirmed.  A comment, not a code change, so the
+    * binary the arms of 42.2 were sampled with stays the binary the source builds. */
+   printf("# workload  %d attributes in (%zu B/vertex), %u vec4 varyings out%s\n",
+          NUM_ATTRIBS, sizeof(vertex_t),
+          arm ? arm->n : (unsigned) NUM_VARYINGS,
+          arm ? "" : " (the pair of tests/vpc_attrbuf.vert)");
+   if (arm)
+      printf("# interface SP_VS_OUTPUT_CNTL.OUT=%u VPC_VS_CNTL.STRIDE_IN_VPC=%u, the state this"
+             " arm asks for;\n#           this program cannot read it back - the check is the"
+             " disassembler command in\n#           tests/gen-varyings-spv.sh's header\n",
+             arm->out, arm->stride);
 
    /* ---- memory helpers ------------------------------------------------------ */
    VkPhysicalDeviceMemoryProperties mp;
@@ -423,11 +505,20 @@ main(int argc, char **argv)
    /* ---- pipeline ------------------------------------------------------------- */
    VkShaderModule vs_mod, fs_mod;
    VkShaderModuleCreateInfo smi = { .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-   smi.codeSize = sizeof vpc_attrbuf_vert_spv;
-   smi.pCode = vpc_attrbuf_vert_spv;
+   const uint32_t *vs_spv = vpc_attrbuf_vert_spv, *fs_spv = vpc_attrbuf_frag_spv;
+   size_t vs_words = sizeof vpc_attrbuf_vert_spv / sizeof(uint32_t),
+          fs_words = sizeof vpc_attrbuf_frag_spv / sizeof(uint32_t);
+   if (arm) {                        /* --varyings=N, the interface arms of queue 34 */
+      vs_spv = arm->vs;
+      fs_spv = arm->fs;
+      vs_words = arm->vs_words;
+      fs_words = arm->fs_words;
+   }
+   smi.codeSize = vs_words * sizeof(uint32_t);
+   smi.pCode = vs_spv;
    chk(vkCreateShaderModule(dev, &smi, NULL, &vs_mod), "vkCreateShaderModule(vs)");
-   smi.codeSize = sizeof vpc_attrbuf_frag_spv;
-   smi.pCode = vpc_attrbuf_frag_spv;
+   smi.codeSize = fs_words * sizeof(uint32_t);
+   smi.pCode = fs_spv;
    chk(vkCreateShaderModule(dev, &smi, NULL, &fs_mod), "vkCreateShaderModule(fs)");
 
    VkSpecializationMapEntry sme = { .constantID = 0, .offset = 0, .size = sizeof(uint32_t) };

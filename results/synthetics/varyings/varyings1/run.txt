@@ -1,0 +1,18 @@
+# gmem      MSM_PARAM_GMEM_SIZE on /dev/dri/renderD128: Invalid argument
+# device[0] Turnip Adreno (TM) 740, driver  , api 1.4
+# measured  Turnip Adreno (TM) 740
+# gmem      kernel reports 0 bytes (0.00 MiB)
+# env       TU_GMEM=(unset)
+# env       TU_FORCE_PROPS=(unset)
+# env       FD_DEV_FEATURES=(unset)
+# env       TU_DEBUG=(unset)
+# workload  768x768, 24576 verts x 8 instances = 196608 verts/frame, FS loop 0
+# workload  8 attributes in (128 B/vertex), 1 vec4 varyings out
+# interface SP_VS_OUTPUT_CNTL.OUT=2 VPC_VS_CNTL.STRIDE_IN_VPC=8, the state this arm asks for;
+#           this program cannot read it back - the check is the disassembler command in
+#           tests/gen-varyings-spv.sh's header
+# clock     60.4 s wall, GPU clock is the devfreq governor's (the sweep keeps windows where the dump reports >= 676 MHz)
+frames 657
+fps 10.87
+verts_per_s 2.137 M
+hash 0x42235eb7194d0383  (2359296 B of the render target)

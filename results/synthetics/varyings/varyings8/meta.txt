@@ -1,0 +1,16 @@
+arm:            varyings8
+what:           the VS/FS interface is 8 vec4 wide; everything else is the same probe
+date:           2026-11-24T01:53:06+08:00
+driver:         /var/home/armada/opencode/build/out/libvulkan_freedreno.so sha256 4c3cdb210082
+probe:          ../build/vpc-attrbuf --seconds=60 --varyings=8   (sha256 a18c2fcb0129)
+icd:            /var/home/armada/opencode/build/out/freedreno_icd.json
+env:            VK_DRIVER_FILES only; TU_GMEM, TU_FORCE_PROPS, FD_DEV_FEATURES,
+                TU_DEBUG, IR3_SHADER_DEBUG, MESA_SHADER_CACHE_DISABLE all unset
+interface:      SP_VS_OUTPUT_CNTL.OUT=9, VPC_VS_CNTL.STRIDE_IN_VPC=36, expected
+                from n (tu_pipeline.cc:1092 and :926-931); read back as 8 VAR slots at
+                il = 0,4,...,28 in the driver's disassembly before this run
+                (scripts/check-varyings-arms.py; results/synthetics/varyings/interface-check.txt)
+cfg:            tools/fdperf/fdperf.cfg-varyings
+sampler:        45 s at 1000 ms, started 10 s after the probe
+expect:         VFD_TOTAL_VERTICES, TSE_INPUT_PRIM, SP_PIXELS and CCU_COLOR_BLOCKS equal
+                to the other arms; VPC_SP_COMPONENTS the column that moves with n

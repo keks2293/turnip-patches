@@ -1048,6 +1048,21 @@ instead of against a build.
     by nothing it is inert and both names are retired like `UCHE_GMEM_*_BEATS`. Until then no document here
     may quote a per-vertex varying count, which is what question 24's evidence silently lacked.
 
+    **Answered 24.11 by journal 42.2, on the rig this item asked for.** Both counters count one event per
+    group of 8 components (32 bytes) of vertex-shader output shipped for a delivered vertex, position
+    included, and they count the same events from the two ends of the transfer: measured-per-vertex over the
+    stride the driver programs is 0.1250-0.1252 in six arms spanning 8.5x, while the export that certainly is
+    per pixel (`SP_EXPORT_RB_TRANS`, 0.2500 per quad) is flat to four digits in the same table - so id 48 is
+    not a pixel counter and no document may quote id 10 and id 48 as two facts (40.14 and 40.27 do, and are
+    the two places to fix). The pair is one signal: the sweep reproduces 40.36's residue - sign flip, low
+    bit-identity, 3e-5 relative median - on a rig whose unit for the pair is identical by construction, which
+    is what 40.36 could not get out of the game dumps. Two things stay open: whether the unit is 8 components
+    or 2 vec4 outputs (queue 38), and RE4's tail of 26 windows over 1 % apart. One method lesson came out of
+    building it and is now a gate in `scripts/run-varyings-sweep.sh`: the interface of every arm is read from
+    the driver's disassembly before sampling, because the shader form this item assumed was correct was not
+    (journal 42.1) - the same reading shows the smoke run cited above ran with a one-varying interface, so its
+    PC zeros remain a valid finding and its "16 vec4 varyings" did not.
+
 35. **Does A740 hardware honour the VPC attribute-buffer registers, or does it drop them** - the question
     behind "are the gen2 sizes 0 because the block is absent or because nobody wrote them" (operator 23.11).
     **PARKED 23.11, by the operator after 40.35 ("пропускаем")**: nothing measured it, and it is parked
@@ -1128,6 +1143,48 @@ instead of against a build.
     committed table because the names were never selected - two of them are this cfg's lines, and the third
     is the corrected id of 41.2, so they should fill in on the first run and an empty column afterwards
     means dead, not missing.
+
+38. **Separate "one event per 8 components" from "one event per 2 vec4 outputs"** (journal 42.2's "does not
+    show"). All six arms ship full vec4 outputs, where the two readings predict the same numbers, so nothing
+    in the sweep can tell them apart. Arm: a `vec2` (or `vec3`) variant of the same generated pairs - same N,
+    same position expression, same `FS_REDUCE=prod` form - checked by `scripts/check-varyings-arms.py` and
+    sampled with `tools/fdperf/fdperf.cfg-varyings`. Decide: if id 10 per vertex halves when components per
+    output halve, the unit is components and 42.2's stride sentences stand as written; if it does not move, the
+    unit is outputs and every "per 8 components" sentence becomes a "per 2 outputs" one. (Packed 16-bit outputs
+    would decide it faster and `e3711f4` says this driver ships none.)
+
+39. **Re-run the attribute-buffer arms on the corrected probe** - bookkeeping behind the parked queue 35, not a
+    measurement debt. `tests/vpc_attrbuf.frag` now ships the sixteen varyings its source always asked for
+    (journal 42.1), so the figures 40.35 quotes (`fps 6.89`, 2.00 `VPC_NUM_VPCRAM_WRITE` per vertex) belong to a
+    one-varying pipeline: the corrected pair runs at `fps 1.64` with 16.7 writes per vertex
+    (`results/synthetics/varyings/attrbuf/`). Arm: `scripts/run-attrbuf-sweep.sh` with the current binary, if
+    and when queue 35 is un-parked. Decides nothing about the carve-out by itself - the pass still renders in
+    sysmem and `VSC_INPUT_TILES` is 0 in every window of both runs - but no prop arm may be sampled with the
+    old binary, because the pressure the question is asked under was never in the pipeline.
+
+40. **Say which of journal 40's busy percentages survive without `VPC_BUSY_CYCLES`** (journal 42.2's warning
+    column). The sweep holds that selector at 99.99-100.00 % of `CP_ALWAYS_COUNT` in six arms spanning 12x in
+    frame rate, while `SP_STALL_CYCLES_VPC` over the same windows is 0.000-0.019 Mc/s of a 680 Mc/s clock: the
+    pixel pipe is never held up by the VPC, so a busy counter pinned at full across that range is not a measure
+    of load. Arm: no run - re-read the entry's busy sentences (91 %, 91.7 %, `VPC_VS_BUSY/VPC_BUSY` 96.85 %) and
+    mark which of them rest on a stall counter or a ratio inside the block rather than on `BUSY`. Decides
+    whether the VPC wall needs re-stating or only re-citing; note that the column that did move here is
+    `VPC_WORKING_CYCLES` (49.9 % to 15.1 %), whose unit is still unnamed.
+
+41. **`tools/fdperf/fdperf.cfg-varyings` spends one of PC's eight slots on `PERF_PC_RESERVED`** - id 0, marked
+    reserved in `a7xx_perfcntrs.json` and printed under that name by `fdperf`, so seven of the block's slots are
+    real and one is nothing. Arm: replace that line with id 39, `PC_TAG_CHECKED_VERTICES`, and re-sample one arm
+    (`scripts/run-varyings-sweep.sh --arms 16 --seconds 20`). Decides a small thing worth knowing before
+    queue 37: whether a non-binning synthetic with sixteen outputs lights a selector that read 0 in 11 of 11
+    windows of the smoke run - if it stays 0 where nothing is reused, queue 37(b) should stop naming it as
+    queue 34's missing denominator, which 42.2 has made moot anyway.
+
+42. **`scripts/run-attrbuf-sweep.sh` ends by pointing at a script that does not exist** - it prints
+    `python3 scripts/attrbuf-table.py <dirs>` and no such file is in the repository. Arm: write that reader the
+    way `scripts/varyings-table.py` is written (same loader, per-arm medians, `MISSING` for a selector the cfg
+    did not program), or change the line to name an existing reader and say why these arms do not need a new
+    one. Decides nothing; it is a broken pointer in a runner's own output, and the cost of leaving it is that a
+    later reader re-runs a sweep that is already curated.
 
 ## Open questions
 

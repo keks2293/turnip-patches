@@ -1003,7 +1003,7 @@
     "results/games/re4/mesa27-vertex/fdperf-raw.txt",
     "results/games/re4/game-patched-algopg.log"
    ],
-   "lines": 2171,
+   "lines": 2187,
    "headings": [
     "## 40.1 What was run",
     "## 40.2 The discard, and what kind of discard it is",
@@ -1073,6 +1073,37 @@
    ],
    "verdict_quote": "the fifteen tools/fdperf/fdperf.cfg the audit read (sixteen counting fdperf.cfg-gaps,",
    "verdict_source": "journal 41"
+  },
+  {
+   "id": "42",
+   "title": "Both export counters count one event per group of 8 components of vertex export, and the probe built to measure them had been carrying one varying (24.11)",
+   "question": "Both export counters count one event per group of 8 components of vertex export, and the probe built to measure them had been carrying one varying (24.11)",
+   "file": "journal/42-the-export-counters-count-groups-of-8-components-and-a-sum-of-varyings-is-not-an-interface.md",
+   "date": "24.11",
+   "status": "closed",
+   "decision": "",
+   "verdict_first_line": "queue 34's two unnamed units have one - `PERF_VPC_SP_COMPONENTS` (VPC selector 10) and",
+   "artifacts": [
+    "tests/vpc-attrbuf.c",
+    "scripts/check-varyings-arms.py",
+    "scripts/check-varyings-controls.sh",
+    "tests/gen-varyings-spv.sh",
+    "tests/varyings_spv.h",
+    "build/vpc-attrbuf",
+    "results/synthetics/varyings/interface-check.txt",
+    "results/synthetics/varyings/negative-controls.txt",
+    "results/synthetics/attrbuf/smoke/run.txt",
+    "results/synthetics/varyings/attrbuf/run.txt",
+    "scripts/run-varyings-sweep.sh",
+    "tools/fdperf/fdperf.cfg-varyings"
+   ],
+   "lines": 165,
+   "headings": [
+    "## 42.1 A sum of varyings is not an interface: the attribute-buffer probe had been shipping one vec4, and the wrong form is now a control",
+    "## 42.2 `VPC_SP_COMPONENTS` and `SP_EXPORT_VPC_TRANS` count one event per 8 components, from both ends, and neither is per pixel"
+   ],
+   "verdict_quote": "queue 34's two unnamed units have one - PERF_VPC_SP_COMPONENTS (VPC selector 10) and",
+   "verdict_source": "journal 42"
   }
  ]
 }
