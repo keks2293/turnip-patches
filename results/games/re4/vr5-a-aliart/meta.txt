@@ -1,0 +1,17 @@
+# game:    Resident Evil 4 Gold Edition - /run/media/armada/Slim/Games/Resident.Evil.4.Gold.Edition-InsaneRamZes/re4.exe
+# title:   re4
+# tag:     vr5-a-aliart
+# date:    2026-11-23T07:51:11+08:00
+# driver:  /var/home/armada/opencode/build/out-ab/libvulkan_freedreno.so sha256=88bab928c520
+# cfg:     tools/fdperf/fdperf.cfg-vertex
+# env:     TU_IMG_INV=1 TU_FORCE_PROPS=has_alias_rt   (delta against the plain ship stack)
+# shot:    results/games/re4/raw/shot-vr5-a-aliart.png, 3 distinct colours at 160x90; panel dpms=Off/Off/On
+#           (a capture of this compositor with the panel off is black; the content check is
+#            counter reproduction between arms, see docs/howto-measure.md)
+# chain:   chain37.sh
+# source:  results/raw/game-patched-vr5-a-aliart.log (gitignored), fps: results/games/re4/fps-vr5-a-aliart.csv
+# build:   /var/home/armada/opencode/build/out-ab/libvulkan_freedreno.so  sha256=88bab928c520  (tree provenance: results/games/re4/0014ab/builds.txt)
+# inventory: TU_IMG_INV=1, 4183 create lines in the run log
+# delivery: 9 driver line(s) 'TU_FORCE_PROPS: has_alias_rt'
+# content:  NOT CHECKED - alias.rt changes what the shader writes and the panel is off;
+#            operator decision 23.11: counters and fps only, the picture question stays open.

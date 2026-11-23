@@ -1,0 +1,13 @@
+# game:    Resident Evil 4 Gold Edition - /run/media/armada/Slim/Games/Resident.Evil.4.Gold.Edition-InsaneRamZes/re4.exe
+# title:   re4
+# tag:     0014ab-ship
+# date:    2026-11-23T07:47:36+08:00
+# driver:  /var/home/armada/opencode/build/out/libvulkan_freedreno.so sha256=4c3cdb210082
+# cfg:     tools/fdperf/fdperf.cfg-vertex
+# env:     <none>   (delta against the plain ship stack)
+# shot:    results/games/re4/raw/shot-0014ab-ship.png, 3 distinct colours at 160x90; panel dpms=Off/Off/On
+#           (a capture of this compositor with the panel off is black; the content check is
+#            counter reproduction between arms, see docs/howto-measure.md)
+# chain:   chain37.sh
+# source:  results/raw/game-patched-0014ab-ship.log (gitignored), fps: results/games/re4/fps-0014ab-ship.csv
+# build:   /var/home/armada/opencode/build/out/libvulkan_freedreno.so  sha256=4c3cdb210082  (tree provenance: results/games/re4/0014ab/builds.txt)

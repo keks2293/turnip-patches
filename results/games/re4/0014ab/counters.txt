@@ -1,0 +1,18 @@
+# Counter table for the arms named below (journal 40.29).  Registry: results/games/README.md
+# sampler: tools/fdperf/fdperf.cfg-vertex, counter window t_rel 20-105 s at the pinned clock
+# regenerate: scripts/arm-counters-table.py 0014ab-a 0014ab-b 0014ab-ship vr5-a-aliart > results/games/re4/0014ab/counters.txt
+#
+# 0014ab-a: driver /var/home/armada/opencode/build/out-ab/libvulkan_freedreno.so sha256=88bab928c520; env TU_IMG_INV=1   (delta against the plain ship stack)
+# 0014ab-b: driver /var/home/armada/opencode/build/out-no0014/libvulkan_freedreno.so sha256=7ae5f008caa8; env TU_IMG_INV=1   (delta against the plain ship stack)
+# 0014ab-ship: driver /var/home/armada/opencode/build/out/libvulkan_freedreno.so sha256=4c3cdb210082; env <none>   (delta against the plain ship stack)
+# vr5-a-aliart: driver /var/home/armada/opencode/build/out-ab/libvulkan_freedreno.so sha256=88bab928c520; env TU_IMG_INV=1 TU_FORCE_PROPS=has_alias_rt   (delta against the plain ship stack)
+
+| arm | game settings | p25 fps 70-84s | p25 fps 95-150s | prims/frame (TSE in / p25) | TSE in M/s | TSE vis % | TSE 0-pixel M/s | VPC busy % | PC stall on VPC % | DRAM read GB/s | windows kept/dropped |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 0014ab-a | NOT RECORDED |  25.76 (n=140) |  26.12 (n=549) |   8.44 M |   220.38 |       n/a |       n/a |  85.63 |  57.44 |       n/a | 39 / 0 |
+| 0014ab-b | NOT RECORDED |  25.06 (n=140) |  25.62 (n=548) |   8.41 M |   215.37 |       n/a |       n/a |  84.58 |  56.71 |       n/a | 40 / 0 |
+| 0014ab-ship | NOT RECORDED |  26.08 (n=140) |  26.52 (n=548) |   8.45 M |   224.20 |       n/a |       n/a |  85.64 |  57.10 |       n/a | 40 / 0 |
+| vr5-a-aliart | NOT RECORDED |  26.22 (n=140) |  26.44 (n=548) |   8.49 M |   224.37 |       n/a |       n/a |  85.58 |  57.19 |       n/a | 40 / 0 |
+
+prims/frame is a quotient (per-second TSE input over p25 fps of the same arm), not a counter;
+it is the column that compares two arms whose frame rates differ.

@@ -1,0 +1,13 @@
+# fps p25 of the queue-16 arms over the standard window (elapsed 95-150 s, ns column caveat:
+# scripts/fps-window.py). Generated 2026-11-23T07:51:31+08:00 by:
+#   for tag in 0014ab-a 0014ab-b 0014ab-ship vr5-a-aliart; do python3 scripts/fps-window.py results/games/re4/fps-$tag.csv 95 150; done
+# Identical-arm spread on this frame is 0.6 % (journal 40.21), so <1 % is unattributable.
+
+fps-0014ab-a.csv: span 0.3..150.0s, window 95-150s
+  n=549 p25=26.12 mean=26.88 min=21.9 max=33.2
+fps-0014ab-b.csv: span 0.3..150.0s, window 95-150s
+  n=548 p25=25.62 mean=26.37 min=21.9 max=36.8
+fps-0014ab-ship.csv: span 0.2..150.1s, window 95-150s
+  n=548 p25=26.52 mean=27.44 min=21.1 max=36.0
+fps-vr5-a-aliart.csv: span 0.3..150.0s, window 95-150s
+  n=548 p25=26.44 mean=27.38 min=21.8 max=34.7

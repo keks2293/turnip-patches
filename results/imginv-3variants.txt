@@ -1,4 +1,4 @@
-# Three image inventories on one scale (journal 27 of docs/analysis.md), generated 2026-11-20.
+# Three image inventories on one scale (journal 27 of docs/analysis.md), generated 2026-11-23.
 # Input (results/raw/ is gitignored: full proton stdout/stderr; curated copies live in results/):
 #   results/raw/game-patched-imginv4.log              839 KB  sha256 cde39e2971a60097
 #   results/raw/game-patched-imginv5.log              953 KB  sha256 80d433927103ef02
@@ -10,58 +10,45 @@
 #   python3 scripts/imginv-stats.py game-patched-imginv4.log game-patched-imginv5.log game-patched-stockflaginv.log
 # MUTABLE_FORMAT is taken from `flags & 0x8`, not from the `mutable=` field, whose meaning
 # changed between revisions of the tooling.
+# Regenerated 23.11: output labels are English now (scripts/imginv-stats.py was translated).
 
 $ python3 scripts/imginv-stats.py game-patched-imginv4.log game-patched-imginv5.log game-patched-stockflaginv.log
 
-  (results/raw/game-patched-imginv4.log: 1 строк инвентаря обрезаны чужим stderr, они не учтены)
-  (results/raw/game-patched-imginv5.log: 1 строк инвентаря обрезаны чужим stderr, они не учтены)
-  (results/raw/game-patched-stockflaginv.log: 9 строк инвентаря обрезаны чужим stderr, они не учтены)
-=== results/raw/game-patched-imginv4.log  (3638 созда) ===
-  всего созда            3638    7740.5 MiB  100.0 %
+  (results/raw/game-patched-imginv4.log: 1 inventory lines cut by foreign stderr, not counted)
+  (results/raw/game-patched-imginv5.log: 1 inventory lines cut by foreign stderr, not counted)
+  (results/raw/game-patched-stockflaginv.log: 9 inventory lines cut by foreign stderr, not counted)
+=== results/raw/game-patched-imginv4.log  (3638 creates) ===
+  all creates            3638    7740.5 MiB  100.0 %
     tile=tiled           1646    3939.5 MiB   50.9 %
     ubwc=1               1592    3884.5 MiB   50.2 %
-  MUTABLE со списком      688     758.4 MiB    9.8 %
-    из них ubwc           634     703.3 MiB    9.1 %
-  MUTABLE без списка     1983    3800.9 MiB   49.1 %
-    из них tiled            0       0.0 MiB    0.0 %
-    из них ubwc             0       0.0 MiB    0.0 %
-  без MUTABLE             967    3181.2 MiB   41.1 %
-    из них ubwc           958    3181.1 MiB   41.1 %
+  MUTABLE with list       688     758.4 MiB    9.8 %
+    of them ubwc          634     703.3 MiB    9.1 %
+  MUTABLE no list        1983    3800.9 MiB   49.1 %
+    of them tiled           0       0.0 MiB    0.0 %
+    of them ubwc            0       0.0 MiB    0.0 %
+  without MUTABLE         967    3181.2 MiB   41.1 %
+    of them ubwc          958    3181.1 MiB   41.1 %
 
-=== results/raw/game-patched-imginv5.log  (4176 созда) ===
-  всего созда            4176    8080.8 MiB  100.0 %
+=== results/raw/game-patched-imginv5.log  (4176 creates) ===
+  all creates            4176    8080.8 MiB  100.0 %
     tile=tiled           3125    6449.9 MiB   79.8 %
     ubwc=1               1595    3925.6 MiB   48.6 %
-  MUTABLE со списком      726     766.3 MiB    9.5 %
-    из них ubwc           632     696.3 MiB    8.6 %
-  MUTABLE без списка     2474    4081.1 MiB   50.5 %
-    из них tiled         1450    2450.3 MiB   30.3 %
-    из них ubwc             0       0.0 MiB    0.0 %
-  без MUTABLE             976    3233.4 MiB   40.0 %
-    из них ubwc           963    3229.3 MiB   40.0 %
+  MUTABLE with list       726     766.3 MiB    9.5 %
+    of them ubwc          632     696.3 MiB    8.6 %
+  MUTABLE no list        2474    4081.1 MiB   50.5 %
+    of them tiled        1450    2450.3 MiB   30.3 %
+    of them ubwc            0       0.0 MiB    0.0 %
+  without MUTABLE         976    3233.4 MiB   40.0 %
+    of them ubwc          963    3229.3 MiB   40.0 %
 
-=== results/raw/game-patched-stockflaginv.log  (4170 созда) ===
-  всего созда            4170    8088.0 MiB  100.0 %
+=== results/raw/game-patched-stockflaginv.log  (4170 creates) ===
+  all creates            4170    8088.0 MiB  100.0 %
     tile=tiled           4040    8086.1 MiB  100.0 %
     ubwc=1               1597    3944.9 MiB   48.8 %
-  MUTABLE со списком      727     769.9 MiB    9.5 %
-    из них ubwc           633     699.8 MiB    8.7 %
-  MUTABLE без списка     2470    4073.0 MiB   50.4 %
-    из них tiled         2367    4071.2 MiB   50.3 %
-    из них ubwc             0       0.0 MiB    0.0 %
-  без MUTABLE             973    3245.1 MiB   40.1 %
-    из них ubwc           964    3245.1 MiB   40.1 %
-
-
-$ python3 scripts/imginv-classes.py game-patched-imginv4.log game-patched-imginv5.log game-patched-stockflaginv.log
-
-=== MUTABLE без списка: MiB и доля tiled по классам тексельного блока ===
-класс                                imginv4                   imginv5              stockflaginv
-8 bit                  1170.6   0.0 %    0.0u     1183.8 100.0 %    0.0u     1181.8 100.0 %    0.0u
-32 bit                  993.0   0.0 %    0.0u     1023.5   0.0 %    0.0u     1014.7 100.0 %    0.0u
-64 bit                  585.0   0.0 %    0.0u      666.4 100.0 %    0.0u      650.8 100.0 %    0.0u
-16 bit                  607.3   0.0 %    0.0u      606.7   0.0 %    0.0u      624.9  99.9 %    0.0u
-BC (compressed)         445.1   0.0 %    0.0u      600.7  99.9 %    0.0u      600.7  99.9 %    0.0u
-ИТОГО                  3800.9   0.0 %    0.0u     4081.1  60.0 %    0.0u     4073.0 100.0 %    0.0u
-
-колонка: MiB, доля tiled, MiB с ubwc (суффикс u)
+  MUTABLE with list       727     769.9 MiB    9.5 %
+    of them ubwc          633     699.8 MiB    8.7 %
+  MUTABLE no list        2470    4073.0 MiB   50.4 %
+    of them tiled        2367    4071.2 MiB   50.3 %
+    of them ubwc            0       0.0 MiB    0.0 %
+  without MUTABLE         973    3245.1 MiB   40.1 %
+    of them ubwc          964    3245.1 MiB   40.1 %

@@ -1564,3 +1564,48 @@ single file exp-26 touches, i.e. to 0014's one semantic site.
 **Does not show.** Which edit since 20.11 moved the ship hash (the drift was measured, not bisected);
 whether A and B differ at runtime at all - that is chain37; and nothing about alias.rt, whose hook is
 merely present in both trees and does nothing unless `TU_FORCE_PROPS` names it.
+## 40.29 The 0014 A/B reproduces both inventory signatures on dedicated builds, and `has_alias_rt` moves no counter (queues 16 and 26, chain37)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** Queue 16 accepts patch 0014 by an inventory signature, not by a hash: the pre-0014
+inventory has MUTABLE-without-list at 0 MiB tiled (`results/imginv-3variants.txt`, imginv4 row) and
+the with-0014 one at 2450.3 MiB (imginv5 row). Do the two dedicated builds of 40.28 reproduce that
+pair, and does the queue-26 candidate `has_alias_rt` move any counter on the same frame?
+
+**Method.** `/tmp/opencode/chain37.sh`, four arms, `scripts/run-game.sh` with
+`tools/fdperf/fdperf.cfg-vertex`, `HUDLOG=150`, `TIMEOUT=190`, the game's shadow cache as this
+install has it. A = `build/out-ab` (`88bab928c520`), B = `build/out-no0014` (`7ae5f008caa8`), both
+with `TU_IMG_INV=1`; the ship `.so` (`4c3cdb210082`) runs as a control that cannot show inventory
+lines (the rig is not in its tree); the fourth arm is A with `TU_FORCE_PROPS=has_alias_rt`. Arms are
+interleaved only by time, one run each. The inventory is read by `scripts/imginv-stats.py`, fps by
+`scripts/fps-window.py ... 95 150`, counters by `scripts/arm-counters-table.py`.
+
+**Numbers.** `results/games/re4/0014ab/imginv.txt`: A has 2474 MUTABLE-no-list creates, 4080.8 MiB,
+**1450 tiled, 2450.3 MiB (60.0 %)**; B has 2475, 4063.0 MiB, **0 tiled, 0 MiB**. That is the
+imginv5 and the imginv4 row to the tenth of a MiB on the tiled figure. `fps.txt`: p25 95-150 s is
+A 26.12, B 25.62, ship 26.52, aliart 26.44. `counters.txt`: TSE in 220.38 / 215.37 / 224.20 / 224.37
+M/s, VPC busy 85.63 / 84.58 / 85.64 / 85.58 %, PC stall on VPC 57.44 / 56.71 / 57.10 / 57.19 %; the
+`TU_FORCE_PROPS: has_alias_rt` line is in the aliart run log, so the name was applied.
+
+**Verdict.** The acceptance pair is reproduced: B is the pre-0014 inventory and A is the with-0014
+one, so the one semantic site exp-26 turns off (40.28) is 0014 and nothing else. fps does not
+separate the arms: A is 1.95 % above B, but the ship control is 1.5 % above A, i.e. the three sit
+inside a band this frame has never resolved (0.6 % identical-arm spread, 40.21) - 0014 stays a
+correctness/tiling patch, not a lever. `has_alias_rt` moves nothing: the largest counter difference
+against A is 1.8 % on TSE input, VPC busy differs by 0.06 %, and fps by 1.2 %.
+
+**Does not show.** Correctness of any arm - the operator's call for queue 26 was counters only, the
+panel is off and the screenshot check is black by construction; whether the gen3 alias-RT pass did
+not engage or merely is not on the critical path (counters cannot tell the two apart); whether the
+1.95 % between A and B is real; DRAM and TSE-visibility columns, which `cfg-vertex` does not
+program (printed as `n/a` in `counters.txt`).
+
+**What the A arm actually carried.** Its 0014 is the one-decision text (`mutable_compat_class()` and
+`mutable_views()` inside `tu6_mutable_format_list_forces_linear()`), not the text committed on 19.11
+- the drift 39.7 measured, and the reason `git apply -R patches/0014` fails on these trees. The
+operator's decision on 23.11: make that text the committed `0014` (same decision, one place instead
+of two), with no further equivalence run - journals 33 and 36 already measured it equivalent to the
+committed text (598 of 598 probe lines, 784 create signatures), and this run now carries it as the A
+arm. Done on 23.11: `patches/0014-*.patch` is that text, and the p14 binary remains the
+older text (`docs/release.md`, provenance).

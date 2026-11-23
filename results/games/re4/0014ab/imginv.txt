@@ -1,0 +1,49 @@
+# Image inventories of the queue-16 arms (acceptance is the imginv4/imginv5 signature, never a
+# hash - docs/plan-next-checks.md queue 16). Generated 2026-11-23T07:51:31+08:00 by:
+#   python3 scripts/imginv-stats.py <the three raw logs named below>
+# Raw logs (gitignored; sha256 so a replacement log can be recognised):
+#   results/raw/game-patched-0014ab-a.log                                  f212fd51a9af
+#   results/raw/game-patched-0014ab-b.log                                  f406c28a2c21
+#   results/raw/game-patched-vr5-a-aliart.log                              0156e4c03d5c
+# Reference rows (committed): results/imginv-3variants.txt - imginv4 = pre-0014 (MUTABLE no-list
+# 0 MiB tiled), imginv5 = with 0014 (2450.3 MiB tiled). The ship arm cannot show inventory lines:
+# the rig is not in the ship tree (docs/release.md checklist item 1).
+
+  (results/raw/game-patched-0014ab-a.log: 6 inventory lines cut by foreign stderr, not counted)
+  (results/raw/game-patched-0014ab-b.log: 5 inventory lines cut by foreign stderr, not counted)
+  (results/raw/game-patched-vr5-a-aliart.log: 18 inventory lines cut by foreign stderr, not counted)
+=== results/raw/game-patched-0014ab-a.log  (4153 creates) ===
+  all creates            4153    8051.9 MiB  100.0 %
+    tile=tiled           3102    6421.3 MiB   79.7 %
+    ubwc=1               1572    3897.0 MiB   48.4 %
+  MUTABLE with list       722     766.9 MiB    9.5 %
+    of them ubwc          628     696.8 MiB    8.7 %
+  MUTABLE no list        2474    4080.8 MiB   50.7 %
+    of them tiled        1450    2450.3 MiB   30.4 %
+    of them ubwc            0       0.0 MiB    0.0 %
+  without MUTABLE         957    3204.2 MiB   39.8 %
+    of them ubwc          944    3200.2 MiB   39.7 %
+
+=== results/raw/game-patched-0014ab-b.log  (4178 creates) ===
+  all creates            4178    8069.1 MiB  100.0 %
+    tile=tiled           1676    4006.0 MiB   49.6 %
+    ubwc=1               1597    3932.9 MiB   48.7 %
+  MUTABLE with list       727     772.5 MiB    9.6 %
+    of them ubwc          634     703.3 MiB    8.7 %
+  MUTABLE no list        2475    4063.0 MiB   50.4 %
+    of them tiled           0       0.0 MiB    0.0 %
+    of them ubwc            0       0.0 MiB    0.0 %
+  without MUTABLE         976    3233.6 MiB   40.1 %
+    of them ubwc          963    3229.6 MiB   40.0 %
+
+=== results/raw/game-patched-vr5-a-aliart.log  (4165 creates) ===
+  all creates            4165    8032.1 MiB  100.0 %
+    tile=tiled           3117    6408.6 MiB   79.8 %
+    ubwc=1               1598    3936.4 MiB   49.0 %
+  MUTABLE with list       727     769.9 MiB    9.6 %
+    of them ubwc          634     703.3 MiB    8.8 %
+  MUTABLE no list        2461    4025.1 MiB   50.1 %
+    of them tiled        1440    2401.7 MiB   29.9 %
+    of them ubwc            0       0.0 MiB    0.0 %
+  without MUTABLE         977    3237.1 MiB   40.3 %
+    of them ubwc          964    3233.1 MiB   40.3 %

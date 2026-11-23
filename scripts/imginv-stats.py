@@ -40,7 +40,7 @@ def parse(path):
         d['dims'] = re.search(r' \d+x\d+x\d+ ', line).group().strip()
         rows.append(d)
     if broken:
-        print(f'  ({path}: {broken} строк инвентаря обрезаны чужим stderr, они не учтены)')
+        print(f'  ({path}: {broken} inventory lines cut by foreign stderr, not counted)')
     return rows
 
 
@@ -51,19 +51,19 @@ def summarize(rows):
     mut_list = [r for r in rows if r['mutable'] and r['listn'] > 0]
     mut_nolist = [r for r in rows if r['mutable'] and r['listn'] == 0]
     plain = [r for r in rows if not r['mutable']]
-    out = [('всего созда', len(rows), total),
+    out = [('all creates', len(rows), total),
            ('  tile=tiled', len(tiled), sum(r['size'] for r in tiled) / MiB),
            ('  ubwc=1', len(ubwc), sum(r['size'] for r in ubwc) / MiB),
-           ('MUTABLE со списком', len(mut_list), sum(r['size'] for r in mut_list) / MiB),
-           ('  из них ubwc', len([r for r in mut_list if r['ubwc']]),
+           ('MUTABLE with list', len(mut_list), sum(r['size'] for r in mut_list) / MiB),
+           ('  of them ubwc', len([r for r in mut_list if r['ubwc']]),
             sum(r['size'] for r in mut_list if r['ubwc']) / MiB),
-           ('MUTABLE без списка', len(mut_nolist), sum(r['size'] for r in mut_nolist) / MiB),
-           ('  из них tiled', len([r for r in mut_nolist if r['tile'] == 'tiled']),
+           ('MUTABLE no list', len(mut_nolist), sum(r['size'] for r in mut_nolist) / MiB),
+           ('  of them tiled', len([r for r in mut_nolist if r['tile'] == 'tiled']),
             sum(r['size'] for r in mut_nolist if r['tile'] == 'tiled') / MiB),
-           ('  из них ubwc', len([r for r in mut_nolist if r['ubwc']]),
+           ('  of them ubwc', len([r for r in mut_nolist if r['ubwc']]),
             sum(r['size'] for r in mut_nolist if r['ubwc']) / MiB),
-           ('без MUTABLE', len(plain), sum(r['size'] for r in plain) / MiB),
-           ('  из них ubwc', len([r for r in plain if r['ubwc']]),
+           ('without MUTABLE', len(plain), sum(r['size'] for r in plain) / MiB),
+           ('  of them ubwc', len([r for r in plain if r['ubwc']]),
             sum(r['size'] for r in plain if r['ubwc']) / MiB)]
     return out
 
@@ -89,7 +89,7 @@ def main():
     logs = sys.argv[1:]
     parsed = [(p, parse(p)) for p in logs]
     for p, rows in parsed:
-        print(f'=== {p}  ({len(rows)} созда) ===')
+        print(f'=== {p}  ({len(rows)} creates) ===')
         total = sum(r['size'] for r in rows) / MiB
         for name, n, mib in summarize(rows):
             share = 100.0 * mib / total if total else 0
@@ -98,8 +98,8 @@ def main():
     if len(parsed) == 2:
         a, b = combos(parsed[0][1]), combos(parsed[1][1])
         keys = sorted(set(a) | set(b), key=lambda k: -(a.get(k, [0, 0])[1] + b.get(k, [0, 0])[1]))
-        print('=== MUTABLE со списком: база -> список (MiB, из них ubwc) ===')
-        print(f'{"база":22} {"список":34} {"A c/MiB":>14} {"B c/MiB":>14} {"A ubwc":>8} {"B ubwc":>8}')
+        print('=== MUTABLE with list: base -> list (MiB, of them ubwc) ===')
+        print(f'{"base":22} {"list":34} {"A c/MiB":>14} {"B c/MiB":>14} {"A ubwc":>8} {"B ubwc":>8}')
         for k in keys:
             ea, eb = a.get(k, [0, 0.0, 0.0, 0.0]), b.get(k, [0, 0.0, 0.0, 0.0])
             print(f'{k[0].replace("PIPE_FORMAT_", ""):22} {k[1].replace("PIPE_FORMAT_", ""):34} '
