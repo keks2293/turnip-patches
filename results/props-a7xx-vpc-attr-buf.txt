@@ -1,0 +1,72 @@
+=== which GPUProps block defines each name (a7xx_base included) ===
+has_gmem_vpc_attr_buf              a7xx_gen3=True
+sysmem_vpc_attr_buf_size           a7xx_gen3=131072, a8xx_gen1=131072, a8xx_gen2=131072
+gmem_vpc_attr_buf_size             a7xx_gen3=49152, a8xx_gen1=49152, a8xx_gen2=49152
+sysmem_per_ccu_depth_cache_size    a6xx_base=65536, a7xx_base=262144, a8xx_gen1=262144, a8xx_gen2=196608
+sysmem_per_ccu_color_cache_size    a6xx_base=65536, a7xx_base=65536, a8xx_gen1=131072, a8xx_gen2=131072
+gmem_ccu_color_cache_fraction      a6xx_base=2, a7xx_base=3, a8xx_gen1=3, a8xx_gen2=3
+gmem_ccu_depth_cache_fraction      a6xx_base=2, a7xx_base=3, a8xx_gen1=0, a8xx_gen2=0
+
+=== the merged props of those chip ids, as the generator sees them ===
+0x43050a01 FD740 (this rig)   name='FD740' num_ccu=6 tile_align=96x32
+    has_gmem_vpc_attr_buf              (unset -> 0 in C)
+    sysmem_vpc_attr_buf_size           (unset -> 0 in C)
+    gmem_vpc_attr_buf_size             (unset -> 0 in C)
+    sysmem_per_ccu_depth_cache_size    262144
+    sysmem_per_ccu_color_cache_size    65536
+    gmem_ccu_color_cache_fraction      3
+    gmem_ccu_depth_cache_fraction      3
+0xffff43050c01 X1-85              name='Adreno X1-85' num_ccu=6 tile_align=96x32
+    has_gmem_vpc_attr_buf              (unset -> 0 in C)
+    sysmem_vpc_attr_buf_size           (unset -> 0 in C)
+    gmem_vpc_attr_buf_size             (unset -> 0 in C)
+    sysmem_per_ccu_depth_cache_size    262144
+    sysmem_per_ccu_color_cache_size    65536
+    gmem_ccu_color_cache_fraction      3
+    gmem_ccu_depth_cache_fraction      3
+0x43050d01 0x43050d01         not in Mesa's catalog
+0x43020000 FD720              name='FD720' num_ccu=2 tile_align=64x32
+    has_gmem_vpc_attr_buf              (unset -> 0 in C)
+    sysmem_vpc_attr_buf_size           (unset -> 0 in C)
+    gmem_vpc_attr_buf_size             (unset -> 0 in C)
+    sysmem_per_ccu_depth_cache_size    262144
+    sysmem_per_ccu_color_cache_size    65536
+    gmem_ccu_color_cache_fraction      3
+    gmem_ccu_depth_cache_fraction      3
+0x43020100 Adreno 722         name='Adreno (TM) 722' num_ccu=2 tile_align=64x16
+    has_gmem_vpc_attr_buf              (unset -> 0 in C)
+    sysmem_vpc_attr_buf_size           (unset -> 0 in C)
+    gmem_vpc_attr_buf_size             (unset -> 0 in C)
+    sysmem_per_ccu_depth_cache_size    262144
+    sysmem_per_ccu_color_cache_size    65536
+    gmem_ccu_color_cache_fraction      3
+    gmem_ccu_depth_cache_fraction      3
+0x07010000 FD710              name='FD710' num_ccu=1 tile_align=64x32
+    has_gmem_vpc_attr_buf              (unset -> 0 in C)
+    sysmem_vpc_attr_buf_size           (unset -> 0 in C)
+    gmem_vpc_attr_buf_size             (unset -> 0 in C)
+    sysmem_per_ccu_depth_cache_size    262144
+    sysmem_per_ccu_color_cache_size    65536
+    gmem_ccu_color_cache_fraction      3
+    gmem_ccu_depth_cache_fraction      3
+
+=== every catalog entry the flag is on, and the family it is off for ===
+    ON  0x43051401 'FD750'                  num_ccu=6 sysmem=0x20000 gmem=0xc000
+    ON  0xffff43051401 'FD750'                  num_ccu=6 sysmem=0x20000 gmem=0xc000
+    ON  0xffff43051701 'Adreno (TM) 753'        num_ccu=6 sysmem=0x20000 gmem=0xc000
+    ON  0xffff44010000 'Adreno (TM) 810'        num_ccu=1 sysmem=0x20000 gmem=0x4000
+    ON  0xffff44050000 'Adreno (TM) 830'        num_ccu=6 sysmem=0x20000 gmem=0xc000
+    ON  0xffff44050001 'Adreno (TM) 830v1'      num_ccu=6 sysmem=0x20000 gmem=0xc000
+    ON  0x44050000 'Adreno (TM) 830'        num_ccu=6 sysmem=0x20000 gmem=0xc000
+    ON  0x44050001 'Adreno (TM) 830'        num_ccu=6 sysmem=0x20000 gmem=0xc000
+    ON  0xffff44030a20 'Adreno (TM) 829'        num_ccu=4 sysmem=0x20000 gmem=0xc000
+    ON  0x44030a20 'Adreno (TM) 829'        num_ccu=4 sysmem=0x20000 gmem=0xc000
+    ON  0xffff44050a31 'Adreno (TM) 840'        num_ccu=6 sysmem=0x20000 gmem=0xc000
+    ON  0xffff44050a21 'Adreno (TM) 840'        num_ccu=4 sysmem=0x20000 gmem=0xc000
+    ON  0xffff44070031 'Adreno (TM) X2-85'      num_ccu=6 sysmem=0x20000 gmem=0xc000
+    ON  0xffff44060030 'Adreno (TM) X2-85'      num_ccu=6 sysmem=0x20000 gmem=0xc000
+    ON  0xffff44070041 'Adreno (TM) X2-90'      num_ccu=8 sysmem=0x20000 gmem=0xc000
+    OFF 73 entries, including every a7xx_gen1 and a7xx_gen2 chip
+
+(0 in C means: never written to GMEM and never consulted - the layout branch and
+ emit_vpc_attr_buf are both gated on has_gmem_vpc_attr_buf, journal 40.34)

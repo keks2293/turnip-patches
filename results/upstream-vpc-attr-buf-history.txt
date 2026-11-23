@@ -1,0 +1,78 @@
+# Was the VPC attribute-buffer prop ever set for the A740 chain upstream?  (23.11, journal 40.35)
+#
+# Reproduce (the file names do not matter; every line below is a command plus its output):
+#   for ref in mesa-24.0.9 mesa-24.2.8 mesa-25.0.7 mesa-25.2.4 main; do
+#     curl -sS -o fd.py https://gitlab.freedesktop.org/mesa/mesa/-/raw/$ref/src/freedreno/common/freedreno_devices.py
+#     grep -c vpc_attr_buf fd.py ; grep -n 'GPUProps(' -A 24 fd.py | grep -c vpc_attr_buf
+#   done
+#   curl -sS -o mr.patch https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/23217.patch
+#   grep -c vpc_attr_buf mr.patch
+# The GitLab web UI is behind Anubis for plain page fetches; /-/raw/<ref>/ and /-/merge_requests/<n>.patch answer.
+
+== every upstream ref where the name occurs, and the block that carries it ==
+ref mesa-24.0.9    bytes=33409  vpc_attr_buf_hits=0    vpc_pos_buf_size_hits=0
+ref mesa-24.2.8    bytes=47661  vpc_attr_buf_hits=3    vpc_pos_buf_size_hits=0
+      line 882   in a7xx_750                                       has_gmem_vpc_attr_buf = True,
+      line 883   in a7xx_750                                       sysmem_vpc_attr_buf_size = 0x20000,
+      line 884   in a7xx_750                                       gmem_vpc_attr_buf_size = 0xc000,
+ref mesa-25.0.7    bytes=49902  vpc_attr_buf_hits=3    vpc_pos_buf_size_hits=0
+      line 902   in a7xx_gen3                                      has_gmem_vpc_attr_buf = True,
+      line 903   in a7xx_gen3                                      sysmem_vpc_attr_buf_size = 0x20000,
+      line 904   in a7xx_gen3                                      gmem_vpc_attr_buf_size = 0xc000,
+ref mesa-25.2.4    bytes=51414  vpc_attr_buf_hits=3    vpc_pos_buf_size_hits=0
+      line 952   in a7xx_gen3                                      has_gmem_vpc_attr_buf = True,
+      line 953   in a7xx_gen3                                      sysmem_vpc_attr_buf_size = 0x20000,
+      line 954   in a7xx_gen3                                      gmem_vpc_attr_buf_size = 0xc000,
+ref main           bytes=61752  vpc_attr_buf_hits=9    vpc_pos_buf_size_hits=6
+      line 844   in a7xx_gen3                                      has_gmem_vpc_attr_buf = True,
+      line 845   in a7xx_gen3                                      sysmem_vpc_attr_buf_size = 0x20000,
+      line 846   in a7xx_gen3                                      gmem_vpc_attr_buf_size = 0xc000,
+      line 1466  in a8xx_vpc_cache_lg                              sysmem_vpc_attr_buf_size = 128 * 1024,
+      line 1467  in a8xx_vpc_cache_lg                              sysmem_vpc_pos_buf_size = 64 * 1024,
+      line 1469  in a8xx_vpc_cache_lg                              gmem_vpc_attr_buf_size = 48 * 1024,
+      line 1470  in a8xx_vpc_cache_lg                              gmem_vpc_pos_buf_size = 24 * 1024,
+      line 1475  in a8xx_vpc_cache_med                             sysmem_vpc_attr_buf_size = 128 * 1024,
+      line 1476  in a8xx_vpc_cache_med                             sysmem_vpc_pos_buf_size = 48 * 1024,
+      line 1478  in a8xx_vpc_cache_med                             gmem_vpc_attr_buf_size = 48 * 1024,
+      line 1479  in a8xx_vpc_cache_med                             gmem_vpc_pos_buf_size = 24 * 1024,
+      line 1484  in a8xx_vpc_cache_sm                              sysmem_vpc_attr_buf_size = 32 * 1024,
+      line 1485  in a8xx_vpc_cache_sm                              sysmem_vpc_pos_buf_size = 12 * 1024,
+      line 1487  in a8xx_vpc_cache_sm                              gmem_vpc_attr_buf_size = 16 * 1024,
+      line 1488  in a8xx_vpc_cache_sm                              gmem_vpc_pos_buf_size = 12 * 1024,
+
+== the FD740 chain in each of those files (the line is the props list) ==
+ref mesa-24.0.9    FD740 at line 869   props chain: [a7xx_base, a7xx_740],
+ref mesa-24.2.8    FD740 at line 1066  props chain: [a7xx_base, a7xx_740],
+ref mesa-25.0.7    FD740 at line 1159  props chain: [a7xx_base, a7xx_gen2],
+ref mesa-25.2.4    FD740 at line 1212  props chain: [a7xx_base, a7xx_gen2],
+ref main           FD740 at line 1225  props chain: [a7xx_base, a7xx_gen2],
+
+== 24.2.8, the two a7xx blocks side by side (this is where the props first appear) ==
+  a7xx_740| a7xx_740 = A7XXProps(
+  a7xx_740|         stsc_duplication_quirk = True,
+  a7xx_740|         has_event_write_sample_count = True,
+  a7xx_740|         ubwc_unorm_snorm_int_compatible = True,
+  a7xx_740|         supports_ibo_ubwc = True,
+  a7xx_740|         fs_must_have_non_zero_constlen_quirk = True,
+  a7xx_740|         # Most devices with a740 have blob v6xx which doesn't have
+  a7xx_740|         # this hint set. Match them for better compatibility by default.
+  a7xx_740|         enable_tp_ubwc_flag_hint = False,
+  a7xx_740|     )
+  a7xx_750| a7xx_750 = A7XXProps(
+  a7xx_750|         has_event_write_sample_count = True,
+  a7xx_750|         load_inline_uniforms_via_preamble_ldgk = True,
+  a7xx_750|         load_shader_consts_via_preamble = True,
+  a7xx_750|         has_gmem_vpc_attr_buf = True,
+  a7xx_750|         sysmem_vpc_attr_buf_size = 0x20000,
+  a7xx_750|         gmem_vpc_attr_buf_size = 0xc000,
+  a7xx_750|         ubwc_unorm_snorm_int_compatible = True,
+  a7xx_750|         gs_vpc_adjacency_quirk = True,
+  a7xx_750|         storage_8bit = True,
+  a7xx_750|     )
+
+== MR 23217 (the a7xx enablement series that created the FD740 entry): 25 patches, 291027 B ==
+  grep -c vpc_attr_buf  mr23217.patch = 0
+  grep -c ATTR_BUF      mr23217.patch = 0
+  first patch of the series: [PATCH 01/25] freedreno/registers: Refactor gen_header.py to allow
+  the patch that adds the FD740 props block: freedreno: Fully define a730 and a740 device properties
+77

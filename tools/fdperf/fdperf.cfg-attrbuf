@@ -1,0 +1,117 @@
+// fdperf.cfg-attrbuf - the VPC attribute-buffer probe (tests/vpc-attrbuf.c, journal 40.35).
+//
+// Why a fourth vertex cfg: the question is whether writing VPC_ATTR_BUF_GMEM_SIZE /
+// VPC_ATTR_BUF_GMEM_BASE / PC_ATTR_BUF_GMEM_SIZE changes anything on A740, where
+// emit_vpc_attr_buf() returns before the first write (tu_cmd_buffer.cc:649) because
+// props.has_gmem_vpc_attr_buf is False for a7xx_gen2.  The arm that turns the flag on
+// also takes 6 * size bytes away from usable GMEM (fd6_gmem_cache.h:108-109, num_ccu = 6
+// for FD740), so every prop arm is paired with a TU_GMEM control arm of identical usable
+// GMEM and identical CCU offsets and no register writes.  The counters below are the ones
+// that separate those two: the buffer's own fullness and its back-pressure on VFD, both
+// normalised by delivered vertices.
+//
+// WHAT EACH COLUMN IS FOR
+//   VPC 0,1     busy and working - is the block loaded at all, and is it computing or
+//               stalled (40.34: 0.63-0.69 working/busy on RE4).
+//   VPC 23      VPCRAM_FULL - the counter whose cause the operator's spill-vs-credit fork
+//               is about.  If a GMEM attribute carve-out changes it, the fork has an
+//               answer; if a 32x size range leaves it where the control arm puts it, the
+//               registers are inert here.
+//   VPC 22,24   WIT_FULL and LM_FULL_WAIT_FOR_INTP_END - the other two stall names, so a
+//               movement in 23 alone cannot be read as "the buffer".
+//   VPC 25      NUM_VPCRAM_WRITE - per-vertex writes, the volume behind the fullness.
+//   VFD 2       STALL_CYCLES_VPC_ALLOC - VPC back-pressure seen from the feeder.
+//   VFD 17,9,8  TOTAL_VERTICES, NUM_ATTRIBUTES, DECODED_ATTRIBUTE_BYTES - the denominators
+//               that make every other column per vertex, and the check that all arms drew
+//               the same geometry (this probe asks for 8 attributes and 128 B per vertex).
+//   VSC 4       INPUT_TILES - the bin count, so the confound the control arm exists for is
+//               visible in the dump instead of assumed equal.  VSC 0 is BUSY, the pair the
+//               binned-window reader of 40.30 uses.
+//   PC 20,25,21 IA_VERTICES, VS_INVOCATIONS, IA_PRIMITIVES - submitted volume.
+//   PC 39,19    TAG_CHECKED_VERTICES and VERTEX_HITS together at last (40.33: 19 has never
+//               had its denominator programmed anywhere on this machine).  This probe is an
+//               accidental calibration for them: its mesh is 24576 independent triangles
+//               with no shared vertex, so the honest expectation is checked ~ all IA
+//               vertices and hits ~ 0.  If 19/39 is far from that with a known-zero
+//               sharing rate, the names do not mean what they say.
+//   PC 2,4      stall on VFD and on VPC - who waits for whom.
+//   UCHE 0,1    busy and arbiter stall - is the L2 involved in the vertex tract here at all.
+//   UCHE 13     READ_REQUESTS_SP - the pixel side's demand, to see whether FS-loop arms did
+//               what they were told.
+//   UCHE 16     WRITE_REQUESTS_VPC - kept although 40.34 found it reads 0.000 in every
+//               window of 15 in-game arms: this is a different pipeline, so either it
+//               moves here (and the zero is workload, not wiring) or it is 0 again in a
+//               workload where attributes certainly do go somewhere (and the counter is
+//               dead).  Both answers are worth having.
+//   TSE 6       INPUT_PRIM - with PC 21, the primitive conservation of the path.
+//   SP 0        BUSY - is the pixel side the limiter in the FS-loop arms.
+//
+// HW BUDGETS (a7xx, docs/fdperf-a7xx.md "hw budgets and silent-ignore"): CP 13, RBBM 4,
+// UCHE 12, VFD 8, PC 8, VPC 6, TSE 4, SP 24, VSC 2.  Every block below is inside it
+// (CP 2/13, RBBM 1/4, UCHE 4/12, VFD 5/8, PC 8/8, VPC 6/6, TSE 1/4, SP 1/24, VSC 2/2).
+// Selectors are the `value=` of the name in
+// src/freedreno/registers/adreno/a7xx_perfcntrs.xml.  CP counter0 is reserved by fdperf
+// for ALWAYS_COUNT, the GPU frequency; the synthetic is not clock-pinned, so a window
+// below 676 MHz is filtered out the way the game runs are.
+//
+// Run (scripts/run-attrbuf-sweep.sh does all arms):
+//   scripts/fdperf-sample.sh <sec> 1000 <file> tools/fdperf/fdperf.cfg-attrbuf
+
+FD740 = {
+  CP = {
+    counter0 = 0;    // reserved (ALWAYS_COUNT, frequency)
+    counter1 = 2;    // PERF_CP_BUSY_CYCLES
+  }
+
+  RBBM = {
+    counter0 = 1;    // PERF_RBBM_ALWAYS_ON (divisor for the duty cycle)
+  }
+
+  UCHE = {
+    counter0 = 0;    // PERF_UCHE_BUSY_CYCLES
+    counter1 = 1;    // PERF_UCHE_STALL_CYCLES_ARBITER
+    counter2 = 13;   // PERF_UCHE_READ_REQUESTS_SP
+    counter3 = 16;   // PERF_UCHE_WRITE_REQUESTS_VPC (0.000 in every in-game arm, 40.34)
+  }
+
+  VFD = {
+    counter0 = 0;    // PERF_VFD_BUSY_CYCLES
+    counter1 = 2;    // PERF_VFD_STALL_CYCLES_VPC_ALLOC (the back-pressure)
+    counter2 = 8;    // PERF_VFD_DECODED_ATTRIBUTE_BYTES
+    counter3 = 9;    // PERF_VFD_NUM_ATTRIBUTES
+    counter4 = 17;   // PERF_VFD_TOTAL_VERTICES
+  }
+
+  PC = {
+    counter0 = 0;    // PERF_PC_BUSY_CYCLES
+    counter1 = 20;   // PERF_PC_IA_VERTICES
+    counter2 = 25;   // PERF_PC_VS_INVOCATIONS
+    counter3 = 21;   // PERF_PC_IA_PRIMITIVES
+    counter4 = 39;   // PERF_PC_TAG_CHECKED_VERTICES   <- 19's denominator, first time
+    counter5 = 19;   // PERF_PC_VERTEX_HITS
+    counter6 = 2;    // PERF_PC_STALL_CYCLES_VFD
+    counter7 = 4;    // PERF_PC_STALL_CYCLES_VPC
+  }
+
+  VPC = {
+    counter0 = 0;    // PERF_VPC_BUSY_CYCLES
+    counter1 = 1;    // PERF_VPC_WORKING_CYCLES
+    counter2 = 22;   // PERF_VPC_WIT_FULL_CYCLES
+    counter3 = 23;   // PERF_VPC_VPCRAM_FULL_CYCLES   <- the column the arms are compared on
+    counter4 = 24;   // PERF_VPC_LM_FULL_WAIT_FOR_INTP_END
+    counter5 = 25;   // PERF_VPC_NUM_VPCRAM_WRITE
+  }
+
+  VSC = {
+    counter0 = 0;    // PERF_VSC_BUSY_CYCLES
+    counter1 = 4;    // PERF_VSC_INPUT_TILES (the bin count: the control arm's reason)
+  }
+
+  TSE = {
+    counter0 = 6;    // PERF_TSE_INPUT_PRIM
+  }
+
+  SP = {
+    counter0 = 0;    // PERF_SP_BUSY_CYCLES
+  }
+}

@@ -1961,3 +1961,105 @@ generation, see above. Whether the flat SP side is the bottom of a stall: SP bus
 both frames, so nothing here separates "SP is busy because VPC feeds it" from "SP is busy because 1440p with
 4x MSAA is busy". Whether promotion costs anything: no build was made. Nothing new about fps - the arms are
 the ones 40.9, 40.14, 40.18 and 40.30 already measured.
+
+## 40.35 The gen2 zeros are not hidden by inheritance, and the chip-variant list does not describe this tree (queue 35, no run)
+
+**Question.** Queue 35 asks whether A740's `sysmem_vpc_attr_buf_size`/`gmem_vpc_attr_buf_size`
+of 0 means "no such block in the silicon" or "nobody wrote the props". Before spending a session
+on it, two cheaper questions had to be settled. (1) Could the 0 be an artefact of how this file is
+read - the prop set once in a base block, applied to A740, and simply not repeated in the FD740
+entry (the operator's reading, 23.11)? Inheritance here is real - `sysmem_per_ccu_depth_cache_size`
+reaches FD740 from `a7xx_base` and the FD740 entry says nothing about it - so grep near the entry
+cannot answer it. (2) The operator also brought a description of a variant with per-chip magic
+register lists for chip ids `0x07010000` (A710), `0x43020000` (A720) and `0x43020100` (A722), said
+to include hardware-tuned VPC attribute-buffer sizes and to be the only path those chip ids take,
+"none of these chip IDs exist in Mesa main". Is that what this tree does?
+
+**Method.** No run, no build. `scripts/props-for-chip.py` imports the props generator's own
+catalog (`freedreno_devices.py` through `freedreno_dev_info.py`) and prints, per prop name, every
+block that defines it plus the **merged** props of the chip ids in question - the same dict that
+gets stringified into `freedreno_devices.h`. It runs in the build container, the only place with
+mako, against `scripts/pystub/` (stubs for `mako`, `yaml`, and the meson-generated `a6xx` register
+module this checkout lacks); the register proxy has to hand out a distinct value per name, because
+a constant 0 makes `A6xxGPUInfo.__init__` abort with "duplicate raw magic reg". Raw output:
+`results/props-a7xx-vpc-attr-buf.txt`. The second half was read in the source: the entries at
+`freedreno_devices.py:1077`, `:1096`, `:1115` against the FD740 entry at `:1235`, and the
+`UCHE_CACHE_WAYS` / `PC_DBG_ECO_CNTL` / `VPC_DBG_ECO_CNTL` lines of `a730_raw_magic_regs` (`:885`),
+`a740_raw_magic_regs` (`:930`) and `a710_raw_magic_regs` (`:982`), `a720_raw_magic_regs` (`:1029`).
+The upstream half is `curl` of `/-/raw/<ref>/src/freedreno/common/freedreno_devices.py` and
+`/-/merge_requests/23217.patch` - the plain merge-request page is Anubis-protected, those two paths
+answer, and the commands are in the artifact's header.
+
+**Numbers.** First table: where the three names are defined, and what FD740 ends up with
+(`results/props-a7xx-vpc-attr-buf.txt`); second: what the message claimed against this tree.
+
+| prop | blocks that define it | FD740, merged |
+|---|---|---|
+| `has_gmem_vpc_attr_buf` | `a7xx_gen3` only | unset → 0 |
+| `sysmem_vpc_attr_buf_size` | `a7xx_gen3`, `a8xx_gen1`, `a8xx_gen2` = 0x20000 | unset → 0 |
+| `gmem_vpc_attr_buf_size` | `a7xx_gen3`, `a8xx_gen1`, `a8xx_gen2` = 0xc000 | unset → 0 |
+| `sysmem_per_ccu_depth_cache_size` (control) | `a6xx_base`, `a7xx_base`, `a8xx_gen*` | 0x40000, inherited |
+| `gmem_ccu_depth_cache_fraction` (control) | `a6xx_base` 2, `a7xx_base` 3, `a8xx_gen1/2` 0 | 3, inherited |
+
+The flag is on for 15 catalog entries (FD750, Adreno 753, 810, 830/830v1, 829, 840, X2-85, X2-90)
+and off for 73, which is every a6xx and every a7xx_gen1/gen2 chip.
+
+| the message | this tree |
+|---|---|
+| "none of these chip IDs exist in Mesa main" | all three are in the catalog: `0x07010000` FD710 `:1077`, `0x43020000` FD720 `:1096`, `0x43020100` Adreno (TM) 722 `:1115` |
+| `fd710_raw_magic_regs`, `fd720_722_magic_regs` | the names here are `a710_raw_magic_regs` and `a720_raw_magic_regs`; the 722 entry takes `a730_raw_magic_regs` |
+| A710 num_ccu 3, tile align 32x16 | num_ccu 1, tile align 64x32 |
+| A720 num_ccu 3, 64x32 | num_ccu 2, 64x32 |
+| A722 num_ccu 4, 64x32 | num_ccu 2, 64x16 |
+| A710 has different UCHE cache ways | `UCHE_CACHE_WAYS` 0x00040004 on a710, the same value a740 has; a730 is the one that differs (0x00840004) |
+| A710 has a unique `PC_DBG_ECO_CNTL` | 0x20100000 on a710 - identical to a720's; a740 has 0x00100000, a730 0x20080000 |
+| all three carry hardware-tuned VPC attribute buffer sizes | all three are `[a7xx_base, a7xx_gen1]`, where neither size is set; and no raw magic list contains `VPC_ATTR_BUF_*` |
+
+A third check, from the same evening ("it seems it was there before and then got removed", pointing at
+MR 23217): the same file at five upstream refs plus the enablement series itself, in
+`results/upstream-vpc-attr-buf-history.txt`.
+
+| upstream ref | where the name occurs | FD740's props chain |
+|---|---|---|
+| mesa-24.0.9 | nowhere (0 hits, the name does not exist) | `[a7xx_base, a7xx_740]` |
+| mesa-24.2.8 | `a7xx_750` only (3 hits, 882-884) | `[a7xx_base, a7xx_740]`; the `a7xx_740` block is 8 lines, no cache size of any kind |
+| mesa-25.0.7 / mesa-25.2.4 | `a7xx_gen3` only (3) | `[a7xx_base, a7xx_gen2]` |
+| main | `a7xx_gen3` plus the three `a8xx_vpc_cache_{lg,med,sm}` presets (9, and 6 `vpc_pos_buf_size`) | `[a7xx_base, a7xx_gen2]` |
+
+MR 23217 is the 25-patch a7xx enablement series that created the FD740 entry ("freedreno: Fully define
+a730 and a740 device properties", "tu: Basic a7xx support"); the fetched series contains `vpc_attr_buf`
+0 times and `ATTR_BUF` 0 times.
+
+**Verdict.**
+* The inheritance reading is false for these three names: no block of the a7xx family sets them
+  before `a7xx_gen3`, while the two control rows show the same merge producing a real value where a
+  base block does name a property. So 0 on A740 is "nothing ever named the property", not "a base
+  block names it and the FD740 entry stays silent". That is the end of what source can say; the
+  hardware half stays queue 35.
+* Nothing was removed. The props appear in 24.2 attached to `a7xx_750` - the chip whose blob-derived
+  props they are - and every ref since has kept them in the gen3/a8xx chains; 24.0.9 does not know the
+  name at all, and the series that wrote the FD740 entry never mentions an attribute buffer. So
+  "gen2 has 0 because someone deleted it" has no candidate: across the five refs, A740's chain has
+  never been declared. What has grown since is the mechanism around it - main carries per-a8xx presets
+  for the attr, pos and bv_pos sizes - i.e. the tuning is being done for a8xx and not for gen2.
+* The variant description is not this Mesa - three chip ids that are in the catalog, two reg-list
+  names that do not exist here, and three per-chip numbers that differ. Either it is another tree
+  (a vendor fork) or a mixture of remembered values. Either way it cannot change what the driver
+  writes on A740: the attribute-buffer registers appear only in the CS path behind
+  `has_gmem_vpc_attr_buf` (`tu_cmd_buffer.cc:645-670`) and in no regtable, so a per-chip magic-reg
+  variant leaves the question exactly where queue 35 has it. If a fork with those `num_ccu` and
+  `tile_align` values is ever reachable, the interesting diff is those two fields - they move bin
+  geometry - and not VPC.
+* Nothing in 40.34's row 22 needs correcting: it already said the value is "never consulted", which
+  this confirms at a different level (definition, not consumption).
+
+**Does not show.** Any hardware behaviour - no counter, no session, no build. Whether forcing the
+prop on gen2 would buy anything: 40.9 is still the only evidence and it says only "no fault, no
+counter moved". The props printed here are those of `../mesa27-src`, the hand-patched tree the ship
+stack is built from; the chip-id and history rows are checked against files fetched from upstream
+(`/-/raw/<ref>`, in the artifact), so "not in Mesa main" is refuted for main and not just for this
+tree. What was not read is the commits - the clone is shallow, no blame API - so a prop set and
+removed *between* two of the five refs would be invisible here; the only window where that could hide
+is 24.0.9 to 24.2.8, when the name did not exist yet. And no register value in the props output is
+real: the `a6xx` module is stubbed, which is why this entry quotes only props and the literal `0x…`
+values typed in the device file.

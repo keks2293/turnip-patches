@@ -79,6 +79,47 @@ a730/a740 `PREEMPT_OPTIMIZE` **is off by default**. It gets enabled only by
 
 The number 128 came up earlier in the discussion — it is not in the code.
 
+### Whether a gen2 chip inherits the attribute-buffer sizes (23.11)
+
+Asked directly: "is `gmem_vpc_attr_buf_size` 0 on A740 because nobody wrote the line, or
+because the base block carries it and the FD740 entry does not repeat it?" The second
+reading is a real risk here - inheritance in this file is real:
+`sysmem_per_ccu_depth_cache_size` 262144 reaches FD740 from `a7xx_base`, and the FD740
+entry says nothing about it. So the question was settled by importing the generator's
+own catalog and reading the
+**merged** props, which is the same dict `freedreno_devices.py` stringifies into the C
+table (`scripts/props-for-chip.py`, output
+[`../results/props-a7xx-vpc-attr-buf.txt`](../results/props-a7xx-vpc-attr-buf.txt)):
+
+```
+podman run --rm -v <mesa>/src:/src:Z -v <repo>/scripts/pystub:/stub:Z \
+    -v <repo>/scripts:/hostscripts:Z \
+    -e PYTHONPATH=/stub:/src/freedreno/common \
+    -e MESA_FREEDRENO_COMMON=/src/freedreno/common \
+    <build image> python3 /hostscripts/props-for-chip.py -p /stub -q
+```
+
+`scripts/pystub/` stubs `mako`, `yaml` and the meson-generated `a6xx` register module,
+which this checkout does not have; nothing numeric comes out of them, which is why the
+script prints props and never a register encoding.
+
+| name | the only blocks that set it | FD740 (`[a7xx_base, a7xx_gen2]`) |
+|---|---|---|
+| `has_gmem_vpc_attr_buf` | `a7xx_gen3` = True | unset → 0 |
+| `sysmem_vpc_attr_buf_size` | `a7xx_gen3`, `a8xx_gen1`, `a8xx_gen2` = 0x20000 | unset → 0 |
+| `gmem_vpc_attr_buf_size` | `a7xx_gen3`, `a8xx_gen1`, `a8xx_gen2` = 0xc000 | unset → 0 |
+| `sysmem_per_ccu_depth_cache_size` | `a6xx_base` 0x10000, `a7xx_base` 0x40000, `a8xx_gen*` | **inherited**: 0x40000 |
+| `gmem_ccu_depth_cache_fraction` | `a6xx_base` 2, `a7xx_base` 3, `a8xx_gen1/2` 0 | **inherited**: 3 |
+
+So there is no inheritance to wait for: neither name occurs in `a6xx_base`, `a7xx_base`,
+`a7xx_gen1` or `a7xx_gen2`, and the last two rows show the same merge giving a non-zero
+value where the base block really does set one. The flag is on for **15** catalog entries
+(FD750, Adreno 753, and the a8xx family: 810, 830/830v1, 829, 840, X2-85, X2-90) and off
+for 73, every a6xx and every a7xx_gen1/gen2 chip. Whether the silicon behind the gen2
+zeros has the block anyway is queue 35, NOT RUN; a740's own `VPC_DBG_ECO_CNTL` value
+(`0x02000000`, in `a740_raw_magic_regs`) is shared with a730 and a710 and carries no
+attribute-buffer field in `a6xx.xml`, so it neither proves nor refutes anything.
+
 ### Coverage of `TU_FORCE_PROPS`
 
 `tu_force_props()` (`tu_device.cc:1717`) can override 12 flags:

@@ -1052,6 +1052,36 @@ instead of against a build.
     bins do move, the registers are inert here and the direction closes as a negative ADR rather than a null
     result. Stay at or below 0x20000 and use no GS or adjacency: `gs_vpc_adjacency_quirk` says certain VPC
     sizes hang on a750 and nothing says the inverse is safe on a740.
+    23.11, two things the smoke run settled before any arm was measured (`/tmp/opencode/vab-smoke.txt`
+    and its dump, 11 windows at 680 MHz - to be re-taken into `results/synthetics/attrbuf/` with the
+    first real arm): the pass renders **in sysmem** (`VSC_INPUT_TILES` 0 in all 11 windows, `VSC_BUSY`
+    0.0009 M/s against a 680 MHz clock), and in that mode `VPC_VPCRAM_FULL` is 0 where the game shows
+    50-71 %, so the arms would be comparing four counters that do not move. The probe has to be made to
+    bin before the prop arms mean anything (`TU_DBG_RM_HIST`, the render-mode histogram of exp-24, is
+    not in the ship `.so`, so the mode is read from the counters). The second finding is that the kernel
+    will not say the GMEM size (queue 36), so the arms are built on an absolute `TU_GMEM` budget instead
+    of on `G - 6S`: control arm `TU_GMEM=B`, prop arm `TU_GMEM=B+6S`, both ending at the same usable
+    GMEM by construction, with no kernel read anywhere. What the run did give: the probe holds the VPC
+    busy for 1.00 of a core (680.0 M/s against `CP_ALWAYS_COUNT` 680.0 M/s) and *working* for 0.447 of
+    it, writes 2.00 `VPC_NUM_VPCRAM_WRITE` per vertex, and `VFD_STALL_CYCLES_VPC_ALLOC` is 11.6x the
+    clock - the profile of a vertex-dominated synthetic that never bins. Two more columns came out of
+    that dump and belong to queue 31, not here: `VPC_WIT_FULL` is 5.79x the clock while
+    `VPC_LM_FULL_WAIT_FOR_INTP_END` is 0 (the probe's stall has a different name than the game's), and
+    `PC_TAG_CHECKED_VERTICES` reads **0** in a mesh of 24576 independent triangles where every vertex
+    must pass the cache - the same nothing-as-a-denominator that 40.33 complained about, now measured
+    against its own control.
+
+36. **Find out why `DRM_IOCTL_MSM_GET_PARAM` answers EINVAL to userspace while the driver's own init,
+    which fails hard if it fails, succeeds** (found building the queue-35 probe, 23.11). Measured:
+    `GPU_ID`, `GMEM_SIZE`, `MAX_FREQ`, `HIGHEST_BANK_BIT`, `pipe` 0 and 1, with the request number Mesa
+    itself builds (`DRM_IOWR(DRM_COMMAND_BASE + 0x00, struct drm_msm_param)`, 24 B), on `/dev/dri/card0`
+    and `/dev/dri/renderD128`, as the invoking user and as root - EINVAL in every case. Yet `/dev/dri/`
+    holds only `card0` and `renderD128`, their uevent says `DRIVER=msm_dpu`, the probe holds both open
+    while it draws, and its GPU mapping comes from `renderD128`. Arm: run the ship driver under
+    `strace -e trace=ioctl` (the host has no strace; the container's, with `--pid=host`, will do) and
+    see which node and which request it reads GMEM with. Decides: whether any script here may compute a
+    GMEM figure from the kernel at all - today the answer is no, which is why queue 35's arms are built
+    on absolute `TU_GMEM` budgets.
 
 ## Open questions
 
@@ -1082,7 +1112,7 @@ instead of against a build.
 | 23 | is `alias.rt` correct on A740, given that its two registers are declared for A7XX | CLOSED 23.11 with queue 26: the prop is delivered and moves no counter and no fps (40.29 - 1.8 % on TSE input against the same-build control, 0.06 points of VPC busy, 1.2 % fps); whether the pass engages is a diff of two disassemblies with and without `TU_FORCE_PROPS=has_alias_rt`, offline, and no shipped patch carries the property, so neither answer changes a number here |
 | 24 | does RE4's shader set push varyings through the VPC that the fragment stage never reads (the one live sub-point of the outside geometry note of 23.11) | ANSWERED IN BOTH HALVES 23.11, journal 40.26: the fp16 half is a measured zero (`IR3_SHADER_DEBUG=nofp16` moves `VPCRAM_FULL` by 0.38 points of busy and p25 fps by 1.0 %, delivery of the flag unproven), and the dead-output half is closed by the code - the driver sizes the interpolators from what the FS reads (`tu_pipeline.cc:744`, `:683`, `:802`), so an unmatched VS output gets no slot. What remains is not "dead varyings" but the width itself, and that is measured: queue 30 closed 23.11 by journal 40.27 from committed dumps - per vertex the two frames are the same workload (31.81 against 33.03 B/vertex while the frame rate differs by 74 %), so the "make each vertex cheaper in the VPC" family has no measured opening. 23.11, 40.34: the `SP_COMPONENTS` column of that entry is withdrawn - it is one signal with `SP_EXPORT_VPC_TRANS` and has no unit - but the width argument stands on `VFD_DECODED_ATTRIBUTE_BYTES` and `VFD_NUM_ATTRIBUTES`, which are unaffected; the varying count itself is queue 34 |
 | 25 | is the vertex path recomputing vertices because of a driver setting - vertex cache size, `prim_restart`, topology - as vkd3d-proton might provoke (operator, 23.11) | ANSWERED 23.11, both halves, journal 40.33. Driver side: nothing to check - `tu_pipeline.cc` (5345 lines) has no cache size, cache mode, restart or topology state, and turnip never reads `max_pc_dest_regs`; restart is written from the game's own dynamic IA state (`tu_cmd_buffer.cc:8703-8725`, `primitive_restart_enabled && indexed`). Counter side: the reuse this repository quotes (2.9:1, journal 38) is mesh sharing, an upper bound on what a cache could save, and the cache's own hit rate has never been measured - `PC_VERTEX_HITS` (id 19) is in nine of the thirteen cfgs, its denominator `PC_TAG_CHECKED_VERTICES` (id 39) in none that has run. That is queue 31, whose cfg (`tools/fdperf/fdperf.cfg-vpc4`) is written and NOT RUN. Whether RE4 uses primitive restart or strip topologies at all is unmeasured and unmeasurable with the cfgs that exist |
-| 27 | does the A740 attribute-buffer hardware exist, or only its absence from the gen2 prop table | OPEN 23.11, queue 35. What is settled: the prop, both sizes and all three CS emissions are gated on `has_gmem_vpc_attr_buf`, the field is labelled "Vertex attrib cache (a750+)" and `a7xx_gen3` is the only a7xx generation that sets it, so on a740 the registers are never written and the GMEM layout never consults them (40.34). What is not settled: whether the silicon has the carve-out at all - `a6xx.xml` declares the registers for the whole `A7XX` variant, which includes A740, and 40.9's forced-prop run shows the writes are accepted and change nothing. The synthetic in 35 separates the two, with a bin-count control arm for the confound that the same number also shrinks usable GMEM |
+| 27 | does the A740 attribute-buffer hardware exist, or only its absence from the gen2 prop table | OPEN 23.11, queue 35. What is settled: the prop, both sizes and all three CS emissions are gated on `has_gmem_vpc_attr_buf`, the field is labelled "Vertex attrib cache (a750+)" and `a7xx_gen3` is the only a7xx generation that sets it, so on a740 the registers are never written and the GMEM layout never consults them (40.34). 23.11 (40.35): the other half of the explanation - that a base block sets the value and the FD740 entry merely stays silent - is refuted by importing the generator and reading the **merged** props: the three names appear in no block before `a7xx_gen3`, while control props do reach FD740 from `a7xx_base` (`results/props-a7xx-vpc-attr-buf.txt`), so the zero is a declaration gap in the driver and nothing more. What is not settled: whether the silicon has the carve-out at all - `a6xx.xml` declares the registers for the whole `A7XX` variant, which includes A740, and 40.9's forced-prop run shows the writes are accepted and change nothing. The synthetic in 35 separates the two, with a bin-count control arm for the confound that the same number also shrinks usable GMEM |
 | 26 | is the VPC a compute wall, and is its attribute RAM full because it spills or because the consumer below drains slowly | ANSWERED IN PART 23.11, journal 40.34, no run: it is not compute (`WORKING/BUSY` 0.630-0.687) and the stall is named (`VPCRAM_FULL` 50-52 % of busy on the ship frame, 71 % on the Shadow-Cache frame, i.e. 0.48 against 0.61 of a core), it needs no divider (max `VPC_BUSY/CP_ALWAYS_COUNT` 0.9345 over all 72 dumps, against 12.05 for SP), and the spill half of the fork is unanswerable with these counters - `UCHE_WRITE_REQUESTS_VPC` is 0.000 in every window of all 15 arms that program it, the same dead-zero pattern as 40.15 and `VPC_NUM_LM_REQ_HIT`. What the dumps do say is that fullness grows on the frame with half the geometry, which is the shape of backpressure and not of supply. Mechanism stays open: no counter here measures credits, and no size knob exists on this generation, so nothing downstream waits for it |
 
 ## Pitfalls (reminder)
