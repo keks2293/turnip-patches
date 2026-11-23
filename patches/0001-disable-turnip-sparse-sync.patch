@@ -1,4 +1,44 @@
+0001: do not cross-sync the graphics queue with the sparse/VM-bind timepoints.
 
+**Status:** shipped in `27.0.0-devel-p14`. Taken from the ArmadOS image recipe for
+stack compatibility, not authored here (`image-build/`; origin and notes in
+`patches/PATCHES.md`). Upstream: not in Mesa, not worth sending.
+**Found:** inherited with the origin; not reproduced on this bench.
+
+## For users of other drivers
+
+Nothing to set; a stock driver keeps the cross-sync, and on machines that hit the
+fault storm this patch is the only workaround.
+
+## Summary
+
+Mesa `0cc0e786e096` made every graphics submit that crosses the sparse or VM-bind
+timepoints carry one extra timeline-semaphore wait/signal. The origin project
+dropped that pair for A740-class devices - the cross-sync produced GPU
+translation-fault storms - and the stack stays what the image builds.
+
+## Evidence
+
+One site, `msm_queue_submit()` in `tu_knl_drm_msm.cc`: the two `extra_*_count`
+computations become `0`. The storm is the origin project's observation
+(`patches/PATCHES.md`), not a measurement here.
+
+## Tests
+
+Nothing here checks this hunk: RE4 creates sparse images but submits nothing on a
+sparse queue, so the patched path is idle in every recorded run. What would test
+it: a workload submitting on the sparse queue and the graphics queue at once.
+NOT TESTED on this bench.
+
+## The change in this repo
+
+One hunk, two constants. It must not grow - if upstream fixes the storm, the
+patch goes. Revert: `git apply -R` with the file name explicit.
+
+## Related
+
+`patches/PATCHES.md`; `0004` (the sparse path, but not the sparse queue);
+`docs/release.md` chronology.
 
 diff --git a/src/freedreno/vulkan/tu_knl_drm_msm.cc b/src/freedreno/vulkan/tu_knl_drm_msm.cc
 index e3a6916..d60db42 100644

@@ -1,8 +1,46 @@
-0006: the FD6_UBWC_B8G8R8A8_INT type in the compat table of freedreno_ubwc.h.
+0006: one INT compat type for B8G8R8A8 in the UBWC compat table.
 
-Relations: standalone. The same file is edited by 0011 and 0012 (other
-rows of the enum and the switch) - all three apply together without
-conflicts.
+**Status:** shipped in `27.0.0-devel-p14`. Upstream: not sent separately - one of
+the ADR-0003 family (0005, 0006, 0010, and the tiling axis of 0014).
+**Found:** a list containing B8G8R8A8 lost UBWC because the table had
+no INT compat type that its integer views could share.
+
+## For users of other drivers
+
+Nothing to set. A BGRA8 texture whose list also names an integer view keeps
+compression instead of losing it, i.e. bandwidth.
+
+## Summary
+
+`FD6_UBWC_B8G8R8A8_INT` is added to the compat switch of `freedreno_ubwc.h`, so
+the integer interpretation of a BGRA8 image shares one compat class with the
+float one instead of answering `UNKNOWN` and clearing `ubwc_enabled` for the whole
+list.
+
+## Evidence
+
+Two hunks in `src/freedreno/common/freedreno_ubwc.h` (the enum row and the
+switch). Verified by probe `T` of `tests/rp6-vkd3d-sparse-test.c`: the mutable
+list's `memreq` goes `0x100000 -> 0x102000`, i.e. the metadata plane appears
+(`docs/artifacts.md` row 0006; journal 16).
+
+## Tests
+
+| what the hunk changes | how it is checked | result |
+| :--- | :--- | :--- |
+| a BGRA8 list keeps UBWC | probe `T` memreq, journal 16 | `0x100000 -> 0x102000` |
+| probes `S` and `T` still pass | the same run, journals 16 and 20.5 | PASS |
+| nothing else moves | the 94-row matrix, journal 24.3 | 94 EXACT |
+
+## The change in this repo
+
+One row, one case; it must not claim compression for a format the layout tables
+do not tile. Revert: `git apply -R` with the file name explicit.
+
+## Related
+
+`0011`, `0012` (other rows of the same switch); `0005`, `0010` (tiling side);
+ADR-0003.
 
 diff --git a/src/freedreno/common/freedreno_ubwc.h b/src/freedreno/common/freedreno_ubwc.h
 index a85ea6f26a3..45cb608db87 100644

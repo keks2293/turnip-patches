@@ -1,112 +1,58 @@
-0013: mark a CCU color clean after buffer->image on A7XX.
+0013: mark a CCU colour clean after buffer->image on A7XX.
 
-Relations: standalone - one hunk at the tail of tu_copy_buffer_to_image()
-(src/freedreno/vulkan/tu_clear_blit.cc), no other file touched. It does not
-depend on 0004-0012 and does not change what they decide: it only fixes the
-visibility of the writes they already produce.
+**Status:** shipped in `27.0.0-devel-p14`. Upstream: not sent - the
+architecturally right form is a separate blit-write access bit that makes the
+`DST_FLUSH` rule include the clean, plus a CTS reproduction; this patch is the
+smallest correct change for this stack.
+**Found:** 18.11: BC/geometry readbacks returned zero windows that drifted between
+runs; the root cause is a missing CCU clean, not the format (journals 21.10 and
+21.11; ADR-0005).
 
-Why. On A7XX the writes of CP_BLIT land in the CCU, and nothing in the public
-copy commands makes them visible to a later reader:
+## For users of other drivers
 
-  - r2d_teardown() emits no cache operation at all ("nothing to do");
-  - vkCmdPipelineBarrier outside a renderpass does not emit anything either:
-    tu_barrier() only ORs bits into cmd->state.cache.flush_bits, and those
-    bits are executed at the next natural flush point (start of a renderpass,
-    a dispatch, the setup of the next blit, tu_EndCommandBuffer);
-  - tu6_emit_flushes() deliberately excludes the clean for a blit
-    destination: DST_FLUSH(CCU_COLOR) takes ALL_CLEAN & ~CCU_CLEAN_COLOR
-    (tu_cmd_buffer.cc:5847), because a blit does not read through the CCU.
+A correctness fix, nothing to set: without it a `vkCmdCopyBufferToImage`
+followed by a blit reader in the same submit reads pre-copy memory. Readback to
+the host is not affected (the submit boundary flushes).
 
-Turnip already knows the rule and applies it on the paths it wrote earlier:
+## Summary
 
-  "On A7XX, blit cache flushes are required to ensure blit writes are visible
-   via UCHE. This isn't necessary on A6XX, all writes should be visible
-   implicitly"                                            (tu6_emit_flushes())
+On A7XX `CP_BLIT` writes land in the CCU and nothing in the public copy commands
+makes them visible to a later blit reader: `r2d_teardown()` emits nothing,
+`tu_barrier()` only ORs bits into `flush_bits`, and `tu6_emit_flushes()`
+deliberately excludes the clean for a blit destination (`DST_FLUSH(CCU_COLOR)`
+takes `ALL_CLEAN & ~CCU_CLEAN_COLOR`). The patch sets the deferred bits
+(`CCU_CLEAN_COLOR | WAIT_FOR_IDLE`) at the tail of `tu_copy_buffer_to_image()`,
+gated `CHIP >= A7XX`, so the next natural flush point cleans once for the whole
+group and a command buffer that ends there merges into the clean
+`tu_EndCommandBuffer()` already emits.
 
-store_3d_blit() and the tu_copy_image_to_image() staging path emit
-FD_CCU_CLEAN_COLOR for exactly this reason. The public copy commands were the
-ones left out, so the hole is narrow but real: a buffer->image followed by a
-blit reader (image->buffer, image->image) in the same submit reads pre-copy
-memory. Shader readers are already covered by the barrier rules
-(SRC_FLUSH(CCU_COLOR) on the writer plus DST_FLUSH(UCHE) on the reader); a
-blit reader is the one case that is not.
+## Evidence
 
-Why this form and not the others (all measured, tests/rp6-vkd3d-sparse-test.c,
-94 checks, driver built from the 0001-0012 stack; the matrix is in
-results/test-b2isync-{0..15}.log, analysis in docs/analysis.md
-section 21.11):
+Two lines at the tail of `tu_copy_buffer_to_image()`
+(`tu_clear_blit.cc`). The form was chosen from the 16-mode exp-15 matrix: clean +
+WFI per copy, clean + invalidate, `CCU_CLEAN_BLIT_CACHE` (wrong aperture) and a
+deferred flag in every blit setup all cost more or still miss the dispatch/end
+case; the lazy bits cost nothing per copy.
 
-  form                                   result          cost
-  no fix (stock)                         19 MISMATCH     -
-  clean + WFI per copy                   94/94           one WFI per copy,
-                                                        inside a sequence of
-                                                        copies where the next
-                                                        copy is already
-                                                        ordered after the
-                                                        previous one
-  clean + CACHE_INVALIDATE (+/- WFI)     94/94           two events per copy,
-  per copy                                              invalidate is not
-                                                        needed: the writer's
-                                                        clean is what is
-                                                        missing, not the
-                                                        reader's view
-  CCU_CLEAN_BLIT_CACHE (+/- invalidate)  19 MISMATCH     wrong aperture: r2d
-                                                        writes to sysmem
-                                                        through CCU color,
-                                                        the blit cache is a
-                                                        different thing
-  deferred flag, flush in the next blit  94/94           a state flag, a hook
-                                                        in every blit setup,
-                                                        and still no clean if
-                                                        the next command is a
-                                                        dispatch or the end
-                                                        of the command buffer
-  lazy bits (this patch)                 94/94, 3x       nothing per copy: the
-                                                        next natural flush
-                                                        point emits one clean
-                                                        + WFI for the whole
-                                                        group, and a command
-                                                        buffer that ends here
-                                                        merges into the CCU
-                                                        clean that
-                                                        tu_EndCommandBuffer()
-                                                        already emits
+## Tests
 
-The last row is also the reason the change is two lines: the machinery for
-pending flushes already exists, and every flush point already calls
-tu_emit_cache_flush(), so there is nothing to execute here and no new state.
+| what the hunk changes | how it is checked | result |
+| :--- | :--- | :--- |
+| the zero windows | probe `U`/`T` fill + readback, 91-94 checks | 19 MISMATCH -> 94 EXACT |
+| stability | three repeats, `results/test-0013-final.log` sha `e7a33d2d76b0` | 94/94 three times |
+| the shipped stack | `results/test-0014-ship.log` sha `c17d02bcaae9` | 94/94 |
 
-Why not "fix the model" (a separate blit-write access bit that makes the
-DST_FLUSH rule include the clean). That is the architecturally right form for
-an upstream merge and it is not more expensive - the same pending-bit
-machinery, the same point of execution; only a sloppy *_INCOHERENT_WRITE form
-would be. It is not the form here because it changes barrier semantics for
-every user of the driver at once, while the bug is confined to one command
-that forgot to say anything. For an upstream MR the model plus a CTS
-reproduction is the better submission; this patch is the smallest correct
-change for the stack we run.
+## The change in this repo
 
-What is measured. Probe U/T in tests/rp6-vkd3d-sparse-test.c: fill with
-vkCmdCopyBufferToImage, read back with vkCmdCopyImageToBuffer, byte compare,
-91-94 checks depending on the probe set. Stock: 19 mismatches, all in the
-BC/geometry cases (zero windows that drift between runs - the reader starts
-before the CCU has drained). With the patch: 94 EXACT, 0 MISMATCH, stable
-over three repeats (results/test-0013-final.log, sha256 e7a33d2d76b0). The
-full stack 0001-0014 with no instrumentation gives the same 94/94
-(results/test-0014-ship.log, sha256 c17d02bcaae9).
+It must not add a per-copy WFI, new state, or anything for a6xx (the writes are
+visible implicitly there). Not covered, deliberately: the symmetric
+`vkCmdCopyImageToBuffer` chain, which needs its own test. Revert: `git apply -R`
+with the file name explicit.
 
-Not covered, deliberately:
+## Related
 
-  - the symmetric chain: vkCmdCopyImageToBuffer also writes through the blit
-    path, so a later blit reading that buffer in the same submit needs the
-    same treatment. Readback to the host is not affected (the submit
-    boundary flushes everything), which is why it is left for a separate
-    change with its own test;
-  - a6xx: the writes are visible implicitly there, and the code is guarded by
-    if constexpr (CHIP >= A7XX), so nothing is emitted for older chips.
-
-No regressions: the same binary passes all 94 checks, and the patch adds no
-command to any submit that does not already end in a flush point.
+ADR-0005; `experiments/exp-13b-b2i-ccu-clean-candidate.patch`,
+`experiments/exp-15-b2i-sync-env-bundle.patch`; `0014` needs it for its roundtrip.
 
 --- a/src/freedreno/vulkan/tu_clear_blit.cc
 +++ b/src/freedreno/vulkan/tu_clear_blit.cc

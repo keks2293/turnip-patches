@@ -1,3 +1,44 @@
+0003: fold a bindless UBO into const ranges only when the index is constant too.
+
+**Status:** shipped in `27.0.0-devel-p14`. Taken from the ArmadOS image recipe for
+stack compatibility, not authored here; origin ROCKNIX (SM8550,
+`patches/PATCHES.md`). Upstream: not in Mesa, never sent - not shown to be an
+upstream bug from this bench.
+**Found:** inherited; not reproduced here.
+
+## For users of other drivers
+
+Nothing to set. The change makes the compiler less eager, never wrong-ward: a UBO
+read through a dynamic bindless index keeps its real index.
+
+## Summary
+
+`ir3_nir_analyze_ubo_ranges.c` folds UBO accesses into push-constant ranges. Stock
+accepts a bindless access whose *resource* is constant even when the *index* is
+dynamic; this change requires `nir_src_is_const(instr->src[1])` as well, so a
+dynamic index is not attributed to one block.
+
+## Evidence
+
+One site, `get_ubo_info()` in `ir3_nir_analyze_ubo_ranges.c`: one added condition.
+No run here isolates the miscompile it prevents.
+
+## Tests
+
+Nothing here checks this hunk - it only matters for a bindless UBO indexed by a
+uniform, which neither the 94-row matrix nor RE4 is known to compile. What would:
+such a shader compiled both ways, compared in `IR3_SHADER_DEBUG` dumps.
+NOT TESTED on this bench.
+
+## The change in this repo
+
+One hunk, one condition; it must not grow into a bindless rework. Revert:
+`git apply -R` with the file name explicit.
+
+## Related
+
+`patches/PATCHES.md`.
+
 diff --git a/src/freedreno/ir3/ir3_nir_analyze_ubo_ranges.c b/src/freedreno/ir3/ir3_nir_analyze_ubo_ranges.c
 index 6e7e332331c..e724ac03d8d 100644
 --- a/src/freedreno/ir3/ir3_nir_analyze_ubo_ranges.c

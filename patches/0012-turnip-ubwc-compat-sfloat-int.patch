@@ -1,62 +1,58 @@
-0012: _SFLOAT members in the integer UBWC compat classes of fd6_ubwc_compat_mode().
+0012: `_SFLOAT` members in the integer UBWC compat classes.
 
-Relations: standalone - edits only fd6_ubwc_compat_mode()
-(src/freedreno/common/freedreno_ubwc.h). Complements 0006 (other rows of
-the same switch) and 0011 (other format families): three edits of one
-compat table, but different parts of it, they apply together without
-conflicts. The mechanism differs from 0005/0010 - those decide whether a
-list stays tiled, this one decides whether UBWC turns on at all (on gen2
-an incompatible list clears ubwc_enabled unconditionally).
+**Status:** shipped in `27.0.0-devel-p14`. Upstream: not sent - upstream's
+`"a630 blob allows these, but not a660"` is deliberate (a660 is this gen2
+family), so the patch argues from layouts, not from the blob, and that is what an
+upstream reviewer would have to accept.
+**Found:** 04.10, probe `U` (promoted from
+`experiments/exp-8-sfloat-int-ubwc-compat.patch`): five vkd3d TYPELESS classes
+mixed `_SFLOAT` with integers and lost compression entirely.
 
-Why. The stock code keeps every _FLOAT out of fd6_ubwc_compat_mode(), and
-for R32_FLOAT it says outright «a630 blob allows these, but not a660».
-a660 is our gen2 family, so the decision is deliberate, not an oversight.
-But because of it, any format list in which _SFLOAT is mixed with
-integers fails tu6_mutable_format_list_ubwc_compatible() and loses
-compression entirely.
+## For users of other drivers
 
-That is exactly how five vkd3d classes are built, i.e. precisely what
-D3D12 builds for TYPELESS resources (R32_TYPELESS, R16G16_TYPELESS,
-R32G32_TYPELESS, R16G16B16A16_TYPELESS, R32G32B32A32_TYPELESS). Out of 72
-vkd3d classes, 31 hold UBWC on stock and the remaining 41 lose it; this
-patch raises 31 -> 36.
+Nothing to set. A `R32_TYPELESS`-shaped texture with an integer and a float view
+in one list keeps UBWC instead of dropping it.
 
-Justification by layouts, not by the blob. UBWC encoding is defined per
-format class, not per concrete format, and within one class only the
-channel sizes differ. An _SFLOAT member has exactly the same layout as
-the integer member of the same typeless format: same bits per channel,
-same swizzle, same tiled markup. A Vulkan cast is a reinterpretation of
-the same bits, not a channel permutation, so fast-clear and sector
-decoding cannot diverge. Z32_FLOAT deliberately stays UNKNOWN: it belongs
-to no color typeless family, and depth has its own clear semantics.
+## Summary
 
-What this patch does not check (and remains a risk): the driver does not
-compare the contents of the UBWC fast-clear metadata against the format
-interpretation, so a wrong clear value can only show up where an
-application does a fast-clear through a view with float interpretation.
-A byte roundtrip does not catch this.
+Stock keeps every `_FLOAT` out of `fd6_ubwc_compat_mode()`, and one unknown member
+clears `ubwc_enabled` for the whole list. But an `_SFLOAT` member has exactly the
+same layout as the integer member of the same typeless format (same bits per
+channel, same swizzle, same tiled markup); a Vulkan cast reinterprets bits, it
+does not permute channels. With the classes added, the vkd3d classes that hold
+UBWC on stock go 31 -> 36. `Z32_FLOAT` stays `UNKNOWN`: it belongs to no colour
+typeless family, and depth has its own clear semantics.
 
-Measured on Adreno 740 (chip_id 0x43050a01), probe U in
-tests/rp6-vkd3d-sparse-test.c, over five TYPELESS classes:
+## Evidence
 
-  stock (0004-0006):  list=0x100000 vs nonmut=0x102000  -> list dropped UBWC
-  with patch:         list=0x102000                      -> list kept it
+One hunk in `freedreno_ubwc.h`. Probe `U` of `tests/rp6-vkd3d-sparse-test.c`:
+stock `list=0x100000` against `nonmut=0x102000` (the list dropped UBWC), with the
+patch `list=0x102000`; roundtrip through all three shapes EXACT 0/262144. Isolated
+A/B on the 0005-0010 stack: 5 lines of probe output move
+(`results/test-stack.log` vs `results/test-0012.log`), and
+`results/test-backup-oct2.log` matches the stack+patch run byte for byte.
 
-  roundtrip (CopyBufferToImage -> CopyImageToBuffer, byte-by-byte compare):
-  stock  linear/nonmut/list  0/262144, 0/262144, 0/262144    EXACT
-  patch  linear/nonmut/list  0/262144, 0/262144, 0/262144    EXACT
+## Tests
 
-Isolated A/B on the 0005-0010 stack (04.10.2026): the presence of the
-patch changes exactly 5 lines of probe U, everything else is identical
-(results/test-stack.log vs results/test-0012.log). The driver backup log
-from 02.10 (results/test-backup-oct2.log) matches byte for byte the run
-of stack+this patch - the backup was built with it.
+| what the hunk changes | how it is checked | result |
+| :--- | :--- | :--- |
+| the five TYPELESS classes keep UBWC | probe `U` memreq, journal 20.5 | `0x100000 -> 0x102000` |
+| the contents still round-trip | probe `U` copy roundtrip | EXACT 0/262144 in all shapes |
+| nothing else moves | probes `S`, `T`; the 94-row matrix, journal 24.3 | PASS; 94 EXACT |
 
-No regressions: probes S (0005) and T (0006) are still PASS.
+Risk that stays: the driver never compares UBWC fast-clear metadata against the
+format interpretation, so a fast-clear through a float view is unchecked by a
+byte roundtrip. That is stated, not fixed.
 
-Promoted from experiments/exp-8-sfloat-int-ubwc-compat.patch
-(04.10.2026). The fast-clear caveat is kept; analysis - docs/analysis.md,
-section 20.5.
+## The change in this repo
+
+One hunk, integer classes only; it must not admit a float member of a class that
+has no integer member. Revert: `git apply -R` with the file name explicit.
+
+## Related
+
+`0006`, `0011` (same switch); `experiments/exp-8`; journal 32 (the same layout
+argument for the two 64-bit labels).
 
 --- a/src/freedreno/common/freedreno_ubwc.h
 +++ b/src/freedreno/common/freedreno_ubwc.h

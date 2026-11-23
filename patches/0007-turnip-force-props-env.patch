@@ -1,8 +1,47 @@
-0007: TU_FORCE_PROPS - force driver properties from an environment
-variable.
+0007: `TU_FORCE_PROPS` - raise a device property from the environment.
 
-Relations: none - touches only diagnostics, does not affect format
-lists.
+**Status:** shipped in `27.0.0-devel-p14`. Upstream: not sent and not for
+upstream - a diagnostic. ADR-0001 keeps it as the way to measure a property
+without a rebuild.
+**Found:** 30.09, journal 15: the props question could not be answered without
+building a driver per flag.
+
+## For users of other drivers
+
+The knob is `TU_FORCE_PROPS=<name>[,<name>...]`, one name per boolean row of the
+table in `tu_device.cc` (e.g. `ubwc_coherency_quirk`,
+`enable_tp_ubwc_flag_hint`), plus `vpc_attr_buf_size=0x.../0x...` for the VPC
+sizes. Every accepted name is logged as `TU_FORCE_PROPS: <name>`; an unknown one
+warns. It changes nothing unless it is set.
+
+## Summary
+
+One static table maps a name to the property field it writes, parsed from the
+environment at device creation. It exists so that "is this property worth
+anything here" is a run, not a build.
+
+## Evidence
+
+Three hunks in `tu_device.cc`: the table, the per-name log line, the unknown-name
+warning. The measurement use is journal 15 (`results/vkmark-flags.txt`,
+`results/vkmark-ab-combo.txt`) and journal 24 (the gen2 flags with the same knob,
+`results/test-p14-*.log`).
+
+## Tests
+
+A tool, so what checks it is that each named row moves exactly the thing it
+names: journal 15's sweep (every flag against its own scene), journal 24's gen2
+sweep, and the `TU_FORCE_PROPS: <name>` line in each run log as the delivery
+proof. `experiments/exp-25` adds `has_alias_rt` to the same table (queue 26).
+
+## The change in this repo
+
+Diagnostics only; it must not change a default, and it must not touch the format
+lists. Revert: `git apply -R` with the file name explicit.
+
+## Related
+
+`experiments/exp-25-tu-force-props-has-alias-rt.patch`; ADR-0001.
 
 diff --git a/src/freedreno/vulkan/tu_device.cc b/src/freedreno/vulkan/tu_device.cc
 index 0d3e63e..2f02208 100644

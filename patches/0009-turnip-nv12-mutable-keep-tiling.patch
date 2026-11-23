@@ -1,61 +1,51 @@
-NV12 + MUTABLE_FORMAT: do not drop the image to linear, drop only UBWC
+0009: NV12 + MUTABLE loses UBWC, not the tiling.
 
-tu_image.cc: in the planar NV12 branch, images with
-VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT got two restrictions at once:
+**Status:** shipped in `27.0.0-devel-p14`. Upstream: an upstream candidate as a
+separate `tu_image.cc` fix (it removes an unnecessary demotion and adds no chip
+checks) - not sent yet.
+**Found:** `tu_image.cc` gave NV12 + MUTABLE two restrictions at
+once, and the second one made the combination uncreatable under 0004.
 
-    ubwc_enabled = false;
-    force_linear_tile = true;
+## For users of other drivers
 
-The first is necessary and sufficient. The second is redundant, and
-because of it NV12 + MUTABLE + SPARSE_RESIDENTCY could not be created
-at all: patch 0004 refuses creation when tile_mode != TILE6_3, because
-sparse-block addressing describes a tiled layout, and a linear sparse
-image silently reads the wrong addresses.
+Nothing to set. NV12 + MUTABLE stops being linear, and NV12 + MUTABLE + sparse
+becomes creatable at all. On a stock driver without 0004 the image is still
+creatable but linear.
 
-Why the layout does not change. tu_image_view_init reinterprets the
-same plane 0 as Y8/R8: the comment in the code calls this exactly a
-difference in compression ("the 0'th plane of this format has a
-different UBWC compression"), i.e. the reinterpretation is treated as
-identical in layout. And the layout is built by exactly the same
-format: tu6_plane_format() returns PIPE_FORMAT_Y8_UNORM for plane 0,
-and that same value goes into tu_image_init. The base format of plane 1
-also matches (R8_UNORM / PIPE_FORMAT_R8_UNORM). So only what the data
-is compressed with changes, not the geometry of the planes, and a
-separate tiling prohibition is unnecessary.
+## Summary
 
-What this gives, besides removing the rejection:
+In the planar NV12 branch, images with `VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT` got
+`ubwc_enabled = false` *and* `force_linear_tile = true`. The first is necessary
+(the Y plane is compressed in a way that does not survive reinterpretation); the
+second is redundant: the layout is built by the same format (`tu6_plane_format()`
+returns `PIPE_FORMAT_Y8_UNORM` for plane 0), so only the compression differs. A
+linear sparse image cannot be addressed (0004), which is how the redundancy
+turned into a refusal.
 
- - NV12 + MUTABLE stops being linear. For video this is a common
-   configuration, and the demotion to linear costs bandwidth and
-   tiling.
- - The only path reachable from vkd3d into the 0004 rejection is
-   removed, so patching vkd3d is not required.
- - The change is not in a gen2 quirk but in common code: the UBWC
-   refusal stays (that was the point of the branch), only tiling
-   changes. The effect is the same on gen2/g3/a8xx, and 0004 keeps
-   working for all other paths into a linear sparse image.
+## Evidence
 
-Verified by measurement, probe N in tests/rp6-vkd3d-sparse-test.c:
+One hunk in `tu_image.cc`. Verified by probe `N` of
+`tests/rp6-vkd3d-sparse-test.c`: stock SUCCESS, 0004-0008
+`FEATURE_NOT_PRESENT`, plus this patch SUCCESS - and the 0004 gate refuses
+exactly when `tile_mode != TILE6_3`, so SUCCESS means tiled directly. Planar
+layouts: probe `W`, journal 18.
 
-    | build                     | N2: NV12+MUTABLE+SPARSE |
-    |---------------------------|-------------------------|
-    | stock                     | SUCCESS                 |
-    | 0004-0008                  | FEATURE_NOT_PRESENT     |
-    | 0004-0008 + this patch    | SUCCESS                 |
+## Tests
 
-The signal is independent of size computation: the 0004 gate in
-tu_image.cc refuses exactly when tile_mode != TILE6_3, so SUCCESS means
-TILE6_3 directly.
+| what the hunk changes | how it is checked | result |
+| :--- | :--- | :--- |
+| NV12+MUTABLE+SPARSE is creatable | probe `N`, journal 18 | `FEATURE_NOT_PRESENT -> SUCCESS` |
+| the layout is still the same plane | probe `W` planar layouts, journal 18 | unchanged |
+| nothing else moves | the 94-row matrix, journal 24.3 | 94 EXACT |
 
-Planar layout measurements (probe W) and memreq are given in
-docs/analysis.md, section 18.
+## The change in this repo
 
-Upstream-worthiness: the change removes an unnecessary demotion and
-adds no chip checks, so it is an upstream candidate as a separate
-tu_image.cc fix.
-Relations: builds on 0004 - it removes the only path reachable from
-vkd3d into the rejection that patch introduces. Applies standalone even
-without 0004.
+It may drop the tiling ban, never the UBWC ban; it must not move any other format
+between tiled and linear. Revert: `git apply -R` with the file name explicit.
+
+## Related
+
+`0004` (the refusal this removes the vkd3d path into); ADR-0003.
 
 diff --git a/src/freedreno/vulkan/tu_image.cc b/src/freedreno/vulkan/tu_image.cc
 --- a/src/freedreno/vulkan/tu_image.cc

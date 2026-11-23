@@ -1,9 +1,55 @@
-0004: lift the sparseResidencyImage2D gate and refuse creation of the hole
-sparse + MUTABLE -> linear.
+0004: lift the sparseResidencyImage2D gate, and close the hole it opens at create time.
 
-Relations: standalone, applies on a clean HEAD. 0009 builds on the
-rejection introduced here - it removes the only path reachable from
-vkd3d into it.
+**Status:** shipped in `27.0.0-devel-p14`. Upstream: not sent - it exposes a
+capability upstream deliberately withholds for gen2; the reasoning and the exact
+hole are ADR-0002 and ADR-0011.
+**Found:** 21.09, the 12_0 refusal: the game's D3D12 feature level
+is decided by `sparseResidencyImage2D`, which gen2 reports as absent.
+
+## For users of other drivers
+
+Nothing to set: this is what lets a DX12 title reach feature level 12_0 on gen2.
+The hole it opens is closed by the patch itself - see Summary - so a driver that
+lifts the gate without the refusal trades a refusal for silent corruption.
+
+## Summary
+
+The gate is a device property (`tu_device.cc`); lifting it makes
+`sparseResidencyImage2D` true. That exposes the case the gate used to hide:
+`SPARSE_BIND | SPARSE_RESIDENCY | MUTABLE_FORMAT` with no format list. A sparse
+image needs a tiled layout (sparse-block addressing describes tiles), and a
+mutable image with no list is answered with the worst-case predicates, i.e.
+linear - which a sparse create cannot address correctly. The patch introduces
+`tu6_mutable_format_list_forces_linear()` and refuses the combination in
+`vkCreateImage` (`SUCCESS -> FEATURE_NOT_PRESENT`), the point where the problem
+becomes observable.
+
+## Evidence
+
+Hunks in `tu_device.cc` (the property), `tu_formats.cc`/`.h` (the predicate,
+8 hunks over 4 files), `tu_image.cc` (the refusal). Verified by the test's
+`sparseResidencyImage2D` row flipping 0 -> 1 and the hole showing as
+`SUCCESS -> FEATURE_NOT_PRESENT` (journal 4; logs `results/test-mutableen.log`,
+`results/test-expC.log`, `results/test-patched.log`, journals 1-2).
+
+## Tests
+
+| what the hunk changes | how it is checked | result |
+| :--- | :--- | :--- |
+| the property is reported | 12_0 reachability, journal 3 | reached without forcing anything |
+| the hole is refused | probe create of sparse+mutable+no-list, journal 4 | `FEATURE_NOT_PRESENT`, the pre-patch answer is `SUCCESS` |
+| nothing else moves | the 94-row matrix, journal 24.3 | 94 EXACT |
+
+## The change in this repo
+
+It must never let a linear sparse image be created - that is silent bad-address
+reads, not a demotion (ADR-0002). Revert: `git apply -R` with the four file names
+explicit.
+
+## Related
+
+`0009` removes the only vkd3d path into the refusal; `0014` answers the same
+no-list question for the tiling decision; ADR-0002, ADR-0011.
 
 diff --git a/src/freedreno/vulkan/tu_device.cc b/src/freedreno/vulkan/tu_device.cc
 index 0d3e63e..373cabe 100644

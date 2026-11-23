@@ -1,34 +1,48 @@
 0002: the A830 KGSL base chip-id (ROCKNIX port), Mesa 27 form.
 
-Relations: nothing depends on it, it adds ids for a chip this stack is not
-tested on (A830 / SM8750). It is kept so the stack stays what the ArmadOS
-image builds: 0001-0014 on Mesa 27, and the same three image patches on
-Mesa 26.2.3.
+**Status:** shipped in `27.0.0-devel-p14`. Taken from the ArmadOS image recipe for
+stack compatibility (Mesa 26.2.3 applies the twin
+`0002-add-a830-chip-id-mesa26.patch`), not authored here; origin ROCKNIX
+(`patches/PATCHES.md`). Upstream: nothing to send for Mesa 27 - upstream already
+carries all four A830 ids; only the 26.2.3 twin is a real change, not ours.
+**Found:** inherited; the Mesa 27 re-export was done 19.11 (`docs/release.md`,
+"Provenance").
 
-Why two files. The ROCKNIX patch was written against Mesa 26.2.3, where
-`add_gpus()` for A8XX had only the base id and the KGSL id, so it added
-three lines. Upstream Mesa 27 already has `GPUId(chip_id=0xffff44050001,
-name="Adreno (TM) 830v1")` and the KGSL `0x44050001` (as "Adreno (TM) 830"),
-so the 26.2.3 hunk no longer applies and two of its three ids are a
-duplicate. This file is the Mesa 27 form: the id that is still missing, the
-KGSL base `0x44050000`. The old form is kept next to it as
-`0002-add-a830-chip-id-mesa26.patch`, unchanged, because the image build
-(`image-build/build.sh`, Mesa 26.2.3) applies that one; the rebase is
-recorded in docs/mesa-27-plan.md.
+## For users of other drivers
 
-Not testable here: no A830 on the bench, the A740 does not read these ids.
-The change is a table row in freedreno_devices.py; the generated
-freedreno_dev_info.h is what carries it into the driver.
+Nothing to set and nothing to expect on an A740; the row is a no-op on Mesa 27.
 
-Correction (20.11, read off upstream 6dfa32a85f91): on Mesa 27 the "still
-missing" id is not missing - upstream already lists all four
-(`0xffff44050000`, `0xffff44050001`, KGSL `0x44050000`, KGSL `0x44050001`).
-Applied to Mesa 27 this patch therefore adds a second, identical
-`GPUId(chip_id=0x44050000, …)` row. The generated table matches on the first
-entry, so the effect is zero (and the stack matrix is 94 EXACT with and without
-it); the row is kept so the file list stays what the ArmadOS image builds. On
-Mesa 26.2.3 the twin file is still a real change. Nobody should read this patch
-as "A830 support was added here".
+## Summary
+
+The ROCKNIX patch added three ids to Mesa 26.2.3, where `add_gpus()` had two.
+Mesa 27 already lists all four (`0xffff44050000`, `0xffff44050001`, KGSL
+`0x44050000`, KGSL `0x44050001`), so this form adds a second identical
+`GPUId(chip_id=0x44050000, ...)` row, and the generated table matches on the first
+one: effect zero. The row is kept so the file list stays what the image builds.
+This patch is not "A830 support was added here".
+
+## Evidence
+
+One row in `add_gpus()` of `freedreno_devices.py`; the generated
+`freedreno_dev_info.h` carries it. The published bundle and the bench ship tree
+differ in exactly this line and nothing else, 94 EXACT either way
+(`docs/release.md` provenance).
+
+## Tests
+
+What checks the change is that it must be inert on this device: 94 EXACT with and
+without the row (matrix journal 24.3). A real A830 machine is the only thing that
+would test it - NOT TESTED, none exists here.
+
+## The change in this repo
+
+One row, one hunk. The 26.2.3 form stays next to it unchanged because
+`image-build/build.sh` applies that one. Revert: `git apply -R` with the file name
+explicit.
+
+## Related
+
+`patches/PATCHES.md`; the `-mesa26` twin; `docs/release.md` provenance.
 
 diff --git a/src/freedreno/common/freedreno_devices.py b/src/freedreno/common/freedreno_devices.py
 index a1ec052..27e20ea 100644

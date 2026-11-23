@@ -10,8 +10,9 @@ superset of the spec's, argued from the layout and not from a spec reading (ADR-
 ## For users of other drivers
 
 Nothing to set. A stock driver answers a missing list with the worst case of "anything in the
-class" and demotes the image to linear; here the class is enumerated, so an image whose class
-describes one tiled layout keeps it. Compression is still dropped, which is the other question.
+class" - `has_swaps` true, `reinterprets_r8g8_r16` true, `swaps_are_uniform` false - and demotes
+the image to linear; here the class is enumerated, so an image whose class describes one tiled
+layout keeps it. Compression is still dropped, which is the other question.
 
 ## Summary
 
@@ -24,6 +25,21 @@ decides: `tu6_mutable_format_list_forces_linear()` builds the class itself, and 
 (the create and `tu_get_image_format_properties()`) ask it, so the two cannot disagree; the three
 predicates go back to `static` because nothing outside `tu_formats.cc` calls them any more. The
 UBWC predicate keeps seeing the application's list, never the class.
+
+What the class answer is, per block class (probe `NL` of `tests/rp6-vkd3d-sparse-test.c`, the
+rows of `results/test-0014-ship.log`, journal 21.12):
+
+| class | base format | layout | why |
+| :--- | :--- | :--- | :--- |
+| 8-bit | `R8_UNORM` | tiled | no member needs a swap |
+| 8-byte | `R16G16B16A16_FLOAT`, `R32G32_FLOAT` | tiled | every member is `WZYX` |
+| block-compressed | `BC7_UNORM` | tiled | every member is `WZYX` |
+| 4-byte | `R8G8B8A8_UNORM`, `R32_UINT` | linear | the class holds both the RGBA8 and the BGRA8 order |
+
+Only formats the driver can use enter the class: the filter consults `fd6_color_format()` and
+`fd6_texture_format()` together, because block-compressed formats are texture-only in
+`fd6_format_table.c` and `fd6_color_format()` alone would drop every BC format out of its own
+class (measured: BC7 stayed linear until the texture side was added).
 
 ## Evidence
 

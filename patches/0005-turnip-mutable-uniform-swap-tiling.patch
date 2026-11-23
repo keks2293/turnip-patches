@@ -1,8 +1,48 @@
-0005: a uniform-swap list stays tiled (upstream TODO in tu_formats.cc).
+0005: a uniform-swap format list keeps the tiling (upstream TODO in tu_formats.cc).
 
-Relations: standalone; extended by patch 0010 - it rewrites the
-tu6_format_list_swaps_are_uniform() added here, so without 0005
-patch 0010 does not apply.
+**Status:** shipped in `27.0.0-devel-p14`. Upstream: not sent separately - it is
+one of the four predicates ADR-0003 keeps together (0005, 0006, 0010 and the
+tiling axis of 0014).
+**Found:** the mixed-swap experiment: a `{BGRA8, RGBA8}`-shaped list
+went linear although every member has the same layout.
+
+## For users of other drivers
+
+Nothing to set. A texture whose views differ only in channel order stops losing
+the tiling, i.e. bandwidth, on every create that builds such a list.
+
+## Summary
+
+`tu_formats.cc` had an upstream TODO: a mutable list whose formats all swap the
+same way still lost the tiled layout because the code required an exact match of
+something stronger than "uniform". The patch adds
+`tu6_format_list_swaps_are_uniform()` and lets such a list keep tiling; a list
+whose swaps genuinely disagree (the cross-order `{BGRA8, RGBA8}`) stays linear.
+
+## Evidence
+
+Hunks in `tu_formats.cc`/`.h` and `tu_image.cc` (5 hunks). Verified by probe `S`
+of `tests/rp6-vkd3d-sparse-test.c`: FAIL -> PASS (journal 16; the cross-order
+control stays linear there, which is the other half of the claim).
+
+## Tests
+
+| what the hunk changes | how it is checked | result |
+| :--- | :--- | :--- |
+| a uniform-swap list keeps tiling | probe `S`, journal 16 | FAIL -> PASS |
+| a disagreeing list still demotes | the cross-order control of the same probe | stays linear |
+| nothing else moves | the 94-row matrix, journal 24.3 | 94 EXACT |
+
+## The change in this repo
+
+`0010` rewrites `tu6_format_list_swaps_are_uniform()`, so the two land in this
+order. It must not admit a list whose members disagree about the block or the
+channel order. Revert: `git apply -R` with the three file names explicit.
+
+## Related
+
+`0006`, `0010` (ADR-0003 family); `0014` uses the same predicates for the absent
+list.
 
 diff --git a/src/freedreno/vulkan/tu_formats.cc b/src/freedreno/vulkan/tu_formats.cc
 index c0c9480dbe2..e10960b7be5 100644

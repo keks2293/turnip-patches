@@ -1,73 +1,55 @@
-0011: rows for single-channel 16-bit and packed 10-bit in fd6_ubwc_compat_mode().
+0011: rows for single-channel 16-bit and packed 10-bit in the UBWC compat table.
 
-Why. The stock fd6_ubwc_compat_mode() (src/freedreno/common/freedreno_ubwc.h)
-has 28 formats with a non-empty case, and among them there is neither a
-single-channel 16-bit one nor a packed 10-bit one. Any format list into
-which vkd3d puts R16 (and it always does: R16_TYPELESS plus three more
-classes) therefore silently loses UBWC.
+**Status:** shipped in `27.0.0-devel-p14`. Upstream: not sent - the compat table
+row is a candidate, but the argument rests on a measured ceiling on this chip,
+which is what an upstream reviewer would want reproduced.
+**Found:** probe CEIL: the stock table has no R16 and no packed
+10-bit row, so any vkd3d list containing them (R16_TYPELESS and three more
+classes) silently lost UBWC.
 
-Silently - because fd6_ubwc_compat_mode() returns FD6_UBWC_UNKNOWN_COMPAT
-for them, and tu6_mutable_format_list_ubwc_compatible() exits with false
-on the first unknown member. The !mutable_ubwc_fc branch then clears
-ubwc_enabled, and the image stays tiled but uncompressed.
+## For users of other drivers
 
-This is over-caution, not a hardware limit, and it is measured, not
-deduced. Probe CEIL in tests/rp6-vkd3d-sparse-test.c (logs
-results/test-CEIL-base.log and results/test-CEIL-exp0011.log) creates
-three images with the same list: a linear one, the same format without a
-list, and the same with MUTABLE. A lone R16_UNORM without a list gets
-memreq 0x82000 against the linear 0x80000, i.e. the UBWC metadata came
-up on its own: the ceiling exists, and it is the gate that removes it.
-The same for R10G10B10A2_UNORM: 0x102000 against 0x100000.
+Nothing to set. R16 and R10G10B10A2 textures in a mutable list keep compression
+instead of losing it.
 
-Unlike patch 0012, here one does not need to assert that the blob
-"allows these, but not a660". Both formats are full citizens of the
-texture path: fd6_format_table.c has VTC(R16_UNORM, ..., WZYX) (line 72)
-and FMT(R10G10B10A2_UNORM, ..., WZYX) at line 209, both with swap WZYX,
-i.e. matching. The gap is only in the compat table, and this is exactly
-the case where the argument "all variants of the same block size differ
-only in the interpretation of the same bits" holds fully: the layout
-depends only on the block size
-(layout->cpp = util_format_get_blocksize(), fd6_layout.c:115), as in
-0005/0006/0012, and the swap is shared by all members of the list.
+## Summary
 
-What does NOT change. R8_* is deliberately not included here: it has no
-ceiling at all. has_8bpp_ubwc = false on gen2 (freedreno_devices.py,
-working around the text corruption bug from 0f770caa232, "Disable
-8bpp_ubwc on a6xx gen2"), and the measurement confirms it - the
-nonmemreq of a lone R8_UNORM equals the linear one. R32G32B32_* as well:
-the blob has no 3-component rows and no ceiling shows in the
-measurements. These groups are blocked by tu6_ubwc_possible(), not by
-the gate, and editing the rule does not fix them.
+`fd6_ubwc_compat_mode()` answers `UNKNOWN` for those formats, and
+`tu6_mutable_format_list_ubwc_compatible()` exits on the first unknown member, so
+the whole list loses UBWC. That is over-caution, not a hardware limit: a lone
+`R16_UNORM` without a list gets a metadata plane on its own. Both formats are
+ordinary texture-path citizens with swap `WZYX`
+(`fd6_format_table.c:72`, `:209`), and the layout depends only on the block size.
 
-The format name in the switch. The obvious name is wrong, and it cost
-one build: VK_FORMAT_A2B10G10R10_UNORM_PACK32 maps to
-PIPE_FORMAT_R10G10B10A2_UNORM (src/vulkan/util/vk_format.c:114), and
-PIPE_FORMAT_A2B10G10R10_UNORM never reaches this switch, even though
-such a format exists in p_format.h. The cases hold pipe names, not
-Vulkan ones.
+## Evidence
 
-What stays out of the patch's scope.
- - fast-clear: a byte roundtrip does not check the clear metadata, as in
-   0012.
- - reinterpretation through an R16_UINT view on an R16_TYPELESS list:
-   exactly the mechanism that turned out broken in 0010 with diverging
-   swaps. Here the swaps of all R16_* match (WZYX), so there will be no
-   asymmetry, but it has to be checked separately.
- - Only R10G10B10A2_UNORM and _UINT are added to the compat row, because
-   exactly they have tiled entries in fd6_format_table.c (FMT/VTC);
-   SNORM, SINT and USCALED have V__ there, i.e. no tiling. If vkd3d
-   builds a list with SNORM or SINT, the question runs into the texture
-   format table rather than the gate, and this experiment's change will
-   not be enough.
+Two hunks in `freedreno_ubwc.h` (enum rows, switch cases). Probe CEIL creates
+linear / no-list / mutable images of the same list: `R16_UNORM` no-list `memreq`
+`0x82000` against linear `0x80000`, `R10G10B10A2_UNORM` `0x102000` against
+`0x100000` - the ceiling exists and the gate is what removes it
+(`results/test-CEIL-base.log`, `results/test-CEIL-exp0011.log`, journal 21.6.2).
+Isolated A/B on the stack: 3 lines of probe output move
+(`results/test-stack.log` vs `results/test-0011.log`).
 
-Measurement and analysis: docs/analysis.md, section 21.6.
+## Tests
 
-Relations: complements 0006 (same file, other rows) and 0012 (other
-format families) - three edits of one compat table, they apply together
-without conflicts. The A/B is isolated: git apply -R changes exactly 3
-log lines (repeat 04.10.2026: results/test-stack.log vs
-results/test-0011.log).
+| what the hunk changes | how it is checked | result |
+| :--- | :--- | :--- |
+| the two formats keep UBWC in a list | probe CEIL, journal 21.6.2 | metadata plane appears, classes 36 -> 44 |
+| isolated effect | the A/B above | 3 lines of probe output, nothing else |
+| nothing else moves | the 94-row matrix, journal 24.3 | 94 EXACT |
+
+## The change in this repo
+
+Only `R10G10B10A2_UNORM/_UINT` are added: they are the ones with tiled entries in
+`fd6_format_table.c`; SNORM/SINT/USCALED have no tiling there. R8 is deliberately
+absent (no ceiling; `has_8bpp_ubwc` stays false, ADR-0007), and so is R32G32B32
+(no ceiling measured). The cases hold pipe names, not Vulkan names
+(`vk_format.c:114`). Revert: `git apply -R` with the file name explicit.
+
+## Related
+
+`0006`, `0012` (same switch); `0014` (the no-list question).
 
 diff --git a/src/freedreno/common/freedreno_ubwc.h b/src/freedreno/common/freedreno_ubwc.h
 --- a/src/freedreno/common/freedreno_ubwc.h

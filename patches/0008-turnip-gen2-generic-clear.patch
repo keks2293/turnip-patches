@@ -1,7 +1,47 @@
-0008: gen2 gets has_generic_clear + QCTDD12766770_r8g8_fc_alignment by
-default (device table in freedreno_devices.py).
+0008: gen2 gets `has_generic_clear` and `QCTDD12766770_r8g8_fc_alignment`.
 
-Relations: none - touches only the device table.
+**Status:** shipped in `27.0.0-devel-p14`. Upstream: not sent - it flips two
+device-table flags for gen2, and why upstream withholds them is not documented
+here (the row names a Qualcomm erratum id, not a reason).
+**Found:** 30.09, journal 15: of all gen2 properties, this is the only one with a
+measurable effect.
+
+## For users of other drivers
+
+Nothing to set: the two flags live in the device table, not in a knob (the
+measurement was done through `TU_FORCE_PROPS`, 0007).
+
+## Summary
+
+`has_generic_clear` makes "clear and draw" stop loading the previous render
+target contents (generic clear disables conditional load/store,
+`tu_pass.cc:560`); the erratum flag rides with it. On vkmark that is a 61-65 %
+shorter frame in vertex/shading/texture; in RE4 it measured 0 %.
+
+## Evidence
+
+One hunk in the `a7xx_gen2` entry of `freedreno_devices.py`
+(`QCTDD12766770 = True` and the generic-clear flag). Measurements: journal 15.2
+(vkmark table), 15.3 (corruption check), 15.4 (RE4: no gain).
+
+## Tests
+
+| what the hunk changes | how it is checked | result |
+| :--- | :--- | :--- |
+| vkmark frame time | `results/vkmark-ab-combo.txt`, `vkmark-ab-r8g8.txt`, journal 15.2 | vertex -63.1 %, shading -61.1 %, texture -64.5 % |
+| correctness | `results/test-props2-gc*.log` + `pixelcheck`, journal 15.3 | 94 PASS, byte-identical to base; 0-1 px of 880 |
+| the title that matters | RE4, journal 15.4 | 0 % gain |
+
+## The change in this repo
+
+Two table rows, one hunk. It must not be read as "gen2 supports generic clear
+everywhere": the corruption check is what backs it, and RE4 gives it nothing.
+Revert: `git apply -R` with the file name explicit.
+
+## Related
+
+`0007` (the knob that measured it); ADR-0008 (no fps lever in the
+driver for this title).
 
 diff --git a/src/freedreno/common/freedreno_devices.py b/src/freedreno/common/freedreno_devices.py
 index 27e20ea..17a1f4f 100644
