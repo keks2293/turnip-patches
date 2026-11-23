@@ -239,10 +239,14 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
     a shape that carries volume. The verdict of ADR-0001 does not move either way - the
     prop frees no patch and adds no compression (journal 24.3, 27).
 
-11. **`exp-21` - one layout-decision function, the candidate that replaces `0014`**
+11. **`exp-21` - CLOSED 23.11: this text is `0014` now**
     (`experiments/exp-21-mutable-one-decision.patch`, tail
-    `experiments/exp-21b-predicates-static.patch`; graduation number `0016`, because
-    `0015` is spoken for by ADR-0009 and numbers are not reused). Status 21.11: written
+    `experiments/exp-21b-predicates-static.patch`). The operator's decision: replace
+    `0014` with this text without a further equivalence run - journals 33 and 36 already
+    measured it equal, and the queue-16 A arm was built from exactly this text (journal
+    40.29). The reserved number `0016` is retired with the experiment. The rest of this
+    item is the record of why the candidate existed and the rebase notes it carries.
+    Status 21.11: written
     20.11, applies clean to `0001..0013` and reverts clean, **built** 21.11 as
     `build/out-exp21/libvulkan_freedreno.so` (`d49d094a8d6e…`) and **measured
     equivalent** to the released stack on every probe the rig had when the two logs were

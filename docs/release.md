@@ -45,6 +45,12 @@ driver.
 bit-for-bit, so a hash names a build and never a source state; stack identity is proven
 by the 94-row matrix (journal 24.3).
 
+*Corrected 23.11*: rebuilding the same **source tree** is bit-for-bit - the queue-16
+verify tree built twice gave `f80d33ab2077` both times (journal 40.28) - so a hash
+difference is a source difference. What is not reproducible is the **published** stack:
+the bench tree drifted after 19.11 (journal 39.7), and the bundle's `0014` text is not
+the text in `patches/` today (see the note at the end of "Provenance").
+
 | build | what it is | journal |
 |---|---|---|
 | `c17d02bcaae9a960…` | the shipped `.so` (tag `27.0.0-devel-p14`) | - |
@@ -150,6 +156,14 @@ applied-stack tree kept on the bench from that day the two trees differ in one
 file of 11798: `freedreno_devices.py`, the A830 KGSL id line. So the driver
 logic of the shipped binary is reproduced by these patches byte for byte; the
 id-table row is what a rebuild would add, and an A740 never looks it up.
+
+**The `0014` text moved on 23.11.** `patches/0014-*.patch` now carries the one-decision
+form that queue 16 built as its A arm (journal 40.29): `exp-21` plus its static tail.
+The p14 binary `c17d02bcaae9` and the published bundle keep the 19.11 text. The two were
+measured equal - 0 of 598 full-suite lines (journal 33) and 784 game create signatures
+with 0 differing `tile=`/`ubwc=` (journal 36) - and the inventory pair reproduces on the
+dedicated builds (journal 40.29). A rebuild from today's `patches/` differs from the
+bundle in this file's text, not in its decisions.
 
 ## Publishing
 

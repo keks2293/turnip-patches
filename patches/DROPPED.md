@@ -71,6 +71,20 @@ in the table.
 | `0013` b2i CCU clean | stays | correctness of copy-to-image (journal 21.10, ADR-0005) |
 | `0014` mutable no-list tiling | stays in the shipped form (v1) | see below for the v2 that was dropped |
 
+## Numbers 0015 and 0016: retired, no file
+
+The stack stops at `0014`, and the two numbers above it were spent before any file
+existed - patch numbers are never reused, so a reader looking for `0015`/`0016` finds
+none:
+
+- **`0015`** - the withdrawn `MUTABLEEN`-on-gen2 candidate. It never became a file: the
+  verdict that killed it is ADR-0009, the measurement is journal 21.4 (exp-10) plus
+  24.1, and `results/raw/game-patched-imginv{4,5}.log` is the inventory evidence.
+- **`0016`** - reserved for the `exp-21` candidate, then dissolved into `0014` on 23.11
+  instead of graduating beside it: the one-decision text is now
+  `patches/0014-turnip-mutable-no-list-tiling.patch`, and the number is retired with
+  the experiment (`experiments/README.md`, journal 40.29).
+
 ## Files in `patches/dropped/`
 
 | file | what it was | why it is here |

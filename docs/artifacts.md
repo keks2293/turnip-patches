@@ -21,7 +21,7 @@ add a row here and say in the file itself how to regenerate it.
 | 0011 | R16/10-bit rows in the UBWC compat table | `CEIL`: a ceiling exists; 36 -> 44 classes |
 | 0012 | `_SFLOAT` in the integer compat classes | 31 -> 36 classes; EXACT |
 | 0013 | CCU clean after `buffer->image` on A7XX (deferred bits) | 19 MISMATCH -> 0, 94/94, three repeats |
-| 0014 | mutable with no list: the compatibility class instead of `NULL` | probe `NL`: 8/8 layouts and round trips; +2201 MiB tiled by the model, 2170 MiB measured. A candidate that keeps the rule and removes its duplication stands in `experiments/exp-21-mutable-one-decision.patch` (queue 11, NOT BUILT); it replaces this file only if the equivalence run agrees |
+| 0014 | mutable with no list: the compatibility class instead of `NULL`, decided in one place (`tu6_mutable_format_list_forces_linear()`), predicates back to `static` | the queue-16 A/B: A 2450.3 MiB tiled (60.0 %), B 0 MiB (journal 40.29); equivalence to the previous text: 0 of 598 suite lines, 784 create signatures (journals 33, 36) |
 
 `0001`-`0003` belong to the image recipe (they cannot be removed from `image-build/`);
 `0004`-`0014` are this project's stack. Origin of `0001`-`0003`: `patches/PATCHES.md`.
