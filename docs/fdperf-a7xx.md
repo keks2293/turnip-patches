@@ -259,7 +259,17 @@ the dumps (evidence: journal 40.33):
   hit". Quote such a counter only with the divider named and the missing partner named, or not at all.
   `tools/fdperf/fdperf.cfg-vpc4` (queue 31, NOT RUN) is the first cfg here to carry the pair. The same trap
   in the other direction: `VPC_NUM_LM_REQ_HIT` reads 0 or 2.5 per window with no request counter in its
-  group, a measured zero of unknown wiring (40.15's `UCHE_WRITE_REQUESTS_VPC` is the pattern).
+  group, a measured zero of unknown wiring (40.15's `UCHE_WRITE_REQUESTS_VPC` is the pattern, and 40.34
+  found it reading 0.000 in every window of all 15 arms that program it, both frames).
+* **two counters that never differ are one signal, and a name is not a unit.** `VPC_SP_COMPONENTS` (VPC
+  selector 10) and `SP_EXPORT_VPC_TRANS` (SP selector 48) agree to the precision of a control pair
+  (`PC_IA_PRIMITIVES` over `TSE_INPUT_PRIM`, 40.32) in every window of the 33 arms that program both -
+  median ratio 1.00000, 1176 of 1293 windows within 1e-4, `scripts/fdperf-vpc-state.py`) - so citing them
+  as two sides of one traffic double-counts a single signal, and the per-vertex figure from either
+  (0.63-1.04) is in a unit no file in this tree or in `a7xx_perfcntrs.xml` describes. Before dividing a
+  counter, ask what its unit is: if neither the XML nor a calibration probe says, report the raw reading
+  with the pair it came from, or nothing. Queue 34 is that calibration; until it runs, no per-vertex
+  varying count may be quoted here.
 
 Conclusion: **the state of UBWC compression from hw counters on this chip has
 not been verified** (the GMEM-*_BEATS are dead; the UBWC counters never fit in

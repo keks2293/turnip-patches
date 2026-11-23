@@ -146,6 +146,14 @@ not committed artifacts):
   next entry.
 * **A queue item is five lines**: what to run, what it decides. Longer than that means it is
   an entry, not a queue line.
+* **Anything wrong you notice in passing becomes a queue line in the same commit** (added 23.11).
+  A stale number, a counter whose name does not match its data, a script that mislabels, a
+  recipe that no longer works, a cheaper way to do what the plan already plans: if it is not the
+  thing you were asked to fix, it goes into `docs/plan-next-checks.md` as a five-line item (or
+  into the `STATUS` line of the direction's stream page) before the commit that noticed it is
+  finished. A finding said only in a conversation is lost - the queue is the single place a
+  later reader looks for "what is known to be wrong here", and both 40.33 and 40.34 begin as
+  remarks that happened to have been written down.
 
 ### Writing for a reader who does not skim
 

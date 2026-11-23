@@ -25,6 +25,11 @@
 //   PC 21  PERF_PC_IA_PRIMITIVES          its only open question was whether it is a second
 //                                          exposure of TSE_INPUT_PRIM, and 40.32 closed that from
 //                                          committed dumps (0 of 256 windows equal)
+// NOTE 40.34, written after this cfg: the SP group here carries id 48 SP_EXPORT_VPC_TRANS, which measures
+// the same signal as VPC id 10 SP_COMPONENTS (equal in every window of 33 arms). Both lines stay - the SP
+// group has 22 free slots, so the run gets a self-check of that equality for nothing - but neither name
+// has a unit, so no per-vertex figure from them may be reported (queue 34).
+//
 // KEPT: PC 0 busy, 19 hits, 20 IA_VERTICES (the 2.9:1 divider of journal 38), 25 VS_INVOCATIONS,
 // 28 3D_DRAWCALLS (draws/frame sanity, and the check that the session is the same workload).
 //
@@ -106,7 +111,8 @@ FD740 = {
     counter0 = 0;    // PERF_VPC_BUSY_CYCLES
     counter1 = 16;   // PERF_VPC_VS_BUSY_CYCLES
     counter2 = 17;   // PERF_VPC_PS_BUSY_CYCLES
-    counter3 = 10;   // PERF_VPC_SP_COMPONENTS
+    counter3 = 10;   // PERF_VPC_SP_COMPONENTS   (unit undescribed; measured equal to SP id 48 in every window of
+                 // every arm carrying both - one signal, not two sides, 40.34)
     counter4 = 25;   // PERF_VPC_NUM_VPCRAM_WRITE
     counter5 = 24;   // PERF_VPC_LM_FULL_WAIT_FOR_INTP_END
   }
@@ -117,6 +123,7 @@ FD740 = {
 
   SP = {
     counter0 = 0;    // PERF_SP_BUSY_CYCLES
-    counter1 = 48;   // PERF_SP_EXPORT_VPC_TRANS
+    counter1 = 48;   // PERF_SP_EXPORT_VPC_TRANS (unit undescribed; measured equal to VPC id 10 in every
+                     // window of the 33 arms that carry both - one signal, not two sides, 40.34)
   }
 }

@@ -18,6 +18,14 @@ Believed, with the evidence:
   share moves by 0.2 points between a 0014 stack and the crude prop, and the classes the
   prop adds are ones where tiling may be harmful (journal 27, ADR-0001).
 
+Open, and smaller than a lever: three 23.11 readings are in the queue, not here - the last
+driver change standing in the vertex tract (the varying-to-uniform promotion limits, queue 32),
+the control journal 40.30 needs for its `BV_*` verdict (queue 33), and a unit for the two export
+counters now that they are known to be one signal (queue 34). What moves those from curiosity to
+queue line is journal 40.34: the VPC is not computing, it is holding its own attribute RAM full,
+so promotion is worth asking about as a cost and not as a saving, and no attribute-buffer size on
+this generation is programmable to try the other way.
+
 Open: fps A/B for mode 7 (`0013`) was never run; the expectation, given a latency bound,
 is small, and the correctness case for `0013` does not depend on it.
 

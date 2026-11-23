@@ -63,10 +63,17 @@ on its own line below: 5, 8, 17, 21, 22, 23, 26.
 | 3, 4 | the `build/out-stock-inv` column and the ship+prop column of journal 27's scale | two runs, one ~4-minute build | the true zero point of the three-variant scale, and nothing else |
 | 7, 9 | the three probes, and the two documentation pieces | no measurement | test coverage and legibility |
 | 31 | run `tools/fdperf/fdperf.cfg-vpc4` (written, NOT RUN: PC 39, 17, 10 in, 2, 4, 21 out) in the session of 10 | the same session, no build | the vertex-cache hit rate (19/39) and the first dead-primitive rate on this rig |
+| 32 | one line at `tu_shader.cc:3878`: `0, 0` instead of the two `UINT32_MAX` promotion limits of `nir_opt_varyings_bulk`, then the usual A/B | build + session | whether turnip's varying-to-uniform promotion, which RADV turns off, costs anything against this title's UCHE/SP wall (40.34) |
+| 33 | `fdperf.cfg-bv` with `forcebin` on the Shadow-Cache-on frame, once, so `BV_*` rows exist at a `tile_count` that `cb21-h1` also reached (3-14 tiles) | session, no build | a control for 40.30's aliasing verdict using a variable no counter can fake; no committed dump has a binned `cfg-bv` window on that frame |
+| 34 | a probe set with a known VS→FS interface (1, 2, 4, 8 vec4 varyings, same geometry), run once outside the game | session, no build | a unit for `VPC_SP_COMPONENTS` / `SP_EXPORT_VPC_TRANS` or their retirement: they are one signal of unknown unit, 0.63-1.04 per vertex (40.34) |
 
-Nothing else is open beyond 31, which is a cfg edit and rides on 10's session. 16 is closed by 40.29 and 40.31, 21 by 40.30, 18(a) by 40.32; 17 and 22 have no
-buyer after 40.18's render-mode ladder; 23 is answered by 40.18; 5 has no decision on it since ADR-0008;
-26's remaining half is a disassembly question that no shipped patch depends on.
+Nothing else is open beyond 31-34: 31 rides on 10's session, 33 and 34 are sessions with no build, and 32 is the
+last driver change standing in the vertex tract. Where 40.34 leaves the VPC itself: busy 86-92 % of one core and
+working two thirds of that, the stall is its own attribute RAM (0.48 of a core full on the ship frame, 0.61 on the
+Shadow-Cache frame), no VPC counter needs a divider, and the attribute-buffer size is not programmable on this
+generation - so the direction has no measured opening left except 32. 16 is closed by 40.29 and 40.31, 21 by 40.30,
+18(a) by 40.32; 17 and 22 have no buyer after 40.18's render-mode ladder; 23 is answered by 40.18; 5 has no decision
+on it since ADR-0008; 26's remaining half is a disassembly question that no shipped patch depends on.
 
 0. **Done 20.11, updated 21.11, so it may become stale again**: `../mesa27-src` carries
    `0001` and `0002` as commits (`ac08003`, `9845cfb` on base `6dfa32a`) and `0003..0013`
@@ -996,6 +1003,37 @@ proposing versions of the ideas closed above: `journal 30` maps four files from 
 stack to these records, so the next outside proposal can be checked against a verdict
 instead of against a build.
 
+32. **Turn off varying-to-uniform promotion and see whether this title misses it** - one line, NOT BUILT
+    (journal 40.34 is where the call site and the RADV contrast are recorded). `tu_shader.cc:3878` calls
+    `nir_opt_varyings_bulk(shaders, n, true, UINT32_MAX, UINT32_MAX, link_opts, ...)`; per `nir.h:5832` those
+    two arguments are `max_uniform_comps` and `max_ubos`, the limits on promoting a varying into a FS constant
+    or UBO load, and `radv_pipeline_graphics.c:1257` passes `0, 0`. Turnip is therefore more aggressive than
+    RADV on a title whose wall is UCHE/L2 and the pixel side (40.34: SP at 94 % of its pipes in both frames),
+    which makes promotion a cost candidate rather than a saving. Arm: `max_uniform_comps = 0`, `max_ubos = 0`,
+    ship stack, one 150 s session per side, pinned clock. Decide on `UCHE_READ_REQUESTS_SP`, `SP_BUSY`,
+    `VPC_BUSY`/`VPC_VPCRAM_FULL` and p25; a zero in all four closes the direction as an ADR, because it would
+    mean the promotion never fires on this shader set.
+
+33. **The control 40.30 cannot get from its own dumps: `BV_*` at a shared `tile_count`, two frames apart**
+    (journal 40.34 checked that no committed dump allows the cut). Of the four `cfg-bv` arms only `cb21-h1`
+    binned (8 of 40 steady windows, 3-14 tiles) and the other three have no binned window at all, so there is
+    no tile-count overlap between the 15 fps and the 26 fps frame. Arm: `fdperf.cfg-bv` with
+    `TU_DEBUG=startup,gmem,forcebin` on the Shadow-Cache-on frame, same save, one session. Decide by
+    comparing rows at equal `tile_count` against `cb21-h1`'s windows: if a `BV_*` row is the same at 4 tiles
+    on 8.4 M primitives/frame as on 16.7 M, 40.30's aliasing verdict has an independent variable behind it;
+    if it moves with geometry, 40.30 is reopened. Recorded as a control, not as a measurement.
+
+34. **Give `VPC_SP_COMPONENTS` and `SP_EXPORT_VPC_TRANS` a unit, or take both names out of the documents**
+    (journal 40.34: they are equal in every window of the 33 arms that program both, so they are one signal
+    and the per-vertex 0.63-1.04 is in a unit nothing describes). The cfg comments that explained them as
+    "components handed to the FS" and "the other side of the varyings traffic" are corrected in place. Arm: a
+    probe with a known interface - one vertex shader writing 1, 2, 4 and 8 vec4 outputs to the same fragment
+    shader, same geometry, run once per setting outside the game (vkmark's framework or the vkcube rig), both
+    selectors programmed. Decide: if the counter moves by 4 per added vec4 the unit is components and the
+    reading means RE4's interface is tiny; by 1 per vec4 it is a vec4-shaped transaction; by nothing, the
+    selector is inert and both names are retired like `UCHE_GMEM_*_BEATS`. Until then no document here may
+    quote a per-vertex varying count, which is what question 24's evidence silently lacked.
+
 ## Open questions
 
 | # | question | status |
@@ -1023,8 +1061,9 @@ instead of against a build.
 | 21 | what is the wall at 26.7 fps, i.e. with the game's Shadow Cache on | ANSWERED 22.11, journal 40.21 (`results/games/re4/occupancy-two-frames.txt`): the same wall with 6 points of slack - `VPC_BUSY` 85.54 % against 91.57 %, `VS_BUSY` 80.65 %, `PS_BUSY` 76.97 %, and the primitive collector waits on the vertex path 12.7 points less. No block goes from idle to busy, so the "+9…13 % for a non-geometry driver fix" ceiling of 40.10/40.15 stands on this frame too |
 | 22 | what do `LRZ_BUSY_CYCLES`, `RAS_STALL_CYCLES_LRZ` and `RB_STARVE_CYCLES_LRZ_TILE` actually count on A7XX | CLOSED 23.11 as a check, kept as a rule: 40.23's bar on quoting `LRZ_BUSY_CYCLES`, `RAS_STALL_CYCLES_LRZ` and `RB_STARVE_CYCLES_LRZ_TILE` as a cost costs nothing, because no verdict after it rests on them (40.26 and 40.27 argue from `VPCRAM_FULL`, `WIT_FULL`, `LM_*`). Deciding the semantics needs a synthetic depth-overdraw pass in the rig, and nothing downstream waits for it |
 | 23 | is `alias.rt` correct on A740, given that its two registers are declared for A7XX | CLOSED 23.11 with queue 26: the prop is delivered and moves no counter and no fps (40.29 - 1.8 % on TSE input against the same-build control, 0.06 points of VPC busy, 1.2 % fps); whether the pass engages is a diff of two disassemblies with and without `TU_FORCE_PROPS=has_alias_rt`, offline, and no shipped patch carries the property, so neither answer changes a number here |
-| 24 | does RE4's shader set push varyings through the VPC that the fragment stage never reads (the one live sub-point of the outside geometry note of 23.11) | ANSWERED IN BOTH HALVES 23.11, journal 40.26: the fp16 half is a measured zero (`IR3_SHADER_DEBUG=nofp16` moves `VPCRAM_FULL` by 0.38 points of busy and p25 fps by 1.0 %, delivery of the flag unproven), and the dead-output half is closed by the code - the driver sizes the interpolators from what the FS reads (`tu_pipeline.cc:744`, `:683`, `:802`), so an unmatched VS output gets no slot. What remains is not "dead varyings" but the width itself, and that is measured: queue 30 closed 23.11 by journal 40.27 from committed dumps - per vertex the two frames are the same workload (31.81 against 33.03 B/vertex while the frame rate differs by 74 %), so the "make each vertex cheaper in the VPC" family has no measured opening |
+| 24 | does RE4's shader set push varyings through the VPC that the fragment stage never reads (the one live sub-point of the outside geometry note of 23.11) | ANSWERED IN BOTH HALVES 23.11, journal 40.26: the fp16 half is a measured zero (`IR3_SHADER_DEBUG=nofp16` moves `VPCRAM_FULL` by 0.38 points of busy and p25 fps by 1.0 %, delivery of the flag unproven), and the dead-output half is closed by the code - the driver sizes the interpolators from what the FS reads (`tu_pipeline.cc:744`, `:683`, `:802`), so an unmatched VS output gets no slot. What remains is not "dead varyings" but the width itself, and that is measured: queue 30 closed 23.11 by journal 40.27 from committed dumps - per vertex the two frames are the same workload (31.81 against 33.03 B/vertex while the frame rate differs by 74 %), so the "make each vertex cheaper in the VPC" family has no measured opening. 23.11, 40.34: the `SP_COMPONENTS` column of that entry is withdrawn - it is one signal with `SP_EXPORT_VPC_TRANS` and has no unit - but the width argument stands on `VFD_DECODED_ATTRIBUTE_BYTES` and `VFD_NUM_ATTRIBUTES`, which are unaffected; the varying count itself is queue 34 |
 | 25 | is the vertex path recomputing vertices because of a driver setting - vertex cache size, `prim_restart`, topology - as vkd3d-proton might provoke (operator, 23.11) | ANSWERED 23.11, both halves, journal 40.33. Driver side: nothing to check - `tu_pipeline.cc` (5345 lines) has no cache size, cache mode, restart or topology state, and turnip never reads `max_pc_dest_regs`; restart is written from the game's own dynamic IA state (`tu_cmd_buffer.cc:8703-8725`, `primitive_restart_enabled && indexed`). Counter side: the reuse this repository quotes (2.9:1, journal 38) is mesh sharing, an upper bound on what a cache could save, and the cache's own hit rate has never been measured - `PC_VERTEX_HITS` (id 19) is in nine of the thirteen cfgs, its denominator `PC_TAG_CHECKED_VERTICES` (id 39) in none that has run. That is queue 31, whose cfg (`tools/fdperf/fdperf.cfg-vpc4`) is written and NOT RUN. Whether RE4 uses primitive restart or strip topologies at all is unmeasured and unmeasurable with the cfgs that exist |
+| 26 | is the VPC a compute wall, and is its attribute RAM full because it spills or because the consumer below drains slowly | ANSWERED IN PART 23.11, journal 40.34, no run: it is not compute (`WORKING/BUSY` 0.630-0.687) and the stall is named (`VPCRAM_FULL` 50-52 % of busy on the ship frame, 71 % on the Shadow-Cache frame, i.e. 0.48 against 0.61 of a core), it needs no divider (max `VPC_BUSY/CP_ALWAYS_COUNT` 0.9345 over all 72 dumps, against 12.05 for SP), and the spill half of the fork is unanswerable with these counters - `UCHE_WRITE_REQUESTS_VPC` is 0.000 in every window of all 15 arms that program it, the same dead-zero pattern as 40.15 and `VPC_NUM_LM_REQ_HIT`. What the dumps do say is that fullness grows on the frame with half the geometry, which is the shape of backpressure and not of supply. Mechanism stays open: no counter here measures credits, and no size knob exists on this generation, so nothing downstream waits for it |
 
 ## Pitfalls (reminder)
 

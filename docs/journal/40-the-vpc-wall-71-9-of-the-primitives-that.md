@@ -1527,6 +1527,15 @@ width does not differ between two frames of different speed, not a manipulation,
 need a driver that packs varyings, which this tree does not have. And what the 31.8-33.0 "bytes per
 vertex" is in absolute terms - a ratio of a counter named `..._BYTES` over a vertex count, with no unit
 and no per-format breakdown in the XML.
+
+**Corrected 23.11 by journal 40.34, which this paragraph names.** The `SP_COMPONENTS` column of the table
+above is withdrawn as a measure of what a vertex carries: `VPC_SP_COMPONENTS` (VPC selector 10) and
+`SP_EXPORT_VPC_TRANS` (SP selector 48) are one signal, equal to the precision of 40.32's control pair in
+every window of the 33 arms that program both, so the two names describe one count with no unit and 0.89 or
+1.03 per vertex is neither components nor transactions-times-four. The verdict above rests on the two
+VFD-side columns (31.81 against 33.03 bytes and 5.02 against 5.29 attributes per vertex), which are
+untouched; what the varyings weigh per vertex is unmeasured and is queue 34.
+
 ## 40.28 The queue-16 builds exist, the build is reproducible, and that is what makes the ship-hash gap a fact (queue 16, builds)
 
 [Index back to `docs/analysis.md`](../analysis.md)
@@ -1855,3 +1864,100 @@ measured zero whose wiring is undescribed), so it is recorded and not used. Noth
 counter-side facts were spread over item 15 of the queue and a cfg header comment, and no page said "the
 vertex cache question: this part is measured, this part is not measurable with the cfgs that exist". Fixed
 by this entry plus queue item 31, open question 25, and a rule line in `docs/fdperf-a7xx.md`.
+
+## 40.34 The VPC spends half a core with its attribute RAM full on both frames, the two export counters are one signal, and the attribute-buffer size is not a knob on this chip (queues 30 and 31, no run)
+
+**Question.** Four readings the 23.11 review asked for, none of which needed a session, plus two
+source questions that came out of it. (1) Is the VPC computing or is it stalled - `fdperf.cfg-vertex`
+samples `VPC_WORKING_CYCLES` and no entry ever divided it, and the reviewer's "stall UCHE ~0 % therefore
+clean compute" inference rests on that division. (2) Does it need the divider that SP and TP get, i.e. is
+the block multi-instance. (3) Is `VPC_VPCRAM_FULL_CYCLES` a spill into memory (then a bigger attribute
+buffer helps) or a credit stall from below (then it does not) - the fork the reviewer proposed to decide
+with `UCHE_WRITE_REQUESTS_VPC`. (4) Do `VPC_SP_COMPONENTS` (VPC selector 10) and `SP_EXPORT_VPC_TRANS`
+(SP selector 48) measure two sides of the varyings traffic, as the cfg comments say - a "components per
+vertex" of 0.89 is below one, and the reviewer read that as a unit error, a transaction carrying a vec4
+where the document counted components. (5) Are `sysmem_vpc_attr_buf_size`/`gmem_vpc_attr_buf_size` being
+absent from `a7xx_gen2` a missing value. (6) Does turnip run `nir_opt_varyings` at all, and if so with
+which limits.
+
+**Method.** No run, no build. `scripts/fdperf-vpc-state.py` (written for this entry) over every committed
+dump, steady windows `t_rel` 20-105 s with the core pinned at >= 676 MHz, medians per counter and ratios of
+medians; its output is `results/games/re4/vpc-state.txt` (71 arms). The divider question is answered per
+window over all 72 dumps rather than per arm. Source read: `common/fd6_gmem_cache.h`,
+`vulkan/tu_cmd_buffer.cc:649-660`, `common/freedreno_devices.py:736-860`, `common/freedreno_dev_info.py`
+(the `FD_DEV_FEATURES` path), `vulkan/tu_shader.cc:3878`, `compiler/nir/nir.h:5832`,
+`src/amd/vulkan/radv_pipeline_graphics.c:1257`.
+
+**Numbers.** From `results/games/re4/vpc-state.txt`; per-arm columns are filled only where the cfg sampled
+the counter.
+
+| quantity | reading | arms |
+|---|---|---|
+| `VPC_WORKING / VPC_BUSY` | 0.630-0.687 | 23 (cfg-vertex, cfg-bv and the 0014 A/B arms carry it) |
+| `VPC_VS_BUSY / VPC_BUSY` | 0.929-0.980 | 39 |
+| `VPC_VPCRAM_FULL / VPC_BUSY` | 50.4-52.4 % on the 15 fps frame; 70.9-71.6 % on the 26 fps frame | 15, bimodal with no arm in between |
+| `VPC_BUSY / CP_ALWAYS_COUNT` | 0.915-0.918 on the 15 fps frame, 0.856-0.857 on the 26 fps frame | same 15 |
+| RAM-full time as a share of a core | 0.476-0.479 against 0.607-0.609 | same 15 |
+| `VPC_WIT_FULL / VPC_BUSY` | 1.2-1.7 % | 5 |
+| `UCHE_WRITE_REQUESTS_VPC` | 0.000 M/s, every window | 15 arms, both frames |
+| `SP_BUSY / CP_ALWAYS_COUNT` | max 12.05 over all windows; medians 10.12-11.39 | 71 |
+| max `VPC_BUSY / CP_ALWAYS_COUNT`, all windows of all dumps | 0.9345 (`dbg-file`) | 72 dumps |
+| `VPC_SP_COMPONENTS / SP_EXPORT_VPC_TRANS` | 1.00000, 1176 of 1293 windows within 1e-4, largest gap 2.8e-02 in `tse3-cbbase` | 33 arms carry both |
+| control `PC_IA_PRIMITIVES / TSE_INPUT_PRIM` | 0.99998, 1972 of 2088 windows within 1e-4, largest gap 2.8e-03 | 40.32's pair |
+
+Per vertex (`VFD_TOTAL_VERTICES`), the shared export reading is 0.887-0.894 on the 15 fps frame,
+1.034-1.037 on the 26 fps frame and 0.630 in `sc-forcebin`.
+
+**Verdict.**
+* The VPC is not a compute wall and journal 38's `STALL_CYCLES_UCHE` near zero never said it was: the block
+  is busy 86-92 % of a core and *working* two thirds of that, and the third has a name - its attribute RAM
+  is full for 0.48 of a core on the ship frame and 0.61 of a core on the Shadow-Cache frame. The 26 fps
+  frame is the one more often full, at a lower busy share, so fullness does not follow vertex volume.
+* No VPC counter needs a divider: the largest `VPC_BUSY / CP_ALWAYS_COUNT` anywhere in the repository is
+  0.9345, while SP reaches 12.05 - the /12 the analysis applies to SP and TP is real, and the 85-92 % VPC
+  numbers are per-core duty cycles as quoted.
+* The spill-vs-credit fork cannot be decided with the counters that exist, and the reviewer's discriminator
+  is the dead one: `UCHE_WRITE_REQUESTS_VPC` is 0.000 in every window of all 15 arms that program it, both
+  frames - 40.15's zero generalises. What the dumps do give is the correlation instead of the mechanism:
+  RAM-full grows on the frame with half the geometry and a flat SP side, which is the shape of "the buffer
+  holds vertices because the consumer drains slowly" and not of "supply overruns the buffer". Recorded as a
+  reading, not as a mechanism: no counter here measures credits.
+* The pair `VPC_SP_COMPONENTS` / `SP_EXPORT_VPC_TRANS` is one signal, so the ×4 unit correction is not
+  available and the per-vertex figure means nothing in either unit. Every cfg that programs selector 10 also
+  programs selector 48, so this is a same-window comparison, and it is as tight as a control pair known to
+  be two different quantities. The consequence for this repository is worse than the reviewer's: 40.14 and
+  40.27 quote the two names as two facts and the cfg headers explain them as "components handed to the FS"
+  and "the other side of the varyings traffic", and 0.63-1.04 per vertex is below one in a unit nobody has.
+  The number of varyings per vertex has therefore never been measured here; queue 34 either gives the pair a
+  unit with a known-interface probe or retires both names from the documents. Correction appended to 40.27.
+* The attribute-buffer size is not a knob on this chip, which is a structural reason and stronger than the
+  null result 15.2 and 40.9 recorded. `freedreno_devices.py` sets both sizes only in `a7xx_gen3` (0x20000 /
+  0xc000, `:849-856`); `fd6_gmem_cache.h` labels the field "Vertex attrib cache (a750+)" and reads
+  `vpc_attr_buf_size` on a7xx only inside `if (info->props.has_gmem_vpc_attr_buf)` (`:101-107`), the else
+  branch never touching `vpc_attr_buf_*`; and `tu_cmd_buffer.cc:649` returns before `VPC_ATTR_BUF_GMEM_SIZE`,
+  `_BASE` and `PC_ATTR_BUF_GMEM_SIZE` unless that same prop is set. `FD_DEV_FEATURES` reaches props
+  (`freedreno_dev_info.py:275`), not the guard, so a `sysmem_vpc_attr_buf_size` sweep on a740 changes nothing
+  by inspection - and the one variant that does reach the hardware, forcing `has_gmem_vpc_attr_buf` (which
+  fills in both sizes, `tu_device.cc:1800-1806`), is already a measured zero twice, 50.84 % against 50.82 %
+  of busy on the very column above. Absent sizes on gen2 are therefore not a bug: the register pair is not
+  emitted on this generation and there is nothing for the number to size.
+* `nir_opt_varyings` is not missing from turnip - `tu_shader.cc:3878` calls `nir_opt_varyings_bulk`, as do
+  hk, kk and nvk - so the reviewer's exp-18 was a duplicate of existing code and is withdrawn. What is live
+  is the opposite direction: those two `UINT32_MAX` arguments are `max_uniform_comps` and `max_ubos`
+  (`nir.h:5832`), the varying-to-uniform promotion limits, and the API has no slot cap at all; RADV passes
+  `0, 0` to the same parameters (`radv_pipeline_graphics.c:1257`) and so turns promotion off. Against a wall
+  that 40.34 finds in the attribute RAM and the pixel side rather than in VPC arithmetic, promotion is a
+  plausible cost, not a saving. One line, queued as 32, NOT BUILT.
+* The BV control the reviewer asked for - `BV_*` rows at equal `tile_count` between two frames whose geometry
+  differs by 2x - cannot be cut from committed dumps. Of the four `cfg-bv` arms, only `cb21-h1` binned at all
+  (8 of 40 steady windows, 3-14 tiles, 40.30) and the other three have zero binned windows, so there is no
+  tile-count overlap between frames. One session, recorded as a control for 40.30 and not as a measurement:
+  queued as 33.
+
+**Does not show.** The unit of any of these names: `a7xx_perfcntrs.xml` carries no `desc=` at all (40.7,
+40.11), so "components", "transactions" and "requests" stay names and the equality of 10 and 48 says they
+are one signal, not what it is. Whether `VPCRAM_FULL` would respond to a buffer size - untestable on this
+generation, see above. Whether the flat SP side is the bottom of a stall: SP busy is the same 0.6 % band in
+both frames, so nothing here separates "SP is busy because VPC feeds it" from "SP is busy because 1440p with
+4x MSAA is busy". Whether promotion costs anything: no build was made. Nothing new about fps - the arms are
+the ones 40.9, 40.14, 40.18 and 40.30 already measured.

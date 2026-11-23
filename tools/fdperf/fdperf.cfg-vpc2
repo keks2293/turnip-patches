@@ -100,7 +100,7 @@ FD740 = {
 
   SP = {
     counter0 = 0;    // PERF_SP_BUSY_CYCLES
-    counter1 = 48;   // PERF_SP_EXPORT_VPC_TRANS (SP->VPC transactions, the other
-                     // side of the varyings traffic)
+    counter1 = 48;   // PERF_SP_EXPORT_VPC_TRANS (unit undescribed; measured equal to VPC id 10 in every
+                     // window of the 33 arms that carry both - one signal, not two sides, 40.34)
   }
 }

@@ -1003,7 +1003,7 @@
     "results/games/re4/mesa27-vertex/fdperf-raw.txt",
     "results/games/re4/game-patched-algopg.log"
    ],
-   "lines": 1858,
+   "lines": 1964,
    "headings": [
     "## 40.1 What was run",
     "## 40.2 The discard, and what kind of discard it is",
@@ -1037,7 +1037,8 @@
     "## 40.30 A RE4 session can be made to bin, and it is a trickle of tiles at a sagged clock; the `BV_*` primitive halves are not counts (queue 21, chain38)",
     "## 40.31 The traffic half of queue 16's pre-registered reading was already on disk: 2450.3 MiB of linear-to-tiled moves no DRAM volume (queue 16, no run)",
     "## 40.32 `TSE_INPUT_PRIM` and `PC_IA_PRIMITIVES` are two readings, not one counter twice (queue 18(a), no run)",
-    "## 40.33 The vertex-cache hit rate has never been measured: the cfgs carry `PC_VERTEX_HITS` without its denominator, and `tu_pipeline.cc` has no cache or restart state to check (no run)"
+    "## 40.33 The vertex-cache hit rate has never been measured: the cfgs carry `PC_VERTEX_HITS` without its denominator, and `tu_pipeline.cc` has no cache or restart state to check (no run)",
+    "## 40.34 The VPC spends half a core with its attribute RAM full on both frames, the two export counters are one signal, and the attribute-buffer size is not a knob on this chip (queues 30 and 31, no run)"
    ],
    "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
    "verdict_source": "journal 40"
