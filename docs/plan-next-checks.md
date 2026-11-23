@@ -10,9 +10,11 @@ State of the rig, so a queue line can be read without asking:
 
 * `build/out` is the ship stack `4c3cdb210082`; the shipped `c17d02bcaae9a960…` and tag
   `27.0.0-devel-p14` are untouched, and no queue item below changes them without a measurement first.
-* A driver build (queue 16) needs the container, `-j2`, ccache under `/tmp`, and a machine with the
-  game closed: ~3.5 GiB of the 7.3 GiB is free while wine services linger, and stale wine services
-  have to be killed with `kill -9` (the normal exit path leaves them).
+* A driver build (queues 1 and 10 are the two that need one) needs the container, `-j2`, ccache under
+  `/tmp`, and a machine with the game closed: ~3.5 GiB of the 7.3 GiB is free while wine services linger,
+  and stale wine services have to be killed with `kill -9` (the normal exit path leaves them). A build
+  of this tree is reproducible (journal 40.28: the same tree twice, `f80d33ab2077` both times), so a
+  hash difference is a source difference - and no tree on this machine rebuilds the ship hash.
 * The game's own `local_config.ini` is a measurement variable, not environment: journal 40.19 showed
   `AppShadowCache` is worth 49 % of the frame's primitives, so every arm writes the setting into its
   own `meta.txt` and a chain restores the file byte-identically (`docs/howto-measure.md`).
@@ -39,10 +41,32 @@ the plan keeps:
 ---
 ---
 
-## Queue (opened 20.11, updated 22.11)
+## Queue (opened 20.11, updated 23.11)
 
 Ordered by what unblocks what. A closed branch is not repeated here - it has an ADR in
 [`decisions/`](decisions/); this file owns only the next actions.
+
+### Status 23.11, after chain38 - the live list
+
+The table is the only place that says what is left; the numbered items below keep the reasoning.
+Seven items were closed reading the queue against what is already measured, and the reason for each is
+on its own line below: 5, 8, 17, 21, 22, 23, 26.
+
+| queue | what is missing | what it costs | what moves if it comes back |
+|---|---|---|---|
+| 1 `exp-18` | the rule, not a question: (a) the two list predicates out of the `!mutable_ubwc_fc` branch, (b) `TODO: limit based on compatiblity class` against the strict Vulkan class | one build + the 94-row matrix + the `NL`/`UBR`/`XV` rows | the only open direction (`streams/mutable-lazy-deposition`); its hardware half is answered by 31, 32, 37 |
+| 10 `exp-20` | one hook line on the view path, one rebuild, one 150 s run | build + session | the last gap in `0014`/ADR-0001's argument (question 11), and a gate on 1 |
+| 6 | who creates the DEPOSED no-list images, vkd3d or DXVK | one launch on the DXVK branch plus the inventory | which branch 1's verification has to cover |
+| 2 `exp-19` | the `AB` rows at the base grid and at `{32,8}`, in a fresh process | probe only, no build | whether ADR-0007's blocker is the 3D writer or the descriptor |
+| 13 | what vkd3d-proton does under a smaller heap report (`0.5`, `0.4`) | two sessions with journal 17's memory logging | the 7.32 GiB wall; the one memory question with a decision on it |
+| 14 | step 0: a DX11 launch at all, then the same block profile | two sessions | whether the wall survives the translation layer |
+| 3, 4 | the `build/out-stock-inv` column and the ship+prop column of journal 27's scale | two runs, one ~4-minute build | the true zero point of the three-variant scale, and nothing else |
+| 7, 9 | the three probes, and the two documentation pieces | no measurement | test coverage and legibility |
+| 31 | run `tools/fdperf/fdperf.cfg-vpc4` (written, NOT RUN: PC 39, 17, 10 in, 2, 4, 21 out) in the session of 10 | the same session, no build | the vertex-cache hit rate (19/39) and the first dead-primitive rate on this rig |
+
+Nothing else is open beyond 31, which is a cfg edit and rides on 10's session. 16 is closed by 40.29 and 40.31, 21 by 40.30, 18(a) by 40.32; 17 and 22 have no
+buyer after 40.18's render-mode ladder; 23 is answered by 40.18; 5 has no decision on it since ADR-0008;
+26's remaining half is a disassembly question that no shipped patch depends on.
 
 0. **Done 20.11, updated 21.11, so it may become stale again**: `../mesa27-src` carries
    `0001` and `0002` as commits (`ac08003`, `9845cfb` on base `6dfa32a`) and `0003..0013`
@@ -75,6 +99,21 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    Not run: a rebuild of this tree to reproduce the `imginv4` column of
    `results/imginv-3variants.txt` (`0001..0013` + `exp-14`, the control build that column
    was made on). Precedent for spending a build on that: `results/test-restore-shipstack.log`.
+
+   **State 23.11, supersedes the two stale parts of the note above.** `git diff --stat` in
+   `../mesa27-src` is 12 files, +787/-81, not 8 files +663/-80: the tree now also carries `0014`
+   in its one-decision form (`mutable_compat_class()` at `tu_formats.cc:290`, `mutable_views()` at
+   `:351` - the text `patches/0014-*.patch` was regenerated to on 23.11, `docs/release.md`
+   provenance), the `TU_FORCE_PROPS` hook `exp-25` (queue 26, `tu_device.cc:1717-1816`), and the
+   `TU_DBG_RM_HIST` render-mode rig of queue 22 (`tu_cmd_buffer.cc`, `tu_util.cc`) which is written
+   and still unbuilt (`docs/artifacts.md` row 24). So the marker pair "`mutable_compat_class`
+   present / `tu6_mutable_compat_class` absent" no longer tells `0014` off from `0014` on - both
+   texts define `mutable_compat_class`. What tells the difference is the inventory signature, which
+   is how 40.29 accepted its two build trees. Two facts about this tree, both measured in 40.28 and
+   worth repeating here because every build plan inherits them: the queue-16 A/B trees are `cp -a`
+   copies, never this one; and this tree minus both rigs builds `f80d33ab2077`, which is not the
+   ship `4c3cdb210082`, so no build made here reproduces the release and a build hash is only ever
+   compared to another build hash.
 1. **exp-18 - the 64-bit UBWC class** (no patch file yet). Volume: 650.8 MiB, not 4 GB
    (journal 28). The two facts this item used to say must be measured first are measured,
    in journal 31: probe `CEIL` gained a fourth image (a `MUTABLE` image created with **no**
@@ -195,8 +234,12 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
 4. **Ship stack + prop + inventory**: the fourth column that the caveat in journal 27
    needs (the pair A/B differs by the whole stack, not only by the prop). About four
    minutes of build.
-5. **fps A/B for mode 7** (`0013`): the correctness case does not depend on it, and the
-   expectation on a latency-bound game is small (ADR-0008), so it is low priority.
+5. **Closed 23.11, no decision attached: fps A/B for mode 7** (`0013`). The correctness case never
+   depended on it (94/94 EXACT over three repeats, ADR-0005), and the two things this run could have
+   said are already said: ADR-0008 closed driver-side frame-rate levers, and 40.18's ladder priced the
+   render-mode axis on this title in four rungs (forced sysmem 15.18, default 15.34, GMEM without
+   binning 13.74, GMEM plus binning 10.27, p25 95-150 s). A run would add a fifth number to a table
+   with no decision hanging under it. Question 3 closes with it.
 6. **Who creates the DEPOSED no-list images** - vkd3d or DXVK. Not separated, and it
    decides which path the exp-18 verification must cover: vkd3d means the driver lever is
    the whole story, DXVK means the same fix has to be verified on the DX11 path too. There
@@ -204,22 +247,33 @@ Ordered by what unblocks what. A closed branch is not repeated here - it has an 
    (`disable_compression`) is compiled in.
 7. **Probes to add to the test**: b2i -> sampler inside a renderpass; b2i -> dispatch;
    secondary-CB b2i -> primary i2b (the boundary journal 21.10 leaves uncovered).
-8. **R32G32B32 (96-bit)** - the re-check in section 3 above, still worth one run: it most
-   likely confirms the dead end and lowers its priority.
+8. **Closed 23.11, no decision attached: R32G32B32 (96-bit).** The re-check in section 3 above asked
+   whether the dead end is a driver gate or a missing hardware entry, and that was answered twice over:
+   it is the gate `!util_is_power_of_two_or_zero(cpp)` in `fd6_layout.c` (journal 21.6.3a), and the
+   class has no ceiling to lose in the first place - the 128-bit control gets UBWC while the 96-bit rows
+   in `fd6_format_table.c` have no render-buffer entry at all (journal 21's table, corrected again in
+   31/32). The run would confirm a dead end whose shape is known, and no committed inventory records a
+   single 96-bit create by the game, so it has no volume to argue about either. If the class ever shows
+   up in an inventory, the check reopens by itself.
 9. **Documentation**, two open pieces, neither of them a measurement:
    - a distilled how-to page over the operational journal entries 7-12 and 19 (driver
      swap, running the game and reading its logs, the `vkCreateInstance` rejection and its
      real cause, the stale build image). The entries stay as they are; the page is the
      version you read while working.
    - the Russian left outside the archive. `AGENTS.md` says a passage is translated when
-     it is touched; these were not touched, so they are listed instead of quietly kept:
-     `scripts/imginv-stats.py` and `scripts/imginv-classes.py` (their own output labels)
-     and the annotation headers of
-     `results/{series-autotune,series-drirc,vkmark-ab-autotune,vkmark-ab-r8g8,vkmark-flags,test-8bpp-meta-shape}.txt`
-     and `results/games/re4/mesa27{,-vertex}/steady-state.txt`. Translating the two scripts
-     means re-running them over `results/raw/` and checking that every number in
-     `results/imginv-3variants.txt` comes out identical - the labels may change, the
-     counters may not.
+     it is touched; these were not touched, so they are listed instead of quietly kept.
+     Re-counted 23.11 (`grep -cP '[а-яА-Я]'`), because the list itself had gone stale:
+     `scripts/imginv-stats.py` is **done** - translated 23.11, `results/imginv-3variants.txt`
+     regenerated from it with its numbers unchanged, which that file's own header records.
+     What is left is one script and eight annotation headers, with line counts so the job can
+     be sized: `scripts/imginv-classes.py` (6), `results/series-autotune.txt` (35),
+     `results/series-drirc.txt` (16), `results/vkmark-ab-autotune.txt` (4),
+     `results/vkmark-ab-r8g8.txt` (22), `results/vkmark-flags.txt` (14),
+     `results/test-8bpp-meta-shape.txt` (38), `results/games/re4/mesa27/steady-state.txt` (35),
+     `results/games/re4/mesa27-vertex/steady-state.txt` (42). Translating the script means
+     re-running it over `results/raw/` and checking that every number comes out identical - the
+     labels may change, the counters may not. The eight artifacts are hand-written headers over
+     generated tables, so there the header moves and the table is not retyped.
 
    After editing any entry run `scripts/gen-journal-index.py`; the index and
    `docs/journal/manifest.json` are generated, not edited.
@@ -521,6 +575,15 @@ until a title that can choose its API is on this machine.
     exactly 0 in every arm while `..._SP` reads 47-49 M/s: a measured zero whose wiring on a7xx is not
     described, so it is recorded and not used.
 
+    **Corrected 23.11 by journal 40.33, which also names the two sentences above it.** `PC_VERTEX_HITS` is
+    not a reuse figure and 0.65 is not a hit rate: the counter's denominator (`PC_TAG_CHECKED_VERTICES`, PC
+    selector id 39) was programmed by no cfg here until `fdperf.cfg-vpc4` and appears in no committed dump, so
+    the raw reading can only be divided by something borrowed - 1.82-1.90 per delivered vertex, or 0.646-0.655
+    per IA vertex, in the three arms above - and it exceeds the delivered vertex count in every window. The
+    reuse the item quotes (2.9:1) stays valid, it is `PC_IA_VERTICES/VFD_TOTAL_VERTICES` from journal 38 and
+    a property of the game's meshes. The measurement the operator's 23.11 question asked for is queued as
+    item 31; the driver-side half of that question has nothing to check (40.33).
+
     (The text below is the pre-registration as it stood on 21.11; it is kept because the reading it fixed
     is what 40.14 was judged against.)
 
@@ -563,6 +626,14 @@ until a title that can choose its API is on this machine.
 
 16. **The value of what `0014` v1 already shipped - 2450.3 MiB of no-list textures, never measured**
     (no new patch: one hand-made build without `0014` in a copy of the tree, one game session with the
+   **Status 23.11: closed, both halves measured, and the second one needed no run.** 40.29 reproduced
+   both inventory signatures on the two dedicated builds (`88bab928c520` with `0014`, `7ae5f008caa8`
+   without) and found no frame-rate separation. 40.31 then read the DRAM column that `counters.txt`
+   printed as `n/a` out of the same committed dumps: TP is 81.86 % of reads with `0014` and 82.11 %
+   without, 14.82 against 14.62 GB/s total, and the spread between two sessions of one configuration
+   here is 1.74 %. So the pre-registered branch came true - the largest layout change in this stack is
+   worth no measured traffic - ADR-0008 gains a second and much bigger instance, layout closes as a
+   lever, and `0014` stays as correctness and volume. Nothing is left in this item.
     sampler; shares the machine with 12/13/14/15 and with the 7.32 GiB memory wall).
 
     Status 23.11: **run and accepted** (chain37, journal 40.29). B is the pre-`0014` inventory (0 MiB
@@ -617,6 +688,12 @@ until a title that can choose its API is on this machine.
 
 17. **The autotune cost model, nudged the way an outside build nudges it** (journal 30's
     addition; one line, one build, and a probe first that needs neither).
+   **Status 23.11: closed without a build, because 40.18 priced the direction the nudge moves.** The
+   tweak shifts `select_sysmem` towards GMEM, and GMEM is the slower mode on this title in both of its
+   forms: forced sysmem 15.18, default 15.34, GMEM without binning 13.74, GMEM plus binning 10.27
+   (p25 95-150 s, 40.18), with the same shape on the cached frame in queue 24. Step 0 (does RE4 ever
+   pick SYSMEM) cannot rescue a change whose only effect is to move passes towards a mode this game
+   loses by 10-33 %, so `exp-24` is not built.
     `WinNative-Emu/Drivers` ships a "-b (balance)" variant whose only Turnip change left over from
     upstream restructurings is the GMEM bandwidth multiplier: `apply_balance_variant.py` rewrites
     ```c
@@ -646,6 +723,13 @@ until a title that can choose its API is on this machine.
 
 18. **The TSE discard: 71.9 % of the primitives die after the vertex path, so where can a reject move?**
     (journal 40.2; two cheap runs and one decision, no build). Measured on the ship stack: TSE input
+   **Status 23.11: closed - (a) by 40.32, (b) by 40.18, (c) by 40.2/40.25 as written.** (a) The two
+   counters are not one counter exposed twice: 0 of 256 windows in five committed dumps print them
+   equal, they differ in every window and agree to 1e-5, so "nothing is discarded between the collector
+   and TSE" is the reading and 40.2's "not decided" retires. (b) The `prefer_gmem` repeat has no buyer
+   after 40.18's ladder - 40.4 already showed the discard ratio unmoved (73.8 against 71.9 %), so what
+   was left was the cost of a mode this title loses by 10-33 %. What survives here is a wording item,
+   not a run: the meaning of `VPC_PS_BUSY`/`VS_BUSY`, which has no `<desc>` in the XML.
     255.19 Mc/s, visible 71.62 Mc/s (28.06 %), and the discard is 21.1 % trivial-reject, 17.7 %
     face-culled, 27.0 % zero-pixel, 0.33 % zero-area, 0.14 % clipped. Three sub-steps, in order of cost:
 
@@ -728,6 +812,18 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
 
 21. **Get one run where CB actually engages, and read the BV counters in it** (no build; journals 40.11
     and 40.12 leave the question here). On 22.11 every forced arm read `VSC_INPUT_TILES` = 0 in every
+   **Status 23.11: closed by 40.30 (chain38, `cb21-{c0,c1,h0,h1}`).** The stretch was found without a
+   build: on the Shadow-Cache-off frame under `forcecb`, 8 of 40 steady windows feed tiles (3-14 tiles
+   per ~2 s window) and only in windows where the core had sagged to 662-678 MHz - 40.12's hint, read
+   in the same sample and confirmed - while the cache-on arm with the same delivered flag reads 0 tiles
+   in all 40, so the other `cb_disable_reason`s keep their decision. The pre-registered trigger did not
+   fire: the `BV_*` primitive halves rise in exactly those eight windows, but each is a fixed 14x or 2x
+   multiple of that window's own tile count and the half still reads `BV_TP` busy at 945 % of a core
+   (40.8's unprogrammed signature), so they are not per-thread counts; at face value they are <=196
+   primitives against the same window's 247-254 M/s. fps says it without counters: 15.14 against 15.18
+   with the flag, and 26.23 against 26.53 in a pair where neither arm binned - so 1.1 % is what two
+   identical sessions differ by here. The CB direction closes with 40.12, 40.18 and this, no further
+   `cfg-bv` run is queued, and no document may quote a `BV_*` primitive counter as a count.
     window - `cfg-tse3` without any BV section included, and with `forcecb` delivered and logged - where
     21.11's `cfg-tse3` + `forcecb` arm fed 1,532 tiles/s in all 88 windows and its CB-off twin in 32 of 40
     at a median of 56/s (`results/games/re4/tse3-cbforce/`, `results/games/re4/tse3-cbbase/`,
@@ -750,12 +846,26 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
 
 22. **Render-mode reason histogram (needs a build, queue 16 can carry it).** No "enable binning"
     patch is justified: forcing GMEM+binning costs a third of the fps and forcing sysmem changes
+   **Status 23.11: closed, nothing can act on its answer.** The rig is written and sits in the tree
+   (`TU_DBG_RM_HIST`, `docs/artifacts.md` row 24, never built). Both GMEM forms are slower than the
+   sysmem default on both frames (40.16, 40.18, 40.20 with queue 24), so a histogram of *why* passes
+   stay out of binning cannot point at a win; and 40.30 shows what the game does with binning when the
+   gate is forced anyway - 3-14 tiles in 8 of 40 windows, no frame-rate change. The rig stays in the
+   tree as an unrun diagnostic; the item leaves the queue.
     nothing (journal 40.16). What is left is the diagnostic - a once-per-second histogram of
     `force_render_mode_reason` (`tu_cmd_buffer.cc:1424-1487`, never logged, only traced), modelled on
     `tu_dbg_log_gmem_load_store_skips()` (`tu_util.cc:593-642`): which reason covers how many passes.
 
 23. **UBWC attribution (chain24 running 22.11: `gmem-nobin`, `tr-nocomp-perf`, `tr-noupload2`).**
     Existence and price are closed - 2 % of RE4's DRAM reads are compressed, taking compression off
+   **Status 23.11: closed by 40.18, which is the chain24 entry this item was waiting for.** The
+   attribution is answered: in the shipped vkd3d-proton's RE4 profile the compression switch applies to
+   `Z32_FLOAT` and `Z32_FLOAT_S8X24_UINT` only - 177 lines, 0 colour formats, against 2495 `... due to
+   mutable formats` lines for the colour class - so the compressed 2 % is depth and the class `0014`
+   moves is outside it. `tr-noupload2` is the clean second session asked for here (p25 15.19 against
+   15.26, 52 of 52 pinned), so `no_upload_hvv` is a zero on fps as well. The per-image `TU_DEBUG=perf`
+   line needs a build and 40.18 already says its answer would move no measured number; queue 16's
+   traffic cut (40.31) closes the "which images" angle from the other side.
     costs +0.9 % read / +10 % write and no fps (journal 40.17). Open: *which* images those 317 MB/s
     belong to - Turnip's per-image lines need `TU_DEBUG=perf`, and whether `0014`'s images are inside
     that class is queue 16's A/B. `tr-noupload` needs a second session (its first ran a light scene).
@@ -775,6 +885,15 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
 
 26. **The never-forceable gen3 properties: `has_alias_rt` is the one candidate worth a build** (needs
     queue 16's build; the audit is journals 40.24 and `docs/a7xx-gen-props.md`).
+   **Status 23.11: closed as a game question; what remains is a disassembly diff, and nothing ships on
+   it.** 40.29 delivered the property (`TU_FORCE_PROPS: has_alias_rt` in the run log) and it moves
+   nothing: 1.8 % on TSE input against the same-build control, 0.06 points of VPC busy, 1.2 % fps. The
+   open half - whether the pass engages at all, i.e. fewer preamble `mov`s - no longer needs a game
+   session or the panel: it is two disassemblies of the same pipeline cache with and without the prop
+   (`TU_DEBUG=dumpshaders`), offline against the tree. It is not queued, because the wall is the vertex
+   path at 85.5-91.6 % busy (40.21), this pass edits the fragment stage's output preamble, and no
+   shipped patch carries `has_alias_rt` - neither answer changes a number or a decision here. A finding
+   from that diff belongs in `docs/a7xx-gen-props.md`.
 
     Status 23.11: **run, counters only** - the operator's decision for this arm (journal 40.29):
     `exp-25` is built into both queue-16 trees, `TU_FORCE_PROPS=has_alias_rt` is applied (the delivery
@@ -834,6 +953,35 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
     queue family here and no `/dev/kgsl-3d0` (`results/queues-a740.txt`); `VK_EXT_descriptor_heap` - the
     name occurs zero times in the shipped D3D12 layer, so RE4 cannot use it through this stack.
 
+30. **What one vertex costs through the VPC - CLOSED 23.11 by journal 40.27, from committed dumps, no run.**
+    Attribute bytes and components per vertex are the same on the two measured frames (31.81 against
+    33.03 B/vertex while the frame rate differs by 74 %), so the VPC's RAM pressure is a volume problem and
+    not a width problem, and the "make each vertex cheaper" family has no measured opening.
+
+31. **The vertex-cache hit rate, and the first dead-primitive rate - run `fdperf.cfg-vpc4` in the session
+    queue 10 owes anyway** (journal 40.33 is why this is the live half of the operator's 23.11 question). The
+    cfg is written and NOT RUN: `tools/fdperf/fdperf.cfg-vpc4` is `fdperf.cfg-vpc` with PC 2, PC 4 and PC 21
+    traded for id 39 `PC_TAG_CHECKED_VERTICES`, id 17 `PC_DEAD_PRIM` and id 10 `PC_STARVE_CYCLES_FOR_INDEX`
+    (the PC group is capped at 8 and every cfg that carries hits uses all 8; ids are the `value=` attribute of
+    the counter name in `../mesa27-src/src/freedreno/registers/adreno/a7xx_perfcntrs.xml`). It decides two
+    things no committed dump answers: the pre-transform hit rate (19 over 39) - whether the game's vertices do
+    hit the cache, which the 2.9:1 mesh-sharing ratio of journal 38 only bounds - and whether degenerate or
+    restart topology is present at all, which no counter in any committed dump here has ever spoken of. No
+    build, no new arm, no new window convention (20-105 s at the pinned clock).
+
+### Numbers 24, 25 and 30: closed items whose numbers are still cited
+
+Added 23.11, because `AGENTS.md` makes the number an address ("`journal 22.3` must resolve without
+searching") and three records cite queue items that the list above no longer carries. Each line is a pointer;
+the verdict lives where it points.
+
+* **queue 24** - does the render-mode verdict of the heavy frame survive on the light (cached-shadow) one:
+  journal 40.20 (chain27). Closed: it survives, the sysmem default is not tuned to the worst setting.
+* **queue 25** - where the vertex path sits on the cached-shadow frame: journal 40.21 (chain28). Closed:
+  still the busiest block, with 6 points of slack it cannot use.
+* **queue 30** - what one vertex costs per vertex, on both frames: journal 40.27, and item 30 above.
+
+
 Not in the queue, because closed by a record: `ubwc_all_formats_compatible` on gen2
 (ADR-0001), 0015/MUTABLEEN as a game fix (ADR-0009), the `ubwc_coherency_quirk` on gen2
 (ADR-0010), BC + UBWC (ADR-0004), any 8bpp UBWC patch (ADR-0007), removing any shipped patch
@@ -852,30 +1000,31 @@ instead of against a build.
 
 | # | question | status |
 |---|---|---|
-| 1 | the ~2 % lost on the first fill into a fresh image, inside the driver | the probe-side part is documented (journal 20); whether a driver-side component remains is not established, the hypothesis is the same CCU race (journal 21.10) |
-| 2 | moving `WAIT_FOR_IDLE` into `ExecuteCommands` | proposed, +2 lines, NOT MEASURED |
-| 3 | the price of mode 7 in RE4 | correctness matrix exists, no fps A/B |
+| 1 | the ~2 % lost on the first fill into a fresh image, inside the driver | NOT MEASURED, and as of 23.11 it is not a queued check either: journal 20's own title calls it a probe defect, journal 29 class 4 is the mitigation (warm up before measuring), every probe in the suite now warms up, and `0013` closed the readback case it was thought to share. Whether a driver-side component remains is an unexplained behaviour with no decision hanging on it |
+| 2 | moving `WAIT_FOR_IDLE` into `ExecuteCommands` | SUPERSEDED 23.11 by journal 21.11. The hypothesis it rested on - that `CmdExecuteCommands` loses the lazy bits - is refuted there: `tu_EndCommandBuffer` for a non-renderpass CB always does `tu_clean_all_pending()` + `tu_emit_cache_flush()`, `tu_CmdExecuteCommands` does the same for the primary before chaining secondaries (`tu_cmd_buffer.cc:6480-6487`), and `0013` puts `WAIT_FOR_IDLE` straight into `flush_bits`, where the nearest flush point executes it. No separate bit carry is needed |
+| 3 | the price of mode 7 in RE4 | CLOSED 23.11 with queue 5: ADR-0008 plus 40.18's render-mode ladder (forced sysmem 15.18, default 15.34, GMEM without binning 13.74, GMEM plus binning 10.27, p25 95-150 s) leaves no decision a fifth rung could change |
 | 4 | who creates the DEPOSED no-list images | vkd3d or DXVK, not separated (queue 6) |
-| 5 | the 1024/262144 residue in the tiled run | unexplained, 0.39 %, does not change any verdict (journal 21.5) |
+| 5 | the 1024/262144 residue in the tiled run | unexplained, 0.39 %, does not change any verdict (journal 21.5). 23.11: it is the same kind of thing as the collector/TSE gap of 40.32 (2.6e-5 between two counters read across one fdperf window), so it is a note about counter granularity rather than a check anyone owes |
 | 6 | fast clear under `_SFLOAT` (0012) | a byte round trip cannot see it; needs its own probe |
 | 7 | 12_1 | blocked by `VK_EXT_fragment_shader_interlock`, which Turnip does not implement (ADR-0011) |
 | 8 | the 32- and 16-bit classes in lazy deposition | they reinterpret the layout; a separate analysis, and the reason 0014 leaves them linear on purpose |
 | 9 | R8 + UBWC: writer or reader | exp-19 (queue 2) |
 | 10 | UBWC format variants for `R16G16B16A16_FLOAT` and `R32G32_FLOAT` | answered, journal 31: there is no "format variant" to look for (UBWC is a layout flag, and the layout never consults `fd6_ubwc_compat_mode()`); the class has a ceiling, both formats reach it as plain images, and `0012` is what gives them a compat mode - on the bare Mesa 27 base their classes lose UBWC |
 | 11 | does vkd3d view a mutable RE4 image through another format of the same class | NOT MEASURED, exp-20 (queue 10): the inventories record creates, not views |
-| 12 | is a `VkImageFormatListCreateInfo` with `viewFormatCount == 0` the same as passing no list | NOT MEASURED, and `exp-21` deliberately keeps `0014`'s answer (an empty list is forwarded, and the predicates answer it as the worst case). The spec's wording makes them equal, but the inventories cannot tell the two apart - both are `listn=0` - so this is not a question a replay answers |
-| 13 | why does the system driver give UBWC to a `MUTABLE` image with no list, where both Mesa 27 builds refuse it | ONE ROW, journal 31: `B8G8R8A8_UNORM`, `nolist=0x102000` against `0x100000`. Not in the two refusal functions (byte-identical to refs `mesa-26.2.6` and `main`), so it is either elsewhere in 26.2 or in the distribution's own patches (`mesa-vulkan-drivers-26.2.6-1.fc44.armada`, not in this repository). Chasing it would need the downstream source; it changes no verdict, and `exp-18` does not depend on it |
+| 12 | is a `VkImageFormatListCreateInfo` with `viewFormatCount == 0` the same as passing no list | CLOSED 23.11 as not answerable on this rig - which is what the old status said in longer words. The spec makes the two equal, both print `listn=0` in every inventory, and `exp-21` deliberately keeps the worst-case answer. A distinction no instrument here can observe is not a queue item |
+| 13 | why does the system driver give UBWC to a `MUTABLE` image with no list, where both Mesa 27 builds refuse it | CLOSED 23.11: deciding it needs the distribution's own Mesa sources (`mesa-vulkan-drivers-26.2.6-1.fc44.armada`, not in this repository), it changes no verdict, and `exp-18` does not depend on it. The row stays as the record of what was dropped and why |
 | 14 | does a `R64_UINT`/`R64_SINT` view of a UBWC image work, once `STORAGE` makes it legal | ANSWERED 21.11, journal 37: probe `XR64` built the shape and ran it - a no-list `MUTABLE` image with `STORAGE` in the usage, UBWC kept by the `TU_UBWC_NOLIST_64` knob of `experiments/exp-23-ubwc-nolist-64-knob.patch`, stays tiled with the `+0x2000` tail and reads `0/262144` wrong through an `r64ui` storage image, including after `imageAtomicAdd(+1)` per word. It also settled the shape question: a list that *names* `R64_*` is refused compression by `FD6_UBWC_UNKNOWN_COMPAT` with the knob on and off, so the no-list create was the only place the question could be asked at all. `results/test-xr64-nolist-64-ubwc.log`. Still open inside the answer: `sparseImageInt64Atomics=0` on this device, so the sparse corner is unmeasured, and journal 38 puts the class on the SP client, which is 0.3 % of measured DRAM reads |
 | 15 | is the compressor actually writing compressed bytes, or only a metadata plane | ANSWERED 22.11, journal 40.17: yes, bytes. In RE4's steady stretch the bus carries 317 MB/s of `PERF_UCHE_UBWC_READ_BEATS` and 37 MB/s of `..._WRITE_BEATS` against 15.59 / 0.29 GB/s of VBIF traffic - 2.0 % of the read bytes, 2.4 % of the texture client's requests - and the switch that proves the counter means what it says is on the application side: `VKD3D_CONFIG=disable_color_compression,disable_depth_compression` in the shipped vkd3d-proton drives all four UBWC counters, and the TP UBWC request counter, to exactly zero in 52 of 52 samples while the CMPDECMP write-data column doubles. `tools/fdperf/fdperf.cfg-traffic`, `scripts/fdperf-traffic-table.py`, `results/games/re4/traffic-ubwc-ab.txt`. Also measured in the same pair: taking compression off costs +0.9 % DRAM read, +10 % DRAM write and no measurable frame rate. Still open inside the answer: which images the 317 MB/s belongs to - the counters are global, so whether `0014`'s images are inside that 2 % is queue 16, not this |
 | 16 | does any of the reachable driconf perf options change fps in RE4 | ANSWERED 23.11, journal 40.23 and queue 12: no. `disable_conservative_lrz` 27.13 p25 (14 windows) against a same-configuration cluster 26.53-26.67 with every LRZ counter unchanged; concurrent binning was already a zero as `TU_DEBUG=forcecb` (journal 40.8); the FDM option has no attachment to act on (journal 35.1, 0 density-map images in 11 984 creates) |
 | 17 | what does the game do when the driver reports less memory than the heap it reports today | NOT MEASURED, queue 13. The report itself is measured - journal 34.4, `results/vulkaninfo-heap-report.log`, five `vulkaninfo` runs over `heap_memory_percent` - and the queue names the two values to try in the game. What vkd3d-proton does under a smaller report is not, and journal 17's 3129 MiB peak against 4.95 GiB of swap is why the question is not empty |
-| 18 | is any of the 22 shading-rate images ever attached to a render pass, and at what rates | NOT MEASURED. Journal 35.1 counts the images and journal 35.2 measures the capability, but a usage bit is a declaration: the driver has no log line for `subpass->fsr_attachment != VK_ATTACHMENT_UNUSED`, so the check needs one added `if` plus a build, then a game run. Without it, "the game uses VRS" stays an inference, and not even the driver's own per-subpass register write can be observed from a log |
-| 19 | what did the 2450.3 MiB that `0014` v1 moved out of linear buy in traffic or fps | NOT MEASURED, queue 16 (no new patch: a B build without `0014` made in a copy of the tree - `git apply -R` does not work, open question 20 - then one A/B session). Journal 39 sizes what no rule can move (the 1630.8 MiB residue, required linear by the Vulkan class rule plus `fd6_pipe2swap()`), so this is the only no-list number left. The committed profile that looks like an answer - `results/games/re4/mesa27-vertex/steady-state.txt`, TP 12.0 GB/s and 81 % of DRAM reads - was sampled 17.11, and `0014` is journal 21.12, dated 18.11: that run is a with-everything-linear baseline, not a before/after |
-| 20 | does the committed `patches/0014-turnip-mutable-no-list-tiling.patch` describe the tree that built the shipped `c17d02bcaae9…` | NOT SETTLED. Journal 39.7: `git apply -R --check` of that file fails on the recorded ship-stack tree at `tu_formats.cc:261`, and the texts differ by function names (`tu6_mutable_compat_class` vs the tree's static `mutable_compat_class`/`mutable_views`) and by comment wording. The difference cannot change a result, so no verdict in journal 39 depends on it - but it decides how queue 16 makes its B build, and a shipped patch file that is not the built text is a reference-table error worth fixing once, by regenerating the file from the tree and recording in `docs/release.md` which hash it belongs to |
+| 18 | is any of the 22 shading-rate images ever attached to a render pass, and at what rates | CLOSED 23.11, no buyer. Journal 35.1 counts the 22 images and 35.2 measures the capability, and the attach question needs one `if` plus a build - but 40.21 prices the ceiling: `PS_BUSY` 76.97 % against `VPC_BUSY` 85.54 % on the cached frame and 91.6 % on the ship frame, so removing fragment work cannot lift a vertex-bound frame. Whether the game uses VRS would be a curiosity with nothing downstream of it |
+| 19 | what did the 2450.3 MiB that `0014` v1 moved out of linear buy in traffic or fps | ANSWERED 23.11, both halves: fps by 40.29 (A 26.12, B 25.62, ship 26.52 - inside a band this frame cannot resolve), traffic by 40.31 read out of the same committed dumps (TP 81.86 % of reads with `0014` against 82.11 % without, 14.82 against 14.62 GB/s total, same-configuration spread 1.74 %). The largest layout change in this stack is worth no measured traffic; layout closes as a lever and `0014` stays as correctness and volume (queue 16) |
+| 20 | does the committed `patches/0014-turnip-mutable-no-list-tiling.patch` describe the tree that built the shipped `c17d02bcaae9…` | SETTLED 23.11. `patches/0014-*.patch` was regenerated to the one-decision text the tree carries and the queue-16 A arm was built from (`docs/release.md` records the p14 binary as the older text, measured equal in journals 33, 36, 40.29), and 40.28 established the harder fact underneath it: this tree minus both rigs builds `f80d33ab2077`, not the ship `4c3cdb210082`, so no build on this machine reproduces the release and a hash is only ever compared against another build hash. `git apply -R` still fails on the shared tree (it carries `exp-14`, `exp-25` and the `TU_DBG_RM_HIST` rig, plus the 0004/0005 drift 40.28 names), which is why A and B are `cp -a` copies - queue 0's state line |
 | 21 | what is the wall at 26.7 fps, i.e. with the game's Shadow Cache on | ANSWERED 22.11, journal 40.21 (`results/games/re4/occupancy-two-frames.txt`): the same wall with 6 points of slack - `VPC_BUSY` 85.54 % against 91.57 %, `VS_BUSY` 80.65 %, `PS_BUSY` 76.97 %, and the primitive collector waits on the vertex path 12.7 points less. No block goes from idle to busy, so the "+9…13 % for a non-geometry driver fix" ceiling of 40.10/40.15 stands on this frame too |
-| 22 | what do `LRZ_BUSY_CYCLES`, `RAS_STALL_CYCLES_LRZ` and `RB_STARVE_CYCLES_LRZ_TILE` actually count on A7XX | NOT ANSWERED, and 40.23 is the reason it is a question: two arms with `TU_DEBUG=nolrz` (mask `0x81`, `LRZ_PRIM_KILLED_BY_LRZ` 0.00 against 1.21 M/s) read 74.82 % and 74.99 % `LRZ_BUSY`, i.e. indistinguishable from LRZ on. Deciding it needs a workload where LRZ demonstrably rejects - a synthetic depth-overdraw pass in the rig with and without `nolrz`, watching the killed counter and the busy counter together - not another RE4 session. Until then no document in this repository may quote those three counters as a cost |
-| 23 | is `alias.rt` correct on A740, given that its two registers are declared for A7XX | NOT MEASURED, queue 26. `ir3_alias.c:768` refuses on `props.has_alias_rt`, which only `a7xx_gen3` sets, while `tu_shader.cc:2890` programs `SP_PS_OUTPUT_CONST_CNTL`/`SP_PS_OUTPUT_CONST_MASK` for any A7XX and `a6xx.xml:4242`/`:4245` declare both `variants="A7XX-"`. Needs one line in the `TU_FORCE_PROPS` table (queue 16's build), then an fps A/B and a picture check with the panel on |
-| 24 | does RE4's shader set push varyings through the VPC that the fragment stage never reads (the one live sub-point of the outside geometry note of 23.11) | ANSWERED IN BOTH HALVES 23.11, journal 40.26: the fp16 half is a measured zero (`IR3_SHADER_DEBUG=nofp16` moves `VPCRAM_FULL` by 0.38 points of busy and p25 fps by 1.0 %, delivery of the flag unproven), and the dead-output half is closed by the code - the driver sizes the interpolators from what the FS reads (`tu_pipeline.cc:744`, `:683`, `:802`), so an unmatched VS output gets no slot. What remains is not "dead varyings" but the width itself: queue 30 |
+| 22 | what do `LRZ_BUSY_CYCLES`, `RAS_STALL_CYCLES_LRZ` and `RB_STARVE_CYCLES_LRZ_TILE` actually count on A7XX | CLOSED 23.11 as a check, kept as a rule: 40.23's bar on quoting `LRZ_BUSY_CYCLES`, `RAS_STALL_CYCLES_LRZ` and `RB_STARVE_CYCLES_LRZ_TILE` as a cost costs nothing, because no verdict after it rests on them (40.26 and 40.27 argue from `VPCRAM_FULL`, `WIT_FULL`, `LM_*`). Deciding the semantics needs a synthetic depth-overdraw pass in the rig, and nothing downstream waits for it |
+| 23 | is `alias.rt` correct on A740, given that its two registers are declared for A7XX | CLOSED 23.11 with queue 26: the prop is delivered and moves no counter and no fps (40.29 - 1.8 % on TSE input against the same-build control, 0.06 points of VPC busy, 1.2 % fps); whether the pass engages is a diff of two disassemblies with and without `TU_FORCE_PROPS=has_alias_rt`, offline, and no shipped patch carries the property, so neither answer changes a number here |
+| 24 | does RE4's shader set push varyings through the VPC that the fragment stage never reads (the one live sub-point of the outside geometry note of 23.11) | ANSWERED IN BOTH HALVES 23.11, journal 40.26: the fp16 half is a measured zero (`IR3_SHADER_DEBUG=nofp16` moves `VPCRAM_FULL` by 0.38 points of busy and p25 fps by 1.0 %, delivery of the flag unproven), and the dead-output half is closed by the code - the driver sizes the interpolators from what the FS reads (`tu_pipeline.cc:744`, `:683`, `:802`), so an unmatched VS output gets no slot. What remains is not "dead varyings" but the width itself, and that is measured: queue 30 closed 23.11 by journal 40.27 from committed dumps - per vertex the two frames are the same workload (31.81 against 33.03 B/vertex while the frame rate differs by 74 %), so the "make each vertex cheaper in the VPC" family has no measured opening |
+| 25 | is the vertex path recomputing vertices because of a driver setting - vertex cache size, `prim_restart`, topology - as vkd3d-proton might provoke (operator, 23.11) | ANSWERED 23.11, both halves, journal 40.33. Driver side: nothing to check - `tu_pipeline.cc` (5345 lines) has no cache size, cache mode, restart or topology state, and turnip never reads `max_pc_dest_regs`; restart is written from the game's own dynamic IA state (`tu_cmd_buffer.cc:8703-8725`, `primitive_restart_enabled && indexed`). Counter side: the reuse this repository quotes (2.9:1, journal 38) is mesh sharing, an upper bound on what a cache could save, and the cache's own hit rate has never been measured - `PC_VERTEX_HITS` (id 19) is in nine of the thirteen cfgs, its denominator `PC_TAG_CHECKED_VERTICES` (id 39) in none that has run. That is queue 31, whose cfg (`tools/fdperf/fdperf.cfg-vpc4`) is written and NOT RUN. Whether RE4 uses primitive restart or strip topologies at all is unmeasured and unmeasurable with the cfgs that exist |
 
 ## Pitfalls (reminder)
 
