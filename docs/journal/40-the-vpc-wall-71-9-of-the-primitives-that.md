@@ -1609,3 +1609,249 @@ of two), with no further equivalence run - journals 33 and 36 already measured i
 committed text (598 of 598 probe lines, 784 create signatures), and this run now carries it as the A
 arm. Done on 23.11: `patches/0014-*.patch` is that text, and the p14 binary remains the
 older text (`docs/release.md`, provenance).
+
+## 40.30 A RE4 session can be made to bin, and it is a trickle of tiles at a sagged clock; the `BV_*` primitive halves are not counts (queue 21, chain38)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** Queue 21: every 22.11 arm read `VSC_INPUT_TILES` = 0, so the `BV_*` zeros of 40.11 were
+never a measurement of a working BV thread - a binning pass had to be produced first. The queue asked
+for a stretch where the tile counter is nonzero, then the `cfg-bv` halves read inside it, and fixed the
+reading in advance: if during windows with tiles > 0 the `BV_TSE` `TSE_INPUT_PRIM` and `BV_PC`
+`PC_IA_PRIMITIVES` stay 0, the BV thread provably never runs primitives; if they rise, journal 40.2's
+discard has to be re-asked per thread. 40.12 left one hint about where to look - the only windows that
+ever fed tiles were the ones whose `CP_ALWAYS_COUNT` was below the pinned clock.
+
+**Method.** `/tmp/opencode/chain38.sh`, 08:53-09:04 on 23.11, ship stack `4c3cdb210082`, game
+Resident Evil 4 Gold Edition (`re4.exe`, D3D12 -> vkd3d-proton 3.1.0, 2560x1440 - `results/games/README.md`),
+`tools/fdperf/fdperf.cfg-bv`, `HUDLOG=150`, one run per arm, the game's `local_config.ini` written back
+byte-identically after each. Two frames, the flag either on or off: `cb21-c0` / `cb21-c1`
+(`AppShadowCache=1`, the 26 fps frame of 40.19/40.21) and `cb21-h0` / `cb21-h1` (`AppShadowCache=0`, the
+ship frame of 40.10), with `TU_DEBUG=startup` against `TU_DEBUG=startup,forcecb`; `meta.txt` of each arm
+records the setting and counts the delivered `TU_DEBUG=` line (bit 36 = `forcecb`).
+`scripts/fdperf-bv-tilesplit.py` (new) cuts the two halves of one dump by window class - tiles > 0
+against tiles = 0 - with the core clock per class, which is what 40.12 said to read in the same sample.
+
+**Numbers.** `results/games/re4/cb21-{c0,c1,h0,h1}/fdperf-raw.txt` (cfg `cfg-bv`), read with
+`scripts/fdperf-bv-tilesplit.py` over 40 steady windows per arm (`t_rel` 20-105 s of 51-52); the fps column
+is `results/games/re4/cb21/fps.txt`, generated with `scripts/fps-window.py` over 95-150 s.
+
+| arm | frame | `forcecb` | windows with tiles > 0 | tiles in them | core clock, those windows | p25 fps 95-150 s |
+|---|---|---|---|---|---|---|
+| `cb21-c0` | cache on | off | 0 of 40 | - | - | 26.23 |
+| `cb21-c1` | cache on | on | 0 of 40 | - | - | 26.53 |
+| `cb21-h0` | cache off | off | 0 of 40 | - | - | 15.14 |
+| `cb21-h1` | cache off | on | **8 of 40** | 3, 4, 4, 7, 8, 9, 12, 14 | 662-678 MHz (680 elsewhere) | 15.18 |
+
+The eight windows sit at `t_rel` 36.0, 38.1, 40.3, 42.5, 44.8, 46.9, 100.6, 104.8 s. In the `BV_*` half
+of `cb21-h1` the primitive counters are nonzero in exactly those eight windows and zero in the other
+32, with a ratio that does not change while the tile count runs from 3 to 14: `BV_PC` `PC_IA_PRIMITIVES`
+is 2 x tiles and `BV_TSE` `TSE_INPUT_PRIM` is 14 x tiles in every one of them (t=36.0: 7 tiles, 14 and
+98; t=46.9: 14 tiles, 28 and 196). In the same half, `BV_TP` `TP_BUSY_CYCLES` is 945 % of one core and
+equals the ordinary `TP_BUSY` to four digits - 6,346,065,003 against 6,346,186,088 at t=36.0 - which is
+the "not a busy fraction at all" signature 40.8 names in the header of `tools/fdperf/fdperf.cfg-bv`. The
+ordinary halves of the same windows are unremarkable: TSE input 247-254 M/s, VPC busy 89.8-91.7 %.
+
+**Verdict.** Three things, in the order the queue asked them.
+
+1. A binning pass is reachable in this title without a build, but narrowly: tiles appear on the
+   Shadow-Cache-off frame, only under `forcecb`, in 8 of 40 steady windows, at 3-14 tiles per ~2 s
+   window, and only in windows where the core had sagged below the pinned 680 MHz. 40.12's clock hint
+   is confirmed from the other side.
+2. `forcecb` clears one gate and is not sufficient: the cache-on arm with the flag delivered (the
+   `TU_DEBUG=startup,forcecb` line is in its run log) reads 0 tiles in all 40 windows. So
+   `cb_disable_reason` keeps its decision on the frame where the flag works as firmly as on 22.11's.
+3. The pre-registered trigger does not fire. The BV halves do rise, but a pair whose value is always
+   14 x and 2 x the window's own tile counter is not two per-thread primitive counts - it is the tile
+   number reaching the readback of selects that are addressed (the label test of the cfg passes: the
+   `BV_TSE` line prints `INPUT_PRIM`, not the default `BUSY`) and not counting, and the half still
+   carries 40.8's unprogrammed signature. Read at face value the pair is at most 196 primitives in a
+   window whose ordinary pass carries 247-254 M/s, i.e. <= 8e-7, so the 71.9 % discard of 40.2 cannot
+   move per thread by anything this rig could see. And the frame rate says the same thing without
+   counters: 15.14 against 15.18 with the flag on (0.3 %), and 26.23 against 26.53 (1.1 %) in a pair
+   where neither arm binned at all - so 1.1 % is the spread of two identical sessions here, and the
+   eight trickle windows are inside it.
+
+Queue 21 closes here, and with it the CB direction: 40.12 (no tiles in any 22.11 session), this entry
+(tiles only as a trickle, at a sagged clock, worth no fps), and 40.18's ladder (GMEM is slower than
+sysmem in both of its forms) leave nothing for a binning patch to win. Two rules come out of it: no
+document in this repository may quote a `BV_*` primitive counter as a count of primitives, and no
+further `cfg-bv` run is queued - the group answers when it is asked, it does not count per thread, and
+answering again needs a kernel-side look at how the BV selects are written, which is not a game run.
+
+**Does not show.** Whether the `BV_*` selects can be programmed at all from userspace on this kernel
+(the labels say the section reached the group, the values say the values are not the group's own); what
+the `force_render_mode_reason` string holds for the cache-on frame - queue 22's rig is in the tree and
+unbuilt, so the reason stays unlogged; whether a longer or different-content session finds more tile
+windows than 8 of 40 (the four arms are one session each, and 40.12 shows the tile counter is a
+per-session property); and nothing about correctness - the panel is off, so the screenshot is black by
+construction and the content check here is counter reproduction between arms.
+
+## 40.31 The traffic half of queue 16's pre-registered reading was already on disk: 2450.3 MiB of linear-to-tiled moves no DRAM volume (queue 16, no run)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** Queue 16 wrote its reading in advance: "compare ratios inside one sample set, never
+levels... The quantities: TP's GB/s and its share of DRAM reads, `UCHE` busy and its arbiter stall, the
+TP starve counters, fps", and "if 2450.3 MiB of linear-to-tiled changes neither TP's 81 % share nor its
+GB/s measurably, then the largest layout change in this stack is worth no traffic". 40.29 delivered the
+inventory signatures and the fps, and printed `n/a` in the DRAM column, which reads as a missing
+measurement. The question here is whether a session is needed to fill that column or whether chain37's
+dumps already contain it.
+
+**Method.** No run. The four chain37 dumps - `results/games/re4/{0014ab-a,0014ab-b,0014ab-ship,vr5-a-aliart}/fdperf-raw.txt`,
+committed with 40.29 - carry the four client read counters `PERF_UCHE_VBIF_READ_BEATS_{TP,SP,VFD,PC}`,
+the split journal 38 read. Cut as journal 38 read it: beats x 16 B (the conversion of
+`results/games/re4/mesa27-vertex/steady-state.txt`, documented in `scripts/fdperf-vpc-ratios.py`), over
+`t_rel` 20-105 s with the core at the pinned clock (median 680 MHz in every arm, 39-40 windows kept of
+52, none dropped for wrapping), median per window.
+
+**Numbers.**
+
+| arm | 0014 | windows | DRAM read GB/s | of which TP | TP share |
+|---|---|---|---|---|---|
+| `0014ab-a` | with | 39 | 14.82 | 12.13 | 81.86 % |
+| `0014ab-b` | without | 40 | 14.62 | 12.01 | 82.11 % |
+| `0014ab-ship` | with (ship `.so`) | 40 | 15.08 | 12.34 | 81.85 % |
+| `vr5-a-aliart` | with + inert prop | 40 | 15.12 | 12.40 | 81.97 % |
+
+Two controls bracket the A/B difference, which is -1.33 %: `a` against `ship`, both with `0014`, differ
+by 1.74 %, and `ship` against `aliart`, one build and a property measured inert in 40.29, by 0.27 %. The
+absolute levels land on journal 38's baseline (TP 12.0 GB/s of 14.8, 81 % of reads), which is the check
+that this cut is the same quantity, read the same way. The rasterizer columns of the same dumps move in
+the same direction and by the same amount (`RB_Z_READ` 95.3 against 92.5 M/s, `RB_Z_WRITE` 19.3 against
+18.2, `RB_C_WRITE` 17.6 against 17.2, A against B): a session-level drift, not a client-specific effect.
+
+**Verdict.** The first branch queue 16 pre-registered came true. 2450.3 MiB moved out of linear changes
+neither the client split (81.86 % against 82.11 % of reads on TP) nor the total read volume by more than
+the spread between two sessions of the same build. The largest layout change in this stack is worth no
+measured traffic, so ADR-0008 gains a second and much bigger instance than the driconf sweep of 40.23,
+layout closes as a lever, and `0014` stays in the release because it is correct and free - which is what
+queue 16's own status line already said; what is now measured is the "and the bandwidth behind it" half
+of that sentence, and it is a zero. The `n/a` in `results/games/re4/0014ab/counters.txt` is a column
+`scripts/arm-counters-table.py` does not map for `cfg-vertex`, not a hole in the data.
+
+**Does not show.** Whether the compressed traffic moved - `fdperf.cfg-vertex` names the UBWC counters in
+its header as deliberately left out ("UBWC is still unverified"), and 40.18 already puts RE4's
+compressed traffic on depth images, outside the class `0014` touches, so that column belongs to a
+different question. Whether the write side moved (the `VBIF_WRITE_BEATS` of `CP` and `UCHE` are not in
+this cfg; `cfg-traffic` has them and was never run on these two builds). Anything about the two frames
+of 40.30 - the chain37 arms ran the ship settings, `AppShadowCache=1`. And UCHE busy plus the TP starve
+counters, the other two quantities queue 16 named: `cfg-vertex` programs the UCHE latency counters but
+not `UCHE_BUSY` as a duty cycle, so that part of its reading stays unmeasured - nothing in the verdict
+above depends on it, because both candidates for "where a layout change would show" - TP's volume and
+TP's share - are measured.
+
+## 40.32 `TSE_INPUT_PRIM` and `PC_IA_PRIMITIVES` are two readings, not one counter twice (queue 18(a), no run)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** Queue 18(a): in four dumps, `PERF_TSE_INPUT_PRIM` and `PERF_PC_IA_PRIMITIVES` are identical
+to the sample (ratio 1.0000), and 40.2 kept both readings of that - "nothing is discarded between the
+primitive collector and TSE", or the same counter exposed twice under two names. It asked for one run
+with a cfg that samples only one of them and a known-different second one.
+
+**Method.** No run. Compared the two names window by window in the five committed dumps that program
+both - the four chain38 arms of 40.30 and `bv-bvbase` - 256 windows, through the same loader the ratio
+scripts use (`scripts/fdperf_sections.py`, so the wrapped-window rows are already out).
+
+**Numbers.** 0 of 256 windows print the two names equal. They agree to between 0.000006 % and 0.094 %:
+the median window (`cb21-h0`) reads 253,011,436 into TSE against 253,004,969 from the collector, a gap
+of 6,467 primitives, 2.6e-5.
+
+**Verdict.** Two exposures of one counter return one register value and cannot differ; these differ in
+every window of both cfgs and both frames. So the equality of 40.2 was a near-equality, and its first
+reading is the right one: nothing is discarded between the primitive collector and TSE, and the whole
+71.9 % discard belongs to TSE itself, which is what the reason breakdown of 40.2 already adds up to.
+Queue 18(a) closes, and 40.2's "two readings, not decided" wording should be retired in favour of
+"two readings that agree to 1e-5".
+
+**Does not show.** What the residual gap is. Both counters are read across the same fdperf window, so
+primitives in flight at the window boundary are the obvious candidate, and nothing here separates that
+from a small population the collector counts and TSE does not accept; it is 4 orders below the quantity
+it is compared against, which is also why journal 21.5's 1024/262144 residue and this gap are the same
+kind of thing and neither owns a verdict.
+
+## 40.33 The vertex-cache hit rate has never been measured: the cfgs carry `PC_VERTEX_HITS` without its denominator, and `tu_pipeline.cc` has no cache or restart state to check (no run)
+
+[Index back to `docs/analysis.md`](../analysis.md)
+
+**Question.** Asked by the operator on 23.11, as a check to be run: "post-transform vertex cache (VFD / PC) -
+check in `tu_pipeline.cc` whether the vertex cache size or the `prim_restart`/topology mode gets reset by
+something about vkd3d-proton, so that every vertex is recomputed instead of hitting the VPC/PC cache. Was
+this checked?" It could not be answered from the documentation in one step, which is the second half of
+the question this entry answers: three committed files make statements about a counter named "hits" and
+none of them says what it is divided by.
+
+**Method.** Three checks, no run. (1) Driver side, in `../mesa27-src`: `grep -niE
+"vertex_cache|vcache|cache_size|restart|max_pc_dest_regs|topology" src/freedreno/vulkan/tu_pipeline.cc`
+(5345 lines) and `grep -rn max_pc_dest_regs src/freedreno/vulkan/`. (2) Counter side: a cfg's selector id is
+the `value="N"` attribute of `A7XX_PERF_<GROUP>_<name>` in
+`../mesa27-src/src/freedreno/registers/adreno/a7xx_perfcntrs.xml`, read there for all 52 `PC_*` declarations
+(0 busy, 10 starve-for-index, 17 dead-prim, 18 live-prim, 19 hits, 20 IA vertices, 21 IA primitives, 25 VS
+invocations, 28 drawcalls, 39 tag-checked vertices); `desc=` occurs 0 times in that file, so a counter's name
+is the whole documentation of it. The declarations are dense, so counting their lines gives the same numbers -
+which is how the eight id comments of `tools/fdperf/fdperf.cfg-vpc` were derived, and both ways were checked
+against the attribute. Then: which `PC_*`/`VPC_*` names the thirteen cfgs of
+`tools/fdperf/` program. (3) Read the quotients that committed dumps already allow, with
+`scripts/fdperf_sections.py`, over the three 21.11 `cfg-vpc` arms.
+
+**Numbers.** The median of each counter over the same steady windows, divided;
+`results/games/re4/{vpc-vpcbase1,vpc-vpcbase2,vpc-cacheon}/fdperf-raw.txt`:
+
+| arm | `PC_VERTEX_HITS` | `VFD_TOTAL_VERTICES` | `PC_IA_VERTICES` | hits per delivered vertex | hits per IA vertex |
+|---|---|---|---|---|---|
+| `vpc-vpcbase1` | 463,810,084 | 244,663,537 | 708,641,707 | 1.896 | 0.654 |
+| `vpc-vpcbase2` | 498,774,947 | 262,754,551 | 761,554,765 | 1.898 | 0.655 |
+| `vpc-cacheon` | 437,511,780 | 240,032,199 | 677,593,461 | 1.823 | 0.646 |
+
+Counter coverage, `grep` over `tools/fdperf/fdperf.cfg*` (thirteen cfgs as checked, fourteen with
+`fdperf.cfg-vpc4` written for this entry): `PC_VERTEX_HITS` (id 19) is programmed by nine of the thirteen;
+`PC_TAG_CHECKED_VERTICES` (id 39, the vertices whose tags were looked up - the denominator a hit rate needs)
+by **none of the thirteen**, and it is absent from every committed dump; `PC_DEAD_PRIM` (17) and
+`PC_LIVE_PRIM` (18), the dead/live primitive pair that would show degenerate topology, by **none** either.
+Every cfg that carries hits uses all 8 of the PC group's hw slots (ids `{0,2,4,19,20,21,25,28}`), which is
+why the partner never came along. On the post-transform side: `VPC_NUM_LM_REQ_HIT` is programmed by
+`cfg-vpc2`/`cfg-vpc3` and reads 0 or 2.5 per window in all five dumps that carry it, with no request counter
+in the same group to divide by.
+
+**Verdict.** Four things.
+
+1. The driver-side check the question names has nothing to check. `tu_pipeline.cc` contains no vertex-cache
+   size, no cache mode, no restart and no topology state (0 matches in 5345 lines), and turnip never reads
+   `max_pc_dest_regs` at all. The only related thing the driver writes is
+   `PC_CNTL(CHIP, .primitive_restart = primitive_restart)` and `PC_RESTART_INDEX` at
+   `tu_cmd_buffer.cc:8703-8725`, where `primitive_restart = primitive_restart_enabled && indexed` comes from
+   the game's own dynamic IA state. So there is no driver-side door for "vkd3d-proton resets the vertex
+   cache" to walk through: the question is a counter question, not a pipeline-state one.
+2. The reuse this repository quotes (2.9:1, journal 38) is `PC_IA_VERTICES / VFD_TOTAL_VERTICES` - the app
+   submits 3 vertices per primitive and ~1.03 reach the vertex shader. That is a property of the game's
+   meshes and index order, an upper bound on what any cache could save; it is not a cache measurement.
+3. The cache's own hit rate has never been measured here. It is hits over tag-checked vertices, ids 19/39,
+   and no cfg in this repository or dump on this machine programs 39. Therefore the three places that read
+   the hits counter as a reuse figure are corrected by this entry: `tools/fdperf/fdperf.cfg-vpc`'s header
+   "PC_VERTEX_HITS (19, here) is what quantifies the reuse directly", and `docs/plan-next-checks.md` item 15's
+   "`PC_VERTEX_HITS` 0.65 per IA vertex" and "`PC_VERTEX_HITS` (19) - the direct measure of the 2.9:1 reuse".
+   The number is not a rate: the same reading is 1.82-1.90 per delivered vertex or 0.646-0.655 per IA vertex
+   depending on which of two dividers is picked, and it exceeds the delivered vertex count in every window -
+   a value larger than the number of vertices cannot be "a vertex that hit".
+4. What closes the gap is a cfg edit, not a build and not a new idea: `tools/fdperf/fdperf.cfg-vpc4` (written
+   with this entry, NOT RUN) is `fdperf.cfg-vpc` with two stall selectors and `PC_IA_PRIMITIVES` traded in the
+   PC group for id 39 `PC_TAG_CHECKED_VERTICES`, id 17 `PC_DEAD_PRIM` and id 10 `PC_STARVE_CYCLES_FOR_INDEX`;
+   the budget is 8/8 so something had to go, and `cfg-vpc` itself is left alone so the 21.11 arms stay
+   reproducible against the header that describes them. Run it in the session queue 10 already owes: that
+   gives the hit rate the operator asked about and, for the first time on this rig, a dead-primitive rate.
+   Queued as item 31.
+
+**Does not show.** What `PC_VERTEX_HITS` counts: `a7xx_perfcntrs.xml` carries no description for any counter
+(0 `desc=` attributes, already noted in 40.7 and 40.11), so its semantics stay a name and only the arithmetic
+above is measured. Whether RE4 enables primitive restart or what topologies it submits - no counter in any
+committed dump speaks of restart, and there is no vkd3d-proton-side trace in this repository; id 17 is the
+first evidence that would exist. Whether the post-transform cache is hit at all: `VPC_NUM_LM_REQ_HIT` reads
+essentially zero with no partner in its group, which is the `UCHE_WRITE_REQUESTS_VPC` pattern of 40.15 (a
+measured zero whose wiring is undescribed), so it is recorded and not used. Nothing about fps.
+
+**Why the documentation was the obstacle.** The workload-side facts are in journal 38's table, the
+counter-side facts were spread over item 15 of the queue and a cfg header comment, and no page said "the
+vertex cache question: this part is measured, this part is not measurable with the cfgs that exist". Fixed
+by this entry plus queue item 31, open question 25, and a rule line in `docs/fdperf-a7xx.md`.

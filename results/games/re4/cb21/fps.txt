@@ -1,0 +1,12 @@
+# fps p25 of the queue-21 arms over the standard window (elapsed 95-150 s, caveat:
+# scripts/fps-window.py). Generated 2026-11-23T09:04:46+08:00 by:
+#   for tag in cb21-c1 cb21-h1 cb21-c0 cb21-h0; do python3 scripts/fps-window.py results/games/re4/fps-$tag.csv 95 150; done
+
+fps-cb21-c1.csv: span 0.4..150.1s, window 95-150s
+  n=548 p25=26.53 mean=27.42 min=21.0 max=37.7
+fps-cb21-h1.csv: span 0.3..150.1s, window 95-150s
+  n=548 p25=15.18 mean=16.17 min=9.1 max=169.5
+fps-cb21-c0.csv: span 0.3..150.1s, window 95-150s
+  n=548 p25=26.23 mean=27.21 min=22.0 max=39.2
+fps-cb21-h0.csv: span 0.3..150.0s, window 95-150s
+  n=548 p25=15.14 mean=15.53 min=13.1 max=19.5

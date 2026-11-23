@@ -6,7 +6,10 @@ game are never put in one table.
 
 | directory | title | how it is launched | what is in it |
 |---|---|---|---|
-| `re4/` | **Resident Evil 4 Gold Edition** (InsaneRamZes build, `re4.exe`), D3D12 through vkd3d-proton 3.1.0 (`vkd3d-1.1-5641-g44cf7c2`) under `proton-cachyos-11.0-arm64`, prefix `~/Games/Heroic/Prefixes/re4`, 2560x1440, in-game FPS counter off, MangoHud recording | `scripts/run-game.sh patched` / `stock` | `fdperf-<tag>/fdperf-raw.txt` (counter dumps, one directory per arm), `fps-<tag>.csv` (MangoHud), `game-<mode>[-<tag>].log` (curated turnip lines), `dbg-flip-and-messages.txt` (journal 40.16), `traffic-ubwc-ab.txt` (journal 40.17) |
+| `re4/` | **Resident Evil 4 Gold Edition** (InsaneRamZes build, `re4.exe`), D3D12 through vkd3d-proton 3.1.0 (`vkd3d-1.1-5641-g44cf7c2`) under `proton-cachyos-11.0-arm64`, prefix `~/Games/Heroic/Prefixes/re4`, 2560x1440, in-game FPS counter off, MangoHud recording | `scripts/run-game.sh patched` / `stock` | `<tag>/fdperf-raw.txt` (counter dumps, one directory per arm; the `fdperf-` prefix on the directory was
+dropped in practice - `0014ab-a/`, `vpc-cacheon/`, `cb21-h1/`), `fps-<tag>.csv` (MangoHud),
+`game-<mode>[-<tag>].log` (curated turnip lines), `<batch>/fps.txt` (a generated fps table for a group of
+arms, e.g. `cb21/fps.txt`), `dbg-flip-and-messages.txt` (journal 40.16), `traffic-ubwc-ab.txt` (journal 40.17) |
 
 `results/raw/` is the gitignored scratch of the same runs (`game-patched-<tag>.log` in full,
 `fdperf-<tag>.txt` before curation, `shot-<tag>.png`); it is not per-game because it is deleted and

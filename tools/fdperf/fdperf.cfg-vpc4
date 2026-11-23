@@ -1,0 +1,122 @@
+// fdperf.cfg-vpc4 - the vertex-cache HIT RATE and the dead-primitive rate (Adreno 740, a7xx).
+//
+// NOT RUN. Written 23.11, queued as item 31 of docs/plan-next-checks.md; the reason it exists is
+// journal 40.33: nine cfgs in this directory program PC_VERTEX_HITS (19) and none programs
+// PC_TAG_CHECKED_VERTICES (39), the vertices whose tags were looked up, so no dump on this machine
+// can express a hit rate. The raw hits reading therefore had to be divided by something borrowed
+// (1.82-1.90 per delivered vertex, 0.646-0.655 per IA vertex in the three cfg-vpc arms) and exceeds
+// the delivered vertex count in every window: it is not "a vertex that hit".
+//
+// WHAT THIS CFG ADDS over fdperf.cfg-vpc (which stays as it is, so the 21.11 arms stay reproducible
+// against the header that describes them). Every group but PC is copied unchanged, so the dividers
+// those entries used are still in the same sample:
+//   PC 39  PERF_PC_TAG_CHECKED_VERTICES   the denominator; 19/39 is the pre-transform hit rate
+//   PC 17  PERF_PC_DEAD_PRIM              dead/degenerate primitives, the first evidence this rig
+//                                         would have of restart or strip-degenerate topology
+//                                         (no committed dump of any cfg mentions restart)
+//   PC 10  PERF_PC_STARVE_CYCLES_FOR_INDEX  PC waiting for index supply, the fetch-side half of the
+//                                          same question (it is in fdperf.cfg-vertex, not in -vpc)
+// WHAT LEAVES THE PC GROUP to make room (budget is 8, silently truncated beyond it):
+//   PC 2   PERF_PC_STALL_CYCLES_VFD       read in mesa27, mesa27-vertex, vpc-vpcbase1/2,
+//                                          vpc-cacheon, cb21-{c0,c1,h0,h1} - re-measuring it buys
+//                                          nothing here
+//   PC 4   PERF_PC_STALL_CYCLES_VPC       ditto; the 63 % of the 17.11 run is recorded in
+//                                          docs/journal/38 and in 40.14
+//   PC 21  PERF_PC_IA_PRIMITIVES          its only open question was whether it is a second
+//                                          exposure of TSE_INPUT_PRIM, and 40.32 closed that from
+//                                          committed dumps (0 of 256 windows equal)
+// KEPT: PC 0 busy, 19 hits, 20 IA_VERTICES (the 2.9:1 divider of journal 38), 25 VS_INVOCATIONS,
+// 28 3D_DRAWCALLS (draws/frame sanity, and the check that the session is the same workload).
+//
+// Read it as: hits/tag-checked = the cache's hit rate; hits/VS-invocations would be the wrong pair
+// (a hit means the VS is NOT invoked, so the two cannot both be large); dead_prim over
+// PC_IA_PRIMITIVES (or TSE_INPUT_PRIM, kept in the TSE group) is the dead-primitive share. The
+// semantics of all three names are still just names: a7xx_perfcntrs.xml carries `desc=` zero times
+// (40.7, 40.11), so report a ratio together with the pair it came from, per the rule added to
+// docs/fdperf-a7xx.md "hw counter budgets and silent ignore in fdperf".
+//
+// HW BUDGETS (see docs/fdperf-a7xx.md): UCHE=12, CP=13, PC=8, VFD=8, VPC=6, TSE=4, SP=24, RB=8,
+// CCU=5, LRZ=4, UFC=4, CMP=4, RBBM=4, VSC=2. fdperf reads counter0..num_counters-1 of each group
+// and SILENTLY IGNORES the rest. Blocks below: CP 5/13, RBBM 3/4, UCHE 12/12, VFD 6/8, PC 8/8,
+// VPC 6/6, TSE 1/4, SP 2/24.
+//
+// Selectors are the `value="N"` attribute of the counter name in
+// ../mesa27-src/src/freedreno/registers/adreno/a7xx_perfcntrs.xml, e.g.
+//   grep 'name="A7XX_PERF_PC_TAG_CHECKED_VERTICES"' ../mesa27-src/src/freedreno/registers/adreno/a7xx_perfcntrs.xml
+// (40.33 checked that the 52 PC declarations are dense, so counting lines in that file happens to
+// give the same numbers today; the attribute is the source). CP counter0 is reserved by fdperf for
+// the GPU frequency (ALWAYS_COUNT).
+//
+// Run (the session queue 10 owes is the planned host; no build is involved):
+//   scripts/fdperf-sample.sh <sec> <window-ms> <file> tools/fdperf/fdperf.cfg-vpc4
+// then scripts/fdperf-analyze.py <file> <tsv>. Window 20-105 s, core pinned at 680 MHz, per the
+// reading convention of journal 40.
+
+FD740 = {
+  CP = {
+    counter0  = 0;    // reserved (ALWAYS_COUNT, frequency)
+    counter1  = 2;    // PERF_CP_BUSY_CYCLES
+    counter2  = 15;   // PERF_CP_SQE_IDLE
+    counter3  = 11;   // PERF_CP_CONTEXT_DONE
+    counter4  = 9;    // PERF_CP_MODE_SWITCH
+  }
+
+  RBBM = {
+    counter0 = 1;    // PERF_RBBM_ALWAYS_ON (divisor for the duty cycle)
+    counter1 = 9;    // PERF_RBBM_VBIF_BUSY
+    counter2 = 12;   // PERF_RBBM_UCHE_BUSY
+  }
+
+  UCHE = {
+    counter0  = 0;    // PERF_UCHE_BUSY_CYCLES
+    counter1  = 1;    // PERF_UCHE_STALL_CYCLES_ARBITER
+    counter2  = 2;    // PERF_UCHE_VBIF_LATENCY_CYCLES
+    counter3  = 3;    // PERF_UCHE_VBIF_LATENCY_SAMPLES
+    counter4  = 27;   // PERF_UCHE_VBIF_READ_BEATS_CH0
+    counter5  = 28;   // PERF_UCHE_VBIF_READ_BEATS_CH1
+    counter6  = 4;    // PERF_UCHE_VBIF_READ_BEATS_TP
+    counter7  = 9;    // PERF_UCHE_READ_REQUESTS_TP
+    counter8  = 8;    // PERF_UCHE_VBIF_READ_BEATS_SP
+    counter9  = 13;   // PERF_UCHE_READ_REQUESTS_SP
+    counter10 = 15;   // PERF_UCHE_WRITE_REQUESTS_SP
+    counter11 = 16;   // PERF_UCHE_WRITE_REQUESTS_VPC (reads 0 in every arm so far - 40.15)
+  }
+
+  VFD = {
+    counter0 = 0;    // PERF_VFD_BUSY_CYCLES
+    counter1 = 2;    // PERF_VFD_STALL_CYCLES_VPC_ALLOC
+    counter2 = 5;    // PERF_VFD_STARVE_CYCLES_UCHE
+    counter3 = 8;    // PERF_VFD_DECODED_ATTRIBUTE_BYTES
+    counter4 = 9;    // PERF_VFD_NUM_ATTRIBUTES
+    counter5 = 17;   // PERF_VFD_TOTAL_VERTICES (the "delivered vertex" divider of 40.27)
+  }
+
+  PC = {
+    counter0 = 0;    // PERF_PC_BUSY_CYCLES
+    counter1 = 10;   // PERF_PC_STARVE_CYCLES_FOR_INDEX    <- new here
+    counter2 = 17;   // PERF_PC_DEAD_PRIM                  <- new: dead/degenerate primitives
+    counter3 = 19;   // PERF_PC_VERTEX_HITS
+    counter4 = 20;   // PERF_PC_IA_VERTICES
+    counter5 = 25;   // PERF_PC_VS_INVOCATIONS
+    counter6 = 28;   // PERF_PC_3D_DRAWCALLS
+    counter7 = 39;   // PERF_PC_TAG_CHECKED_VERTICES       <- new: the denominator of 19
+  }
+
+  VPC = {
+    counter0 = 0;    // PERF_VPC_BUSY_CYCLES
+    counter1 = 16;   // PERF_VPC_VS_BUSY_CYCLES
+    counter2 = 17;   // PERF_VPC_PS_BUSY_CYCLES
+    counter3 = 10;   // PERF_VPC_SP_COMPONENTS
+    counter4 = 25;   // PERF_VPC_NUM_VPCRAM_WRITE
+    counter5 = 24;   // PERF_VPC_LM_FULL_WAIT_FOR_INTP_END
+  }
+
+  TSE = {
+    counter0 = 6;    // PERF_TSE_INPUT_PRIM (the denominator of vertices/primitive)
+  }
+
+  SP = {
+    counter0 = 0;    // PERF_SP_BUSY_CYCLES
+    counter1 = 48;   // PERF_SP_EXPORT_VPC_TRANS
+  }
+}

@@ -1,0 +1,14 @@
+# game:    Resident Evil 4 Gold Edition - /run/media/armada/Slim/Games/Resident.Evil.4.Gold.Edition-InsaneRamZes/re4.exe
+# title:   re4
+# tag:     cb21-h1
+# date:    2026-11-23T08:57:17+08:00
+# driver:  /var/home/armada/opencode/build/out/libvulkan_freedreno.so sha256=4c3cdb210082
+# cfg:     tools/fdperf/fdperf.cfg-bv
+# env:     TU_DEBUG=startup,forcecb   (delta against the plain ship stack)
+# shot:    results/games/re4/raw/shot-cb21-h1.png, 3 distinct colours at 160x90; panel dpms=Off/Off/On
+#           (a capture of this compositor with the panel off is black; the content check is
+#            counter reproduction between arms, see docs/howto-measure.md)
+# chain:   chain38.sh
+# source:  results/raw/game-patched-cb21-h1.log (gitignored), fps: results/games/re4/fps-cb21-h1.csv
+# game settings: AppShadowQuality=1 AppShadowCache=0
+# delivery: 4 line(s) 'TU: info: TU_DEBUG=...' (bit 36 = forcecb when set)

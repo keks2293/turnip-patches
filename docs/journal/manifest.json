@@ -1003,7 +1003,7 @@
     "results/games/re4/mesa27-vertex/fdperf-raw.txt",
     "results/games/re4/game-patched-algopg.log"
    ],
-   "lines": 1612,
+   "lines": 1858,
    "headings": [
     "## 40.1 What was run",
     "## 40.2 The discard, and what kind of discard it is",
@@ -1033,7 +1033,11 @@
     "## 40.26 On the ship frame the VPC's own RAM is 71 % of its busy time, and switching off the fp16 lowering of varyings moves nothing (chain35, question 24 continued, queue 28 closed)",
     "## 40.27 What one vertex costs is the same on both frames, so the VPC's RAM pressure is a volume problem and not a width problem (queue 30, no run)",
     "## 40.28 The queue-16 builds exist, the build is reproducible, and that is what makes the ship-hash gap a fact (queue 16, builds)",
-    "## 40.29 The 0014 A/B reproduces both inventory signatures on dedicated builds, and `has_alias_rt` moves no counter (queues 16 and 26, chain37)"
+    "## 40.29 The 0014 A/B reproduces both inventory signatures on dedicated builds, and `has_alias_rt` moves no counter (queues 16 and 26, chain37)",
+    "## 40.30 A RE4 session can be made to bin, and it is a trickle of tiles at a sagged clock; the `BV_*` primitive halves are not counts (queue 21, chain38)",
+    "## 40.31 The traffic half of queue 16's pre-registered reading was already on disk: 2450.3 MiB of linear-to-tiled moves no DRAM volume (queue 16, no run)",
+    "## 40.32 `TSE_INPUT_PRIM` and `PC_IA_PRIMITIVES` are two readings, not one counter twice (queue 18(a), no run)",
+    "## 40.33 The vertex-cache hit rate has never been measured: the cfgs carry `PC_VERTEX_HITS` without its denominator, and `tu_pipeline.cc` has no cache or restart state to check (no run)"
    ],
    "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
    "verdict_source": "journal 40"

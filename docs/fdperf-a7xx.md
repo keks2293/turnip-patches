@@ -243,6 +243,24 @@ than "they read 0"): `UCHE_EVICTS`, `UCHE_UBWC_READ/WRITE_BEATS`,
 `CMP_VBIF_WRITE_DATA_CCU`, `CMP_VBIF_READ/WRITE_REQUEST`.
 Within budget, but actually reading 0: `UCHE_GMEM_READ/WRITE_BEATS`.
 
+Two rules about the names themselves, both added 23.11 after a question could not be answered from
+the dumps (evidence: journal 40.33):
+
+* **the selector id is a number written in the XML, not a guess.** A cfg's `counter3 = 19` refers to the
+  `value="19"` attribute of `A7XX_PERF_PC_VERTEX_HITS` in
+  `../mesa27-src/src/freedreno/registers/adreno/a7xx_perfcntrs.xml`. Read the attribute: the `PC_*`
+  declarations happen to be dense, so counting them gives the same numbers today (40.33 checked all 52), but
+  nothing guarantees that for another group or another Mesa. The same file carries `desc=` zero times, so a
+  counter's name is the whole documentation of it - which is why the next rule exists.
+* **a name that implies a fraction needs its partner in the same group.** `PC_VERTEX_HITS` (19) is
+  programmed by nine of the thirteen cfgs in `tools/fdperf/` and `PC_TAG_CHECKED_VERTICES` (39), the vertices
+  whose tags were looked up, by none that has ever run - so no dump on this machine can express a hit rate,
+  and the raw reading (1.82-1.90 per delivered vertex) exceeds the vertex count and is not "a vertex that
+  hit". Quote such a counter only with the divider named and the missing partner named, or not at all.
+  `tools/fdperf/fdperf.cfg-vpc4` (queue 31, NOT RUN) is the first cfg here to carry the pair. The same trap
+  in the other direction: `VPC_NUM_LM_REQ_HIT` reads 0 or 2.5 per window with no request counter in its
+  group, a measured zero of unknown wiring (40.15's `UCHE_WRITE_REQUESTS_VPC` is the pattern).
+
 Conclusion: **the state of UBWC compression from hw counters on this chip has
 not been verified** (the GMEM-*_BEATS are dead; the UBWC counters never fit in
 the budget either). The per-client set, where all groups are within the hw

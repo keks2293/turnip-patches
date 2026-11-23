@@ -23,6 +23,16 @@
 //     primitive and the vertex path delivers ~1.03, i.e. the post-transform reuse
 //     is already 2.9:1.  "VFD re-fetches every triangle" is not what the counters
 //     show; PC_VERTEX_HITS (19, here) is what quantifies the reuse directly.
+//     CORRECTED 23.11 by journal 40.33, which this sentence names as the wording it
+//     corrects: 19 is not a reuse figure and cannot be one, because its denominator
+//     (PC_TAG_CHECKED_VERTICES, value 39) was programmed by no cfg in this directory
+//     until fdperf.cfg-vpc4, and so by no dump on this machine. The raw reading is
+//     1.82-1.90 per delivered vertex and 0.646-0.655 per IA vertex - a quotient whose
+//     meaning depends on the divider borrowed, larger than the vertex count, so not
+//     "a vertex that hit".
+//     The 2.9:1 itself stands: it is PC_IA_VERTICES/VFD_TOTAL_VERTICES, a mesh-sharing
+//     ratio and an upper bound on what any cache could save. The rate is asked by
+//     fdperf.cfg-vpc4 (queue 31, NOT RUN).
 //   * VPC_NUM_ATTR_REQ_LM / VFD_TOTAL_VERTICES = 0.497-0.503: about one LM
 //     attribute request per two vertices, while VFD decodes 5.00 attributes per
 //     vertex.  The counter therefore counts something coarser than
@@ -102,6 +112,8 @@ FD740 = {
     counter1 = 2;    // PERF_PC_STALL_CYCLES_VFD
     counter2 = 4;    // PERF_PC_STALL_CYCLES_VPC (the 63% of the 17.11 run)
     counter3 = 19;   // PERF_PC_VERTEX_HITS (the reuse behind 2.9:1, first time measured)
+                     // correct wording, 23.11: 19 alone measures nothing - see the
+                     // correction at the top of this file and journal 40.33
     counter4 = 20;   // PERF_PC_IA_VERTICES
     counter5 = 21;   // PERF_PC_IA_PRIMITIVES
     counter6 = 25;   // PERF_PC_VS_INVOCATIONS
