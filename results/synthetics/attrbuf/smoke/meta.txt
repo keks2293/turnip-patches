@@ -1,0 +1,22 @@
+# probe:     tests/vpc-attrbuf.c, binary ../build/vpc-attrbuf; shaders tests/vpc_attrbuf.{vert,frag}
+#            -> tests/vpc_attrbuf_spv.h (tests/gen-vpc-attrbuf-spv.sh)
+# date:      23.11.2026 14:58:48 +08:00 (the sampler's own header line in fdperf-raw.txt;
+#            the window is 22 s of -r 1000 -d, 11 usable samples)
+# driver:    /var/home/armada/opencode/build/out/libvulkan_freedreno.so sha256=4c3cdb210082, via
+#            the ICD ../build/out/freedreno_icd.json (the probe prints no driver hash of its own)
+# cfg:       tools/fdperf/fdperf.cfg-attrbuf
+# env:       <none>.  TU_GMEM, TU_FORCE_PROPS, FD_DEV_FEATURES, TU_DEBUG all unset - the probe
+#            prints each one, and run.txt is that output verbatim.
+# workload:  768x768 offscreen, 24576 vertices x 8 instances, FS spec-constant loop 0,
+#            8 vec4 attributes in (128 B/vertex), 16 vec4 varyings out
+# result:    fps 6.89, 1.354 M verts/s, render-target hash 0x228dbc3766a546fe
+#            (2359296 B of the target); clock from the dump's own CP_ALWAYS_COUNT, 680.05 MHz
+# mode:      SYSMEM, not binned: VSC_INPUT_TILES is 0 in 11 of 11 windows and VSC_BUSY
+#            0.0009 M/s against a 680 MHz core.  This is why the attribute-buffer sweep was
+#            not run on top of it - the GMEM register under test is not in play in a pass
+#            that never allocates a bin (plan item 35, queue 35 parked).
+# status:    a smoke run of the probe, NOT an arm of scripts/run-attrbuf-sweep.sh.  Cited by
+#            journal 40.35 for the VPC profile and by 40.36 for the two PC columns.
+# gmem:      the probe's own line "kernel reports 0 bytes" is the EINVAL of queue 36, not a
+#            reading: MSM_PARAM_GMEM_SIZE on /dev/dri/renderD128 answers Invalid argument.
+# source:    /tmp/opencode/vab-smoke.txt and /tmp/opencode/vab-smoke-counters.txt, copied 23.11

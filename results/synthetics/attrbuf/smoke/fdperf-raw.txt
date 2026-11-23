@@ -1,0 +1,2180 @@
+# period_ms=1000  duration_s=22  start=2026-11-23T14:58:48+08:00
+=== sample 1795417128.350 ===
+device: FD740
+min_freq=0, max_freq=680000000
+PERF_CP_ALWAYS_COUNT:                             680057526               
+PERF_CP_BUSY_CYCLES:                              680057213                100.00%
+PERF_CP_BUSY_CYCLES:                              680056881                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_CP_DEAD_DRAWS_IN_BIN_RENDER:                 0                       
+PERF_CP_PREDICATED_DRAWS_KILLED:                  0                       
+PERF_CP_MODE_SWITCH:                              0                       
+PERF_CP_ZPASS_DONE:                               0                       
+PERF_CP_CONTEXT_DONE:                             161                     
+PERF_CP_CACHE_FLUSH:                              7                       
+PERF_RBBM_ALWAYS_ON:                              19201588                
+PERF_RBBM_ALWAYS_ON:                              19201584                
+PERF_RBBM_TSE_BUSY:                               679930016                99.98%
+PERF_RBBM_RAS_BUSY:                               679950266                99.98%
+PERF_PC_BUSY_CYCLES:                              657390122                96.67%
+PERF_PC_IA_VERTICES:                              1368066                 
+PERF_PC_VS_INVOCATIONS:                           1368036                 
+PERF_PC_IA_PRIMITIVES:                            456022                  
+PERF_PC_TAG_CHECKED_VERTICES:                     0                       
+PERF_PC_VERTEX_HITS:                              0                       
+PERF_PC_STALL_CYCLES_VFD:                         655445535                96.38%
+PERF_PC_STALL_CYCLES_VPC:                         3018                     0.00%
+PERF_VFD_BUSY_CYCLES:                             7871178665               1157.43%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  7861088393               1155.95%
+PERF_VFD_DECODED_ATTRIBUTE_BYTES:                 175099200               
+PERF_VFD_NUM_ATTRIBUTES:                          10943700                
+PERF_VFD_TOTAL_VERTICES:                          1367972                 
+PERF_VFD_STARVE_CYCLES_UCHE:                      57079838                 8.39%
+PERF_VFD_RBUFFER_FULL:                            7854763028              
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_HLSQ_BUSY_CYCLES:                            680003151                99.99%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               1188189950               174.72%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    6777                     0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     28                      
+PERF_VPC_BUSY_CYCLES:                             679994732                99.99%
+PERF_VPC_WORKING_CYCLES:                          307428551                45.21%
+PERF_VPC_WIT_FULL_CYCLES:                         3936268375               578.81%
+PERF_VPC_VPCRAM_FULL_CYCLES:                      0                        0.00%
+PERF_VPC_LM_FULL_WAIT_FOR_INTP_END:               0                       
+PERF_VPC_NUM_VPCRAM_WRITE:                        2735926                 
+PERF_TSE_INPUT_PRIM:                              455971                  
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        679464076                99.91%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             679948601                99.98%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 56450799                 8.30%
+PERF_RAS_STALL_CYCLES_LRZ:                        623231835                91.64%
+PERF_RAS_STARVE_CYCLES_TSE:                       5012                     0.00%
+PERF_UCHE_BUSY_CYCLES:                            54786223                 8.06%
+PERF_UCHE_STALL_CYCLES_ARBITER:                   1952269                  0.29%
+PERF_UCHE_READ_REQUESTS_SP:                       0                       
+PERF_UCHE_WRITE_REQUESTS_VPC:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_TP:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_VFD:                    5471340                 
+PERF_UCHE_VBIF_READ_BEATS_HLSQ:                   196                     
+PERF_UCHE_VBIF_READ_BEATS_LRZ:                    0                       
+PERF_UCHE_VBIF_READ_BEATS_SP:                     0                       
+PERF_UCHE_READ_REQUESTS_TP:                       0                       
+PERF_UCHE_READ_REQUESTS_VFD:                      10942680                
+PERF_UCHE_READ_REQUESTS_HLSQ:                     392                     
+PERF_TP_BUSY_CYCLES:                              75980                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_TP_L1_CACHELINE_REQUESTS:                    0                       
+PERF_TP_L1_CACHELINE_MISSES:                      0                       
+PERF_TP_SP_TP_TRANS:                              0                       
+PERF_TP_TP_SP_TRANS:                              0                       
+PERF_TP_OUTPUT_PIXELS:                            0                       
+PERF_TP_FILTER_WORKLOAD_16BIT:                    0                       
+PERF_SP_BUSY_CYCLES:                              8102388953               1191.43%
+PERF_SP_ALU_WORKING_CYCLES:                       5215552776               766.93%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         1487                     0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          2688164080               395.29%
+PERF_SP_NON_EXECUTION_CYCLES:                     3660532475               538.27%
+PERF_SP_WAVE_CONTEXTS:                            114774722999            
+PERF_SP_WAVE_CONTEXT_CYCLES:                      8102385101               1191.43%
+PERF_SP_STAGE_WAVE_CYCLES:                        114753452746             16874.09%
+PERF_SP_STAGE_WAVE_SAMPLES:                       162931921               
+PERF_SP_VS_STAGE_WAVE_CYCLES:                     21266350                 3.13%
+PERF_SP_VS_STAGE_WAVE_SAMPLES:                    22596                   
+PERF_SP_FS_STAGE_DURATION_CYCLES:                 6425432634               944.84%
+PERF_SP_VS_STAGE_DURATION_CYCLES:                 5453403                  0.80%
+PERF_SP_WAVE_CTRL_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_LOAD_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_EMIT_CYCLES:                         101275055892             14892.14%
+PERF_SP_WAVE_NOP_CYCLES:                          0                        0.00%
+PERF_SP_WAVE_WAIT_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_FETCH_CYCLES:                        977934540                143.80%
+PERF_SP_WAVE_IDLE_CYCLES:                         491356917                72.25%
+PERF_SP_WAVE_END_CYCLES:                          0                        0.00%
+PERF_RB_BUSY_CYCLES:                              4079683276               599.90%
+PERF_RB_STALL_CYCLES_HLSQ:                        1192637002               175.37%
+PERF_RB_STALL_CYCLES_FIFO0_FULL:                  1238734011               182.15%
+PERF_RB_STALL_CYCLES_FIFO1_FULL:                  1673459772               246.08%
+PERF_RB_STALL_CYCLES_FIFO2_FULL:                  0                        0.00%
+PERF_RB_STARVE_CYCLES_SP:                         0                        0.00%
+PERF_RB_STARVE_CYCLES_LRZ_TILE:                   2311968829               339.97%
+PERF_RB_STARVE_CYCLES_CCU:                        0                        0.00%
+PERF_VSC_BUSY_CYCLES:                             931                      0.00%
+PERF_VSC_INPUT_TILES:                             0                       
+PERF_CCU_BUSY_CYCLES:                             4077884545               599.64%
+PERF_CCU_STALL_CYCLES_RB_DEPTH_RETURN:            0                        0.00%
+PERF_CCU_STALL_CYCLES_RB_COLOR_RETURN:            0                        0.00%
+PERF_CCU_DEPTH_BLOCKS:                            0                       
+PERF_CCU_COLOR_BLOCKS:                            1501185841              
+PERF_LRZ_BUSY_CYCLES:                             679972781                99.99%
+PERF_LRZ_STARVE_CYCLES_RAS:                       111036                   0.02%
+PERF_LRZ_STALL_CYCLES_RB:                         650007944                95.58%
+PERF_LRZ_STALL_CYCLES_VSC:                        266                      0.00%
+PERF_CMPDECMP_STALL_CYCLES_ARB:                   778480733                114.47%
+PERF_CMPDECMP_VBIF_LATENCY_CYCLES:                643897311                94.68%
+PERF_CMPDECMP_VBIF_LATENCY_SAMPLES:               2517108                 
+PERF_CMPDECMP_VBIF_READ_DATA_CCU:                 335051142               
+PERF_UFC_BUSY_CYCLES:                             669580295                98.46%
+PERF_UFC_READ_DATA_VBIF:                          2016                    
+PERF_UFC_WRITE_DATA_VBIF:                         2016                    
+PERF_UFC_READ_REQUEST_VBIF:                       1008                    
+PERF_CP_ALWAYS_COUNT:                             680051128               
+PERF_CP_BUSY_GFX_CORE_IDLE:                       680039078                100.00%
+PERF_CP_BUSY_CYCLES:                              680051139                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_PC_BUSY_CYCLES:                              1372                     0.00%
+PERF_PC_WORKING_CYCLES:                           2051                     0.00%
+PERF_PC_STALL_CYCLES_VFD:                         0                        0.00%
+PERF_PC_RESERVED:                                 0                       
+PERF_PC_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_PC_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_PC_STALL_CYCLES_TESS:                        0                        0.00%
+PERF_PC_STALL_CYCLES_VFD_ONLY:                    0                        0.00%
+PERF_VFD_BUSY_CYCLES:                             3696                     0.00%
+PERF_VFD_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_INFO:                    0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_ATTR:                    0                        0.00%
+PERF_VFD_STARVE_CYCLES_UCHE:                      0                        0.00%
+PERF_VFD_RBUFFER_FULL:                            0                       
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_VPC_BUSY_CYCLES:                             9769                     0.00%
+PERF_VPC_WORKING_CYCLES:                          3574                     0.00%
+PERF_VPC_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VPC_STALL_CYCLES_VFD_WACK:                   0                        0.00%
+PERF_VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC:            0                        0.00%
+PERF_VPC_RESERVED_5:                              0                       
+PERF_TP_BUSY_CYCLES:                              75980                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_SP_BUSY_CYCLES:                              0                        0.00%
+PERF_SP_ALU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          0                        0.00%
+PERF_SP_NON_EXECUTION_CYCLES:                     0                        0.00%
+PERF_SP_WAVE_CONTEXTS:                            0                       
+PERF_SP_WAVE_CONTEXT_CYCLES:                      0                        0.00%
+PERF_SP_STAGE_WAVE_CYCLES:                        0                        0.00%
+PERF_SP_STAGE_WAVE_SAMPLES:                       0                       
+PERF_UFC_BUSY_CYCLES:                             669580233                98.46%
+PERF_UFC_READ_DATA_VBIF:                          669580241               
+PERF_TSE_BUSY_CYCLES:                             2996                     0.00%
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        154                      0.00%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             1232                     0.00%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 0                        0.00%
+PERF_RAS_STALL_CYCLES_LRZ:                        0                        0.00%
+PERF_RAS_STARVE_CYCLES_TSE:                       2695                     0.00%
+PERF_LRZ_BUSY_CYCLES:                             3552                     0.00%
+PERF_LRZ_STARVE_CYCLES_RAS:                       680051155                100.00%
+PERF_LRZ_STALL_CYCLES_RB:                         0                        0.00%
+PERF_LRZ_STALL_CYCLES_VSC:                        154                      0.00%
+PERF_HLSQ_BUSY_CYCLES:                            0                        0.00%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     0                       
+=== sample 1795417130.681 ===
+device: FD740
+min_freq=0, max_freq=680000000
+PERF_CP_ALWAYS_COUNT:                             679712348               
+PERF_CP_BUSY_CYCLES:                              679712339                100.00%
+PERF_CP_BUSY_CYCLES:                              679712356                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_CP_DEAD_DRAWS_IN_BIN_RENDER:                 0                       
+PERF_CP_PREDICATED_DRAWS_KILLED:                  0                       
+PERF_CP_MODE_SWITCH:                              0                       
+PERF_CP_ZPASS_DONE:                               0                       
+PERF_CP_CONTEXT_DONE:                             161                     
+PERF_CP_CACHE_FLUSH:                              7                       
+PERF_RBBM_ALWAYS_ON:                              19190841                
+PERF_RBBM_ALWAYS_ON:                              19190841                
+PERF_RBBM_TSE_BUSY:                               679547543                99.98%
+PERF_RBBM_RAS_BUSY:                               679567686                99.98%
+PERF_PC_BUSY_CYCLES:                              656918194                96.65%
+PERF_PC_IA_VERTICES:                              1360338                 
+PERF_PC_VS_INVOCATIONS:                           1360338                 
+PERF_PC_IA_PRIMITIVES:                            453446                  
+PERF_PC_TAG_CHECKED_VERTICES:                     0                       
+PERF_PC_VERTEX_HITS:                              0                       
+PERF_PC_STALL_CYCLES_VFD:                         654943932                96.36%
+PERF_PC_STALL_CYCLES_VPC:                         2929                     0.00%
+PERF_VFD_BUSY_CYCLES:                             7865273367               1157.15%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  7855112228               1155.65%
+PERF_VFD_DECODED_ATTRIBUTE_BYTES:                 174113328               
+PERF_VFD_NUM_ATTRIBUTES:                          10882083                
+PERF_VFD_TOTAL_VERTICES:                          1360251                 
+PERF_VFD_STARVE_CYCLES_UCHE:                      57000792                 8.39%
+PERF_VFD_RBUFFER_FULL:                            7848885796              
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_HLSQ_BUSY_CYCLES:                            679604498                99.98%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               1199523067               176.48%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    6778                     0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     28                      
+PERF_VPC_BUSY_CYCLES:                             679594079                99.98%
+PERF_VPC_WORKING_CYCLES:                          306246564                45.06%
+PERF_VPC_WIT_FULL_CYCLES:                         3933244041               578.66%
+PERF_VPC_VPCRAM_FULL_CYCLES:                      0                        0.00%
+PERF_VPC_LM_FULL_WAIT_FOR_INTP_END:               0                       
+PERF_VPC_NUM_VPCRAM_WRITE:                        2720650                 
+PERF_TSE_INPUT_PRIM:                              453449                  
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        679064130                99.90%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             679545711                99.98%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 56130862                 8.26%
+PERF_RAS_STALL_CYCLES_LRZ:                        623150371                91.68%
+PERF_RAS_STARVE_CYCLES_TSE:                       5053                     0.00%
+PERF_UCHE_BUSY_CYCLES:                            54858764                 8.07%
+PERF_UCHE_STALL_CYCLES_ARBITER:                   1980931                  0.29%
+PERF_UCHE_READ_REQUESTS_SP:                       0                       
+PERF_UCHE_WRITE_REQUESTS_VPC:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_TP:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_VFD:                    5441616                 
+PERF_UCHE_VBIF_READ_BEATS_HLSQ:                   196                     
+PERF_UCHE_VBIF_READ_BEATS_LRZ:                    0                       
+PERF_UCHE_VBIF_READ_BEATS_SP:                     0                       
+PERF_UCHE_READ_REQUESTS_TP:                       0                       
+PERF_UCHE_READ_REQUESTS_VFD:                      10883232                
+PERF_UCHE_READ_REQUESTS_HLSQ:                     392                     
+PERF_TP_BUSY_CYCLES:                              75031                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_TP_L1_CACHELINE_REQUESTS:                    0                       
+PERF_TP_L1_CACHELINE_MISSES:                      0                       
+PERF_TP_SP_TP_TRANS:                              0                       
+PERF_TP_TP_SP_TRANS:                              0                       
+PERF_TP_OUTPUT_PIXELS:                            0                       
+PERF_TP_FILTER_WORKLOAD_16BIT:                    0                       
+PERF_SP_BUSY_CYCLES:                              8097096630               1191.25%
+PERF_SP_ALU_WORKING_CYCLES:                       5185788437               762.94%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         1444                     0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          2694667642               396.44%
+PERF_SP_NON_EXECUTION_CYCLES:                     3675807942               540.79%
+PERF_SP_WAVE_CONTEXTS:                            114789997075            
+PERF_SP_WAVE_CONTEXT_CYCLES:                      8097082788               1191.25%
+PERF_SP_STAGE_WAVE_CYCLES:                        114768903877             16884.92%
+PERF_SP_STAGE_WAVE_SAMPLES:                       162003037               
+PERF_SP_VS_STAGE_WAVE_CYCLES:                     21186828                 3.12%
+PERF_SP_VS_STAGE_WAVE_SAMPLES:                    22473                   
+PERF_SP_FS_STAGE_DURATION_CYCLES:                 6400980822               941.72%
+PERF_SP_VS_STAGE_DURATION_CYCLES:                 5421460                  0.80%
+PERF_SP_WAVE_CTRL_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_LOAD_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_EMIT_CYCLES:                         101366372024             14913.13%
+PERF_SP_WAVE_NOP_CYCLES:                          0                        0.00%
+PERF_SP_WAVE_WAIT_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_FETCH_CYCLES:                        972357930                143.05%
+PERF_SP_WAVE_IDLE_CYCLES:                         488540917                71.87%
+PERF_SP_WAVE_END_CYCLES:                          0                        0.00%
+PERF_RB_BUSY_CYCLES:                              4077274688               599.85%
+PERF_RB_STALL_CYCLES_HLSQ:                        1203966884               177.13%
+PERF_RB_STALL_CYCLES_FIFO0_FULL:                  1234752119               181.66%
+PERF_RB_STALL_CYCLES_FIFO1_FULL:                  1671726839               245.95%
+PERF_RB_STALL_CYCLES_FIFO2_FULL:                  0                        0.00%
+PERF_RB_STARVE_CYCLES_SP:                         0                        0.00%
+PERF_RB_STARVE_CYCLES_LRZ_TILE:                   2316973623               340.88%
+PERF_RB_STARVE_CYCLES_CCU:                        0                        0.00%
+PERF_VSC_BUSY_CYCLES:                             929                      0.00%
+PERF_VSC_INPUT_TILES:                             0                       
+PERF_CCU_BUSY_CYCLES:                             4075464982               599.59%
+PERF_CCU_STALL_CYCLES_RB_DEPTH_RETURN:            0                        0.00%
+PERF_CCU_STALL_CYCLES_RB_COLOR_RETURN:            0                        0.00%
+PERF_CCU_DEPTH_BLOCKS:                            0                       
+PERF_CCU_COLOR_BLOCKS:                            1492592556              
+PERF_LRZ_BUSY_CYCLES:                             679570538                99.98%
+PERF_LRZ_STARVE_CYCLES_RAS:                       111980                   0.02%
+PERF_LRZ_STALL_CYCLES_RB:                         649312707                95.53%
+PERF_LRZ_STALL_CYCLES_VSC:                        266                      0.00%
+PERF_CMPDECMP_STALL_CYCLES_ARB:                   785399629                115.55%
+PERF_CMPDECMP_VBIF_LATENCY_CYCLES:                643557939                94.68%
+PERF_CMPDECMP_VBIF_LATENCY_SAMPLES:               2493375                 
+PERF_CMPDECMP_VBIF_READ_DATA_CCU:                 333210591               
+PERF_UFC_BUSY_CYCLES:                             668698939                98.38%
+PERF_UFC_READ_DATA_VBIF:                          2016                    
+PERF_UFC_WRITE_DATA_VBIF:                         2016                    
+PERF_UFC_READ_REQUEST_VBIF:                       1008                    
+PERF_CP_ALWAYS_COUNT:                             679648319               
+PERF_CP_BUSY_GFX_CORE_IDLE:                       679636222                99.99%
+PERF_CP_BUSY_CYCLES:                              679648040                99.99%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_PC_BUSY_CYCLES:                              1372                     0.00%
+PERF_PC_WORKING_CYCLES:                           2051                     0.00%
+PERF_PC_STALL_CYCLES_VFD:                         0                        0.00%
+PERF_PC_RESERVED:                                 0                       
+PERF_PC_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_PC_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_PC_STALL_CYCLES_TESS:                        0                        0.00%
+PERF_PC_STALL_CYCLES_VFD_ONLY:                    0                        0.00%
+PERF_VFD_BUSY_CYCLES:                             3696                     0.00%
+PERF_VFD_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_INFO:                    0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_ATTR:                    0                        0.00%
+PERF_VFD_STARVE_CYCLES_UCHE:                      0                        0.00%
+PERF_VFD_RBUFFER_FULL:                            0                       
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_VPC_BUSY_CYCLES:                             9764                     0.00%
+PERF_VPC_WORKING_CYCLES:                          3567                     0.00%
+PERF_VPC_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VPC_STALL_CYCLES_VFD_WACK:                   0                        0.00%
+PERF_VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC:            0                        0.00%
+PERF_VPC_RESERVED_5:                              0                       
+PERF_TP_BUSY_CYCLES:                              75031                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_SP_BUSY_CYCLES:                              0                        0.00%
+PERF_SP_ALU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          0                        0.00%
+PERF_SP_NON_EXECUTION_CYCLES:                     0                        0.00%
+PERF_SP_WAVE_CONTEXTS:                            0                       
+PERF_SP_WAVE_CONTEXT_CYCLES:                      0                        0.00%
+PERF_SP_STAGE_WAVE_CYCLES:                        0                        0.00%
+PERF_SP_STAGE_WAVE_SAMPLES:                       0                       
+PERF_UFC_BUSY_CYCLES:                             668693363                98.38%
+PERF_UFC_READ_DATA_VBIF:                          668693509               
+PERF_TSE_BUSY_CYCLES:                             2997                     0.00%
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        154                      0.00%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             1232                     0.00%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 0                        0.00%
+PERF_RAS_STALL_CYCLES_LRZ:                        0                        0.00%
+PERF_RAS_STARVE_CYCLES_TSE:                       2695                     0.00%
+PERF_LRZ_BUSY_CYCLES:                             3541                     0.00%
+PERF_LRZ_STARVE_CYCLES_RAS:                       679641808                99.99%
+PERF_LRZ_STALL_CYCLES_RB:                         0                        0.00%
+PERF_LRZ_STALL_CYCLES_VSC:                        154                      0.00%
+PERF_HLSQ_BUSY_CYCLES:                            0                        0.00%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     0                       
+=== sample 1795417132.845 ===
+device: FD740
+min_freq=0, max_freq=680000000
+PERF_CP_ALWAYS_COUNT:                             680785792               
+PERF_CP_BUSY_CYCLES:                              680785793                100.00%
+PERF_CP_BUSY_CYCLES:                              680785786                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_CP_DEAD_DRAWS_IN_BIN_RENDER:                 0                       
+PERF_CP_PREDICATED_DRAWS_KILLED:                  0                       
+PERF_CP_MODE_SWITCH:                              0                       
+PERF_CP_ZPASS_DONE:                               0                       
+PERF_CP_CONTEXT_DONE:                             161                     
+PERF_CP_CACHE_FLUSH:                              7                       
+PERF_RBBM_ALWAYS_ON:                              19222195                
+PERF_RBBM_ALWAYS_ON:                              19222197                
+PERF_RBBM_TSE_BUSY:                               680657923                99.98%
+PERF_RBBM_RAS_BUSY:                               680679084                99.98%
+PERF_PC_BUSY_CYCLES:                              657874981                96.63%
+PERF_PC_IA_VERTICES:                              1356873                 
+PERF_PC_VS_INVOCATIONS:                           1356873                 
+PERF_PC_IA_PRIMITIVES:                            452291                  
+PERF_PC_TAG_CHECKED_VERTICES:                     0                       
+PERF_PC_VERTEX_HITS:                              0                       
+PERF_PC_STALL_CYCLES_VFD:                         655897107                96.34%
+PERF_PC_STALL_CYCLES_VPC:                         3018                     0.00%
+PERF_VFD_BUSY_CYCLES:                             7876740595               1157.01%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  7866580353               1155.51%
+PERF_VFD_DECODED_ATTRIBUTE_BYTES:                 173679552               
+PERF_VFD_NUM_ATTRIBUTES:                          10854972                
+PERF_VFD_TOTAL_VERTICES:                          1356891                 
+PERF_VFD_STARVE_CYCLES_UCHE:                      57059931                 8.38%
+PERF_VFD_RBUFFER_FULL:                            7860363347              
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_HLSQ_BUSY_CYCLES:                            680734633                99.99%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               1209868442               177.72%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    6709                     0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     28                      
+PERF_VPC_BUSY_CYCLES:                             680726092                99.99%
+PERF_VPC_WORKING_CYCLES:                          305889827                44.93%
+PERF_VPC_WIT_FULL_CYCLES:                         3939076987               578.61%
+PERF_VPC_VPCRAM_FULL_CYCLES:                      0                        0.00%
+PERF_VPC_LM_FULL_WAIT_FOR_INTP_END:               0                       
+PERF_VPC_NUM_VPCRAM_WRITE:                        2713874                 
+PERF_TSE_INPUT_PRIM:                              452305                  
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        680197719                99.91%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             680678665                99.98%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 55990845                 8.22%
+PERF_RAS_STALL_CYCLES_LRZ:                        624423954                91.72%
+PERF_RAS_STARVE_CYCLES_TSE:                       5010                     0.00%
+PERF_UCHE_BUSY_CYCLES:                            54998057                 8.08%
+PERF_UCHE_STALL_CYCLES_ARBITER:                   2024741                  0.30%
+PERF_UCHE_READ_REQUESTS_SP:                       0                       
+PERF_UCHE_WRITE_REQUESTS_VPC:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_TP:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_VFD:                    5427744                 
+PERF_UCHE_VBIF_READ_BEATS_HLSQ:                   196                     
+PERF_UCHE_VBIF_READ_BEATS_LRZ:                    0                       
+PERF_UCHE_VBIF_READ_BEATS_SP:                     0                       
+PERF_UCHE_READ_REQUESTS_TP:                       0                       
+PERF_UCHE_READ_REQUESTS_VFD:                      10855488                
+PERF_UCHE_READ_REQUESTS_HLSQ:                     392                     
+PERF_TP_BUSY_CYCLES:                              75059                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_TP_L1_CACHELINE_REQUESTS:                    0                       
+PERF_TP_L1_CACHELINE_MISSES:                      0                       
+PERF_TP_SP_TP_TRANS:                              0                       
+PERF_TP_TP_SP_TRANS:                              0                       
+PERF_TP_OUTPUT_PIXELS:                            0                       
+PERF_TP_FILTER_WORKLOAD_16BIT:                    0                       
+PERF_SP_BUSY_CYCLES:                              8109190831               1191.15%
+PERF_SP_ALU_WORKING_CYCLES:                       5173193136               759.89%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         1460                     0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          2703181602               397.07%
+PERF_SP_NON_EXECUTION_CYCLES:                     3695849746               542.88%
+PERF_SP_WAVE_CONTEXTS:                            114950001670            
+PERF_SP_WAVE_CONTEXT_CYCLES:                      8109189898               1191.15%
+PERF_SP_STAGE_WAVE_CYCLES:                        114928648833             16881.76%
+PERF_SP_STAGE_WAVE_SAMPLES:                       161611087               
+PERF_SP_VS_STAGE_WAVE_CYCLES:                     21152428                 3.11%
+PERF_SP_VS_STAGE_WAVE_SAMPLES:                    22414                   
+PERF_SP_FS_STAGE_DURATION_CYCLES:                 6393198476               939.09%
+PERF_SP_VS_STAGE_DURATION_CYCLES:                 5407722                  0.79%
+PERF_SP_WAVE_CTRL_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_LOAD_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_EMIT_CYCLES:                         101557081694             14917.62%
+PERF_SP_WAVE_NOP_CYCLES:                          0                        0.00%
+PERF_SP_WAVE_WAIT_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_FETCH_CYCLES:                        970003830                142.48%
+PERF_SP_WAVE_IDLE_CYCLES:                         487361154                71.59%
+PERF_SP_WAVE_END_CYCLES:                          0                        0.00%
+PERF_RB_BUSY_CYCLES:                              4084102100               599.91%
+PERF_RB_STALL_CYCLES_HLSQ:                        1214202543               178.35%
+PERF_RB_STALL_CYCLES_FIFO0_FULL:                  1241044403               182.30%
+PERF_RB_STALL_CYCLES_FIFO1_FULL:                  1678113734               246.50%
+PERF_RB_STALL_CYCLES_FIFO2_FULL:                  0                        0.00%
+PERF_RB_STARVE_CYCLES_SP:                         0                        0.00%
+PERF_RB_STARVE_CYCLES_LRZ_TILE:                   2318999237               340.64%
+PERF_RB_STARVE_CYCLES_CCU:                        0                        0.00%
+PERF_VSC_BUSY_CYCLES:                             929                      0.00%
+PERF_VSC_INPUT_TILES:                             0                       
+PERF_CCU_BUSY_CYCLES:                             4082286662               599.64%
+PERF_CCU_STALL_CYCLES_RB_DEPTH_RETURN:            0                        0.00%
+PERF_CCU_STALL_CYCLES_RB_COLOR_RETURN:            0                        0.00%
+PERF_CCU_DEPTH_BLOCKS:                            0                       
+PERF_CCU_COLOR_BLOCKS:                            1488937215              
+PERF_LRZ_BUSY_CYCLES:                             680708879                99.99%
+PERF_LRZ_STARVE_CYCLES_RAS:                       112213                   0.02%
+PERF_LRZ_STALL_CYCLES_RB:                         650605370                95.57%
+PERF_LRZ_STALL_CYCLES_VSC:                        266                      0.00%
+PERF_CMPDECMP_STALL_CYCLES_ARB:                   793900541                116.62%
+PERF_CMPDECMP_VBIF_LATENCY_CYCLES:                644748382                94.71%
+PERF_CMPDECMP_VBIF_LATENCY_SAMPLES:               2470734                 
+PERF_CMPDECMP_VBIF_READ_DATA_CCU:                 332324801               
+PERF_UFC_BUSY_CYCLES:                             669464504                98.34%
+PERF_UFC_READ_DATA_VBIF:                          2016                    
+PERF_UFC_WRITE_DATA_VBIF:                         2016                    
+PERF_UFC_READ_REQUEST_VBIF:                       1008                    
+PERF_CP_ALWAYS_COUNT:                             680787855               
+PERF_CP_BUSY_GFX_CORE_IDLE:                       680775797                100.00%
+PERF_CP_BUSY_CYCLES:                              680787854                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_PC_BUSY_CYCLES:                              1372                     0.00%
+PERF_PC_WORKING_CYCLES:                           2051                     0.00%
+PERF_PC_STALL_CYCLES_VFD:                         0                        0.00%
+PERF_PC_RESERVED:                                 0                       
+PERF_PC_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_PC_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_PC_STALL_CYCLES_TESS:                        0                        0.00%
+PERF_PC_STALL_CYCLES_VFD_ONLY:                    0                        0.00%
+PERF_VFD_BUSY_CYCLES:                             3696                     0.00%
+PERF_VFD_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_INFO:                    0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_ATTR:                    0                        0.00%
+PERF_VFD_STARVE_CYCLES_UCHE:                      0                        0.00%
+PERF_VFD_RBUFFER_FULL:                            0                       
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_VPC_BUSY_CYCLES:                             9779                     0.00%
+PERF_VPC_WORKING_CYCLES:                          3593                     0.00%
+PERF_VPC_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VPC_STALL_CYCLES_VFD_WACK:                   0                        0.00%
+PERF_VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC:            0                        0.00%
+PERF_VPC_RESERVED_5:                              0                       
+PERF_TP_BUSY_CYCLES:                              75059                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_SP_BUSY_CYCLES:                              0                        0.00%
+PERF_SP_ALU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          0                        0.00%
+PERF_SP_NON_EXECUTION_CYCLES:                     0                        0.00%
+PERF_SP_WAVE_CONTEXTS:                            0                       
+PERF_SP_WAVE_CONTEXT_CYCLES:                      0                        0.00%
+PERF_SP_STAGE_WAVE_CYCLES:                        0                        0.00%
+PERF_SP_STAGE_WAVE_SAMPLES:                       0                       
+PERF_UFC_BUSY_CYCLES:                             669479661                98.34%
+PERF_UFC_READ_DATA_VBIF:                          669479653               
+PERF_TSE_BUSY_CYCLES:                             2996                     0.00%
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        154                      0.00%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             1232                     0.00%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 0                        0.00%
+PERF_RAS_STALL_CYCLES_LRZ:                        0                        0.00%
+PERF_RAS_STARVE_CYCLES_TSE:                       2695                     0.00%
+PERF_LRZ_BUSY_CYCLES:                             3586                     0.00%
+PERF_LRZ_STARVE_CYCLES_RAS:                       680808924                100.00%
+PERF_LRZ_STALL_CYCLES_RB:                         0                        0.00%
+PERF_LRZ_STALL_CYCLES_VSC:                        154                      0.00%
+PERF_HLSQ_BUSY_CYCLES:                            0                        0.00%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     0                       
+=== sample 1795417134.981 ===
+device: FD740
+min_freq=0, max_freq=680000000
+PERF_CP_ALWAYS_COUNT:                             680028185               
+PERF_CP_BUSY_CYCLES:                              680028177                100.00%
+PERF_CP_BUSY_CYCLES:                              680028185                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_CP_DEAD_DRAWS_IN_BIN_RENDER:                 0                       
+PERF_CP_PREDICATED_DRAWS_KILLED:                  0                       
+PERF_CP_MODE_SWITCH:                              0                       
+PERF_CP_ZPASS_DONE:                               0                       
+PERF_CP_CONTEXT_DONE:                             161                     
+PERF_CP_CACHE_FLUSH:                              7                       
+PERF_RBBM_ALWAYS_ON:                              19200796                
+PERF_RBBM_ALWAYS_ON:                              19200795                
+PERF_RBBM_TSE_BUSY:                               679902245                99.98%
+PERF_RBBM_RAS_BUSY:                               679921355                99.98%
+PERF_PC_BUSY_CYCLES:                              657088604                96.63%
+PERF_PC_IA_VERTICES:                              1355055                 
+PERF_PC_VS_INVOCATIONS:                           1355055                 
+PERF_PC_IA_PRIMITIVES:                            451685                  
+PERF_PC_TAG_CHECKED_VERTICES:                     0                       
+PERF_PC_VERTEX_HITS:                              0                       
+PERF_PC_STALL_CYCLES_VFD:                         655112208                96.34%
+PERF_PC_STALL_CYCLES_VPC:                         2757                     0.00%
+PERF_VFD_BUSY_CYCLES:                             7867306928               1156.91%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  7857147850               1155.41%
+PERF_VFD_DECODED_ATTRIBUTE_BYTES:                 173446656               
+PERF_VFD_NUM_ATTRIBUTES:                          10840416                
+PERF_VFD_TOTAL_VERTICES:                          1355090                 
+PERF_VFD_STARVE_CYCLES_UCHE:                      56887164                 8.37%
+PERF_VFD_RBUFFER_FULL:                            7850921253              
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_HLSQ_BUSY_CYCLES:                            679974601                99.99%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               1210063821               177.94%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    6796                     0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     28                      
+PERF_VPC_BUSY_CYCLES:                             679966094                99.99%
+PERF_VPC_WORKING_CYCLES:                          305111481                44.87%
+PERF_VPC_WIT_FULL_CYCLES:                         3934353441               578.56%
+PERF_VPC_VPCRAM_FULL_CYCLES:                      0                        0.00%
+PERF_VPC_LM_FULL_WAIT_FOR_INTP_END:               0                       
+PERF_VPC_NUM_VPCRAM_WRITE:                        2710106                 
+PERF_TSE_INPUT_PRIM:                              451704                  
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        679441265                99.91%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             679920270                99.98%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 55915580                 8.22%
+PERF_RAS_STALL_CYCLES_LRZ:                        623741273                91.72%
+PERF_RAS_STARVE_CYCLES_TSE:                       5095                     0.00%
+PERF_UCHE_BUSY_CYCLES:                            54679376                 8.04%
+PERF_UCHE_STALL_CYCLES_ARBITER:                   2060819                  0.30%
+PERF_UCHE_READ_REQUESTS_SP:                       0                       
+PERF_UCHE_WRITE_REQUESTS_VPC:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_TP:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_VFD:                    5420484                 
+PERF_UCHE_VBIF_READ_BEATS_HLSQ:                   196                     
+PERF_UCHE_VBIF_READ_BEATS_LRZ:                    0                       
+PERF_UCHE_VBIF_READ_BEATS_SP:                     0                       
+PERF_UCHE_READ_REQUESTS_TP:                       0                       
+PERF_UCHE_READ_REQUESTS_VFD:                      10841448                
+PERF_UCHE_READ_REQUESTS_HLSQ:                     392                     
+PERF_TP_BUSY_CYCLES:                              74888                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_TP_L1_CACHELINE_REQUESTS:                    0                       
+PERF_TP_L1_CACHELINE_MISSES:                      0                       
+PERF_TP_SP_TP_TRANS:                              0                       
+PERF_TP_TP_SP_TRANS:                              0                       
+PERF_TP_OUTPUT_PIXELS:                            0                       
+PERF_TP_FILTER_WORKLOAD_16BIT:                    0                       
+PERF_SP_BUSY_CYCLES:                              8100126956               1191.14%
+PERF_SP_ALU_WORKING_CYCLES:                       5166299459               759.72%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         1430                     0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          2700949512               397.18%
+PERF_SP_NON_EXECUTION_CYCLES:                     3696277802               543.55%
+PERF_SP_WAVE_CONTEXTS:                            114850646776            
+PERF_SP_WAVE_CONTEXT_CYCLES:                      8100129137               1191.14%
+PERF_SP_STAGE_WAVE_CYCLES:                        114829612992             16885.96%
+PERF_SP_STAGE_WAVE_SAMPLES:                       161395325               
+PERF_SP_VS_STAGE_WAVE_CYCLES:                     21144026                 3.11%
+PERF_SP_VS_STAGE_WAVE_SAMPLES:                    22379                   
+PERF_SP_FS_STAGE_DURATION_CYCLES:                 6374837739               937.43%
+PERF_SP_VS_STAGE_DURATION_CYCLES:                 5398854                  0.79%
+PERF_SP_WAVE_CTRL_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_LOAD_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_EMIT_CYCLES:                         101477336561             14922.48%
+PERF_SP_WAVE_NOP_CYCLES:                          0                        0.00%
+PERF_SP_WAVE_WAIT_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_FETCH_CYCLES:                        968711502                142.45%
+PERF_SP_WAVE_IDLE_CYCLES:                         486713634                71.57%
+PERF_SP_WAVE_END_CYCLES:                          0                        0.00%
+PERF_RB_BUSY_CYCLES:                              4079528189               599.90%
+PERF_RB_STALL_CYCLES_HLSQ:                        1214410369               178.58%
+PERF_RB_STALL_CYCLES_FIFO0_FULL:                  1245473987               183.15%
+PERF_RB_STALL_CYCLES_FIFO1_FULL:                  1684005831               247.64%
+PERF_RB_STALL_CYCLES_FIFO2_FULL:                  0                        0.00%
+PERF_RB_STARVE_CYCLES_SP:                         0                        0.00%
+PERF_RB_STARVE_CYCLES_LRZ_TILE:                   2310373249               339.75%
+PERF_RB_STARVE_CYCLES_CCU:                        0                        0.00%
+PERF_VSC_BUSY_CYCLES:                             929                      0.00%
+PERF_VSC_INPUT_TILES:                             0                       
+PERF_CCU_BUSY_CYCLES:                             4077760405               599.64%
+PERF_CCU_STALL_CYCLES_RB_DEPTH_RETURN:            0                        0.00%
+PERF_CCU_STALL_CYCLES_RB_COLOR_RETURN:            0                        0.00%
+PERF_CCU_DEPTH_BLOCKS:                            0                       
+PERF_CCU_COLOR_BLOCKS:                            1486947595              
+PERF_LRZ_BUSY_CYCLES:                             679948144                99.99%
+PERF_LRZ_STARVE_CYCLES_RAS:                       111231                   0.02%
+PERF_LRZ_STALL_CYCLES_RB:                         649858119                95.56%
+PERF_LRZ_STALL_CYCLES_VSC:                        266                      0.00%
+PERF_CMPDECMP_STALL_CYCLES_ARB:                   788508462                115.95%
+PERF_CMPDECMP_VBIF_LATENCY_CYCLES:                643101127                94.57%
+PERF_CMPDECMP_VBIF_LATENCY_SAMPLES:               2481329                 
+PERF_CMPDECMP_VBIF_READ_DATA_CCU:                 331872081               
+PERF_UFC_BUSY_CYCLES:                             666053753                97.94%
+PERF_UFC_READ_DATA_VBIF:                          2016                    
+PERF_UFC_WRITE_DATA_VBIF:                         2016                    
+PERF_UFC_READ_REQUEST_VBIF:                       1008                    
+PERF_CP_ALWAYS_COUNT:                             680027504               
+PERF_CP_BUSY_GFX_CORE_IDLE:                       680015497                100.00%
+PERF_CP_BUSY_CYCLES:                              680027498                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_PC_BUSY_CYCLES:                              1372                     0.00%
+PERF_PC_WORKING_CYCLES:                           2051                     0.00%
+PERF_PC_STALL_CYCLES_VFD:                         0                        0.00%
+PERF_PC_RESERVED:                                 0                       
+PERF_PC_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_PC_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_PC_STALL_CYCLES_TESS:                        0                        0.00%
+PERF_PC_STALL_CYCLES_VFD_ONLY:                    0                        0.00%
+PERF_VFD_BUSY_CYCLES:                             3696                     0.00%
+PERF_VFD_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_INFO:                    0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_ATTR:                    0                        0.00%
+PERF_VFD_STARVE_CYCLES_UCHE:                      0                        0.00%
+PERF_VFD_RBUFFER_FULL:                            0                       
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_VPC_BUSY_CYCLES:                             9721                     0.00%
+PERF_VPC_WORKING_CYCLES:                          3572                     0.00%
+PERF_VPC_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VPC_STALL_CYCLES_VFD_WACK:                   0                        0.00%
+PERF_VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC:            0                        0.00%
+PERF_VPC_RESERVED_5:                              0                       
+PERF_TP_BUSY_CYCLES:                              74888                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_SP_BUSY_CYCLES:                              0                        0.00%
+PERF_SP_ALU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          0                        0.00%
+PERF_SP_NON_EXECUTION_CYCLES:                     0                        0.00%
+PERF_SP_WAVE_CONTEXTS:                            0                       
+PERF_SP_WAVE_CONTEXT_CYCLES:                      0                        0.00%
+PERF_SP_STAGE_WAVE_CYCLES:                        0                        0.00%
+PERF_SP_STAGE_WAVE_SAMPLES:                       0                       
+PERF_UFC_BUSY_CYCLES:                             666052513                97.94%
+PERF_UFC_READ_DATA_VBIF:                          666052520               
+PERF_TSE_BUSY_CYCLES:                             2996                     0.00%
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        154                      0.00%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             1232                     0.00%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 0                        0.00%
+PERF_RAS_STALL_CYCLES_LRZ:                        0                        0.00%
+PERF_RAS_STARVE_CYCLES_TSE:                       2695                     0.00%
+PERF_LRZ_BUSY_CYCLES:                             3548                     0.00%
+PERF_LRZ_STARVE_CYCLES_RAS:                       680027241                100.00%
+PERF_LRZ_STALL_CYCLES_RB:                         0                        0.00%
+PERF_LRZ_STALL_CYCLES_VSC:                        154                      0.00%
+PERF_HLSQ_BUSY_CYCLES:                            0                        0.00%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     0                       
+=== sample 1795417137.151 ===
+device: FD740
+min_freq=0, max_freq=680000000
+PERF_CP_ALWAYS_COUNT:                             680036591               
+PERF_CP_BUSY_CYCLES:                              680036591                100.00%
+PERF_CP_BUSY_CYCLES:                              680036592                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_CP_DEAD_DRAWS_IN_BIN_RENDER:                 0                       
+PERF_CP_PREDICATED_DRAWS_KILLED:                  0                       
+PERF_CP_MODE_SWITCH:                              0                       
+PERF_CP_ZPASS_DONE:                               0                       
+PERF_CP_CONTEXT_DONE:                             161                     
+PERF_CP_CACHE_FLUSH:                              7                       
+PERF_RBBM_ALWAYS_ON:                              19201036                
+PERF_RBBM_ALWAYS_ON:                              19201036                
+PERF_RBBM_TSE_BUSY:                               679908263                99.98%
+PERF_RBBM_RAS_BUSY:                               679929626                99.98%
+PERF_PC_BUSY_CYCLES:                              657253752                96.65%
+PERF_PC_IA_VERTICES:                              1358745                 
+PERF_PC_VS_INVOCATIONS:                           1358775                 
+PERF_PC_IA_PRIMITIVES:                            452915                  
+PERF_PC_TAG_CHECKED_VERTICES:                     0                       
+PERF_PC_VERTEX_HITS:                              0                       
+PERF_PC_STALL_CYCLES_VFD:                         655289314                96.36%
+PERF_PC_STALL_CYCLES_VPC:                         2824                     0.00%
+PERF_VFD_BUSY_CYCLES:                             7869384532               1157.20%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  7859212197               1155.70%
+PERF_VFD_DECODED_ATTRIBUTE_BYTES:                 173917952               
+PERF_VFD_NUM_ATTRIBUTES:                          10869872                
+PERF_VFD_TOTAL_VERTICES:                          1358777                 
+PERF_VFD_STARVE_CYCLES_UCHE:                      56848620                 8.36%
+PERF_VFD_RBUFFER_FULL:                            7852999747              
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_HLSQ_BUSY_CYCLES:                            679982663                99.99%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               1202684275               176.86%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    6747                     0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     28                      
+PERF_VPC_BUSY_CYCLES:                             679974402                99.99%
+PERF_VPC_WORKING_CYCLES:                          305316278                44.90%
+PERF_VPC_WIT_FULL_CYCLES:                         3935361654               578.70%
+PERF_VPC_VPCRAM_FULL_CYCLES:                      0                        0.00%
+PERF_VPC_LM_FULL_WAIT_FOR_INTP_END:               0                       
+PERF_VPC_NUM_VPCRAM_WRITE:                        2717594                 
+PERF_TSE_INPUT_PRIM:                              452915                  
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        679446647                99.91%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             679928974                99.98%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 56068961                 8.24%
+PERF_RAS_STALL_CYCLES_LRZ:                        623595869                91.70%
+PERF_RAS_STARVE_CYCLES_TSE:                       5012                     0.00%
+PERF_UCHE_BUSY_CYCLES:                            54445074                 8.01%
+PERF_UCHE_STALL_CYCLES_ARBITER:                   2087088                  0.31%
+PERF_UCHE_READ_REQUESTS_SP:                       0                       
+PERF_UCHE_WRITE_REQUESTS_VPC:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_TP:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_VFD:                    5435384                 
+PERF_UCHE_VBIF_READ_BEATS_HLSQ:                   196                     
+PERF_UCHE_VBIF_READ_BEATS_LRZ:                    0                       
+PERF_UCHE_VBIF_READ_BEATS_SP:                     0                       
+PERF_UCHE_READ_REQUESTS_TP:                       0                       
+PERF_UCHE_READ_REQUESTS_VFD:                      10870368                
+PERF_UCHE_READ_REQUESTS_HLSQ:                     392                     
+PERF_TP_BUSY_CYCLES:                              76484                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_TP_L1_CACHELINE_REQUESTS:                    0                       
+PERF_TP_L1_CACHELINE_MISSES:                      0                       
+PERF_TP_SP_TP_TRANS:                              0                       
+PERF_TP_TP_SP_TRANS:                              0                       
+PERF_TP_OUTPUT_PIXELS:                            0                       
+PERF_TP_FILTER_WORKLOAD_16BIT:                    0                       
+PERF_SP_BUSY_CYCLES:                              8099746386               1191.07%
+PERF_SP_ALU_WORKING_CYCLES:                       5180272906               761.76%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         1473                     0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          2697056120               396.60%
+PERF_SP_NON_EXECUTION_CYCLES:                     3688284313               542.36%
+PERF_SP_WAVE_CONTEXTS:                            114738235818            
+PERF_SP_WAVE_CONTEXT_CYCLES:                      8099748116               1191.07%
+PERF_SP_STAGE_WAVE_CYCLES:                        114717100236             16869.23%
+PERF_SP_STAGE_WAVE_SAMPLES:                       161832499               
+PERF_SP_VS_STAGE_WAVE_CYCLES:                     21150235                 3.11%
+PERF_SP_VS_STAGE_WAVE_SAMPLES:                    22444                   
+PERF_SP_FS_STAGE_DURATION_CYCLES:                 6381162630               938.35%
+PERF_SP_VS_STAGE_DURATION_CYCLES:                 5422138                  0.80%
+PERF_SP_WAVE_CTRL_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_LOAD_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_EMIT_CYCLES:                         101328936729             14900.49%
+PERF_SP_WAVE_NOP_CYCLES:                          0                        0.00%
+PERF_SP_WAVE_WAIT_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_FETCH_CYCLES:                        971341359                142.84%
+PERF_SP_WAVE_IDLE_CYCLES:                         488038238                71.77%
+PERF_SP_WAVE_END_CYCLES:                          0                        0.00%
+PERF_RB_BUSY_CYCLES:                              4079590832               599.91%
+PERF_RB_STALL_CYCLES_HLSQ:                        1206989047               177.49%
+PERF_RB_STALL_CYCLES_FIFO0_FULL:                  1244174748               182.96%
+PERF_RB_STALL_CYCLES_FIFO1_FULL:                  1676669002               246.56%
+PERF_RB_STALL_CYCLES_FIFO2_FULL:                  0                        0.00%
+PERF_RB_STARVE_CYCLES_SP:                         0                        0.00%
+PERF_RB_STARVE_CYCLES_LRZ_TILE:                   2310189582               339.72%
+PERF_RB_STARVE_CYCLES_CCU:                        0                        0.00%
+PERF_VSC_BUSY_CYCLES:                             931                      0.00%
+PERF_VSC_INPUT_TILES:                             0                       
+PERF_CCU_BUSY_CYCLES:                             4077750384               599.64%
+PERF_CCU_STALL_CYCLES_RB_DEPTH_RETURN:            0                        0.00%
+PERF_CCU_STALL_CYCLES_RB_COLOR_RETURN:            0                        0.00%
+PERF_CCU_DEPTH_BLOCKS:                            0                       
+PERF_CCU_COLOR_BLOCKS:                            1490997279              
+PERF_LRZ_BUSY_CYCLES:                             679958138                99.99%
+PERF_LRZ_STARVE_CYCLES_RAS:                       112257                   0.02%
+PERF_LRZ_STALL_CYCLES_RB:                         649398662                95.49%
+PERF_LRZ_STALL_CYCLES_VSC:                        266                      0.00%
+PERF_CMPDECMP_STALL_CYCLES_ARB:                   779436261                114.62%
+PERF_CMPDECMP_VBIF_LATENCY_CYCLES:                642327164                94.45%
+PERF_CMPDECMP_VBIF_LATENCY_SAMPLES:               2517589                 
+PERF_CMPDECMP_VBIF_READ_DATA_CCU:                 332808926               
+PERF_UFC_BUSY_CYCLES:                             664426582                97.70%
+PERF_UFC_READ_DATA_VBIF:                          2016                    
+PERF_UFC_WRITE_DATA_VBIF:                         2016                    
+PERF_UFC_READ_REQUEST_VBIF:                       1008                    
+PERF_CP_ALWAYS_COUNT:                             680038031               
+PERF_CP_BUSY_GFX_CORE_IDLE:                       680026019                100.00%
+PERF_CP_BUSY_CYCLES:                              680038032                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_PC_BUSY_CYCLES:                              1372                     0.00%
+PERF_PC_WORKING_CYCLES:                           2051                     0.00%
+PERF_PC_STALL_CYCLES_VFD:                         0                        0.00%
+PERF_PC_RESERVED:                                 0                       
+PERF_PC_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_PC_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_PC_STALL_CYCLES_TESS:                        0                        0.00%
+PERF_PC_STALL_CYCLES_VFD_ONLY:                    0                        0.00%
+PERF_VFD_BUSY_CYCLES:                             3696                     0.00%
+PERF_VFD_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_INFO:                    0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_ATTR:                    0                        0.00%
+PERF_VFD_STARVE_CYCLES_UCHE:                      0                        0.00%
+PERF_VFD_RBUFFER_FULL:                            0                       
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_VPC_BUSY_CYCLES:                             9726                     0.00%
+PERF_VPC_WORKING_CYCLES:                          3562                     0.00%
+PERF_VPC_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VPC_STALL_CYCLES_VFD_WACK:                   0                        0.00%
+PERF_VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC:            0                        0.00%
+PERF_VPC_RESERVED_5:                              0                       
+PERF_TP_BUSY_CYCLES:                              76484                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_SP_BUSY_CYCLES:                              0                        0.00%
+PERF_SP_ALU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          0                        0.00%
+PERF_SP_NON_EXECUTION_CYCLES:                     0                        0.00%
+PERF_SP_WAVE_CONTEXTS:                            0                       
+PERF_SP_WAVE_CONTEXT_CYCLES:                      0                        0.00%
+PERF_SP_STAGE_WAVE_CYCLES:                        0                        0.00%
+PERF_SP_STAGE_WAVE_SAMPLES:                       0                       
+PERF_UFC_BUSY_CYCLES:                             664426574                97.70%
+PERF_UFC_READ_DATA_VBIF:                          664426567               
+PERF_TSE_BUSY_CYCLES:                             2997                     0.00%
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        154                      0.00%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             1232                     0.00%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 0                        0.00%
+PERF_RAS_STALL_CYCLES_LRZ:                        0                        0.00%
+PERF_RAS_STARVE_CYCLES_TSE:                       2695                     0.00%
+PERF_LRZ_BUSY_CYCLES:                             3538                     0.00%
+PERF_LRZ_STARVE_CYCLES_RAS:                       680038041                100.00%
+PERF_LRZ_STALL_CYCLES_RB:                         0                        0.00%
+PERF_LRZ_STALL_CYCLES_VSC:                        154                      0.00%
+PERF_HLSQ_BUSY_CYCLES:                            0                        0.00%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     0                       
+=== sample 1795417139.270 ===
+device: FD740
+min_freq=0, max_freq=680000000
+PERF_CP_ALWAYS_COUNT:                             680121155               
+PERF_CP_BUSY_CYCLES:                              680121156                100.00%
+PERF_CP_BUSY_CYCLES:                              680121157                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_CP_DEAD_DRAWS_IN_BIN_RENDER:                 0                       
+PERF_CP_PREDICATED_DRAWS_KILLED:                  0                       
+PERF_CP_MODE_SWITCH:                              0                       
+PERF_CP_ZPASS_DONE:                               0                       
+PERF_CP_CONTEXT_DONE:                             161                     
+PERF_CP_CACHE_FLUSH:                              7                       
+PERF_RBBM_ALWAYS_ON:                              19203414                
+PERF_RBBM_ALWAYS_ON:                              19203412                
+PERF_RBBM_TSE_BUSY:                               679992361                99.98%
+PERF_RBBM_RAS_BUSY:                               680013788                99.98%
+PERF_PC_BUSY_CYCLES:                              657056750                96.61%
+PERF_PC_IA_VERTICES:                              1346502                 
+PERF_PC_VS_INVOCATIONS:                           1346502                 
+PERF_PC_IA_PRIMITIVES:                            448834                  
+PERF_PC_TAG_CHECKED_VERTICES:                     0                       
+PERF_PC_VERTEX_HITS:                              0                       
+PERF_PC_STALL_CYCLES_VFD:                         655067971                96.32%
+PERF_PC_STALL_CYCLES_VPC:                         2807                     0.00%
+PERF_VFD_BUSY_CYCLES:                             7866802895               1156.68%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  7856578941               1155.17%
+PERF_VFD_DECODED_ATTRIBUTE_BYTES:                 172352256               
+PERF_VFD_NUM_ATTRIBUTES:                          10772016                
+PERF_VFD_TOTAL_VERTICES:                          1346495                 
+PERF_VFD_STARVE_CYCLES_UCHE:                      56941922                 8.37%
+PERF_VFD_RBUFFER_FULL:                            7850445872              
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_HLSQ_BUSY_CYCLES:                            680066394                99.99%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               1222241088               179.71%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    6780                     0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     28                      
+PERF_VPC_BUSY_CYCLES:                             680057756                99.99%
+PERF_VPC_WORKING_CYCLES:                          303345385                44.60%
+PERF_VPC_WIT_FULL_CYCLES:                         3934118831               578.44%
+PERF_VPC_VPCRAM_FULL_CYCLES:                      0                        0.00%
+PERF_VPC_LM_FULL_WAIT_FOR_INTP_END:               0                       
+PERF_VPC_NUM_VPCRAM_WRITE:                        2693004                 
+PERF_TSE_INPUT_PRIM:                              448828                  
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        679533499                99.91%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             680012074                99.98%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 55557844                 8.17%
+PERF_RAS_STALL_CYCLES_LRZ:                        624192447                91.78%
+PERF_RAS_STARVE_CYCLES_TSE:                       5012                     0.00%
+PERF_UCHE_BUSY_CYCLES:                            54468000                 8.01%
+PERF_UCHE_STALL_CYCLES_ARBITER:                   2185652                  0.32%
+PERF_UCHE_READ_REQUESTS_SP:                       0                       
+PERF_UCHE_WRITE_REQUESTS_VPC:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_TP:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_VFD:                    5386008                 
+PERF_UCHE_VBIF_READ_BEATS_HLSQ:                   196                     
+PERF_UCHE_VBIF_READ_BEATS_LRZ:                    0                       
+PERF_UCHE_VBIF_READ_BEATS_SP:                     0                       
+PERF_UCHE_READ_REQUESTS_TP:                       0                       
+PERF_UCHE_READ_REQUESTS_VFD:                      10772016                
+PERF_UCHE_READ_REQUESTS_HLSQ:                     392                     
+PERF_TP_BUSY_CYCLES:                              77188                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_TP_L1_CACHELINE_REQUESTS:                    0                       
+PERF_TP_L1_CACHELINE_MISSES:                      0                       
+PERF_TP_SP_TP_TRANS:                              0                       
+PERF_TP_TP_SP_TRANS:                              0                       
+PERF_TP_OUTPUT_PIXELS:                            0                       
+PERF_TP_FILTER_WORKLOAD_16BIT:                    0                       
+PERF_SP_BUSY_CYCLES:                              8098630020               1190.76%
+PERF_SP_ALU_WORKING_CYCLES:                       5133240044               754.75%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         1422                     0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          2709629280               398.40%
+PERF_SP_NON_EXECUTION_CYCLES:                     3721749858               547.22%
+PERF_SP_WAVE_CONTEXTS:                            114779776614            
+PERF_SP_WAVE_CONTEXT_CYCLES:                      8098628323               1190.76%
+PERF_SP_STAGE_WAVE_CYCLES:                        114758595794             16873.26%
+PERF_SP_STAGE_WAVE_SAMPLES:                       160365171               
+PERF_SP_VS_STAGE_WAVE_CYCLES:                     21082515                 3.10%
+PERF_SP_VS_STAGE_WAVE_SAMPLES:                    22240                   
+PERF_SP_FS_STAGE_DURATION_CYCLES:                 6337535615               931.82%
+PERF_SP_VS_STAGE_DURATION_CYCLES:                 5363604                  0.79%
+PERF_SP_WAVE_CTRL_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_LOAD_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_EMIT_CYCLES:                         101489343347             14922.25%
+PERF_SP_WAVE_NOP_CYCLES:                          0                        0.00%
+PERF_SP_WAVE_WAIT_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_FETCH_CYCLES:                        962528827                141.52%
+PERF_SP_WAVE_IDLE_CYCLES:                         483609543                71.11%
+PERF_SP_WAVE_END_CYCLES:                          0                        0.00%
+PERF_RB_BUSY_CYCLES:                              4080071940               599.90%
+PERF_RB_STALL_CYCLES_HLSQ:                        1226424492               180.32%
+PERF_RB_STALL_CYCLES_FIFO0_FULL:                  1242172632               182.64%
+PERF_RB_STALL_CYCLES_FIFO1_FULL:                  1676844349               246.55%
+PERF_RB_STALL_CYCLES_FIFO2_FULL:                  0                        0.00%
+PERF_RB_STARVE_CYCLES_SP:                         0                        0.00%
+PERF_RB_STARVE_CYCLES_LRZ_TILE:                   2317813322               340.79%
+PERF_RB_STARVE_CYCLES_CCU:                        0                        0.00%
+PERF_VSC_BUSY_CYCLES:                             927                      0.00%
+PERF_VSC_INPUT_TILES:                             0                       
+PERF_CCU_BUSY_CYCLES:                             4078231398               599.63%
+PERF_CCU_STALL_CYCLES_RB_DEPTH_RETURN:            0                        0.00%
+PERF_CCU_STALL_CYCLES_RB_COLOR_RETURN:            0                        0.00%
+PERF_CCU_DEPTH_BLOCKS:                            0                       
+PERF_CCU_COLOR_BLOCKS:                            1477400707              
+PERF_LRZ_BUSY_CYCLES:                             680040179                99.99%
+PERF_LRZ_STARVE_CYCLES_RAS:                       110914                   0.02%
+PERF_LRZ_STALL_CYCLES_RB:                         649561811                95.51%
+PERF_LRZ_STALL_CYCLES_VSC:                        266                      0.00%
+PERF_CMPDECMP_STALL_CYCLES_ARB:                   789528170                116.09%
+PERF_CMPDECMP_VBIF_LATENCY_CYCLES:                642208276                94.43%
+PERF_CMPDECMP_VBIF_LATENCY_SAMPLES:               2466819                 
+PERF_CMPDECMP_VBIF_READ_DATA_CCU:                 329766867               
+PERF_UFC_BUSY_CYCLES:                             662710933                97.44%
+PERF_UFC_READ_DATA_VBIF:                          2016                    
+PERF_UFC_WRITE_DATA_VBIF:                         2016                    
+PERF_UFC_READ_REQUEST_VBIF:                       1008                    
+PERF_CP_ALWAYS_COUNT:                             680120421               
+PERF_CP_BUSY_GFX_CORE_IDLE:                       680108398                100.00%
+PERF_CP_BUSY_CYCLES:                              680120421                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_PC_BUSY_CYCLES:                              1372                     0.00%
+PERF_PC_WORKING_CYCLES:                           2051                     0.00%
+PERF_PC_STALL_CYCLES_VFD:                         0                        0.00%
+PERF_PC_RESERVED:                                 0                       
+PERF_PC_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_PC_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_PC_STALL_CYCLES_TESS:                        0                        0.00%
+PERF_PC_STALL_CYCLES_VFD_ONLY:                    0                        0.00%
+PERF_VFD_BUSY_CYCLES:                             3696                     0.00%
+PERF_VFD_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_INFO:                    0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_ATTR:                    0                        0.00%
+PERF_VFD_STARVE_CYCLES_UCHE:                      0                        0.00%
+PERF_VFD_RBUFFER_FULL:                            0                       
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_VPC_BUSY_CYCLES:                             9737                     0.00%
+PERF_VPC_WORKING_CYCLES:                          3567                     0.00%
+PERF_VPC_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VPC_STALL_CYCLES_VFD_WACK:                   0                        0.00%
+PERF_VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC:            0                        0.00%
+PERF_VPC_RESERVED_5:                              0                       
+PERF_TP_BUSY_CYCLES:                              77188                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_SP_BUSY_CYCLES:                              0                        0.00%
+PERF_SP_ALU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          0                        0.00%
+PERF_SP_NON_EXECUTION_CYCLES:                     0                        0.00%
+PERF_SP_WAVE_CONTEXTS:                            0                       
+PERF_SP_WAVE_CONTEXT_CYCLES:                      0                        0.00%
+PERF_SP_STAGE_WAVE_CYCLES:                        0                        0.00%
+PERF_SP_STAGE_WAVE_SAMPLES:                       0                       
+PERF_UFC_BUSY_CYCLES:                             662710314                97.44%
+PERF_UFC_READ_DATA_VBIF:                          662710098               
+PERF_TSE_BUSY_CYCLES:                             2996                     0.00%
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        154                      0.00%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             1232                     0.00%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 0                        0.00%
+PERF_RAS_STALL_CYCLES_LRZ:                        0                        0.00%
+PERF_RAS_STARVE_CYCLES_TSE:                       2695                     0.00%
+PERF_LRZ_BUSY_CYCLES:                             3542                     0.00%
+PERF_LRZ_STARVE_CYCLES_RAS:                       680120070                100.00%
+PERF_LRZ_STALL_CYCLES_RB:                         0                        0.00%
+PERF_LRZ_STALL_CYCLES_VSC:                        154                      0.00%
+PERF_HLSQ_BUSY_CYCLES:                            0                        0.00%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     0                       
+=== sample 1795417141.405 ===
+device: FD740
+min_freq=0, max_freq=680000000
+PERF_CP_ALWAYS_COUNT:                             680046908               
+PERF_CP_BUSY_CYCLES:                              680046935                100.00%
+PERF_CP_BUSY_CYCLES:                              680046954                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_CP_DEAD_DRAWS_IN_BIN_RENDER:                 0                       
+PERF_CP_PREDICATED_DRAWS_KILLED:                  0                       
+PERF_CP_MODE_SWITCH:                              0                       
+PERF_CP_ZPASS_DONE:                               0                       
+PERF_CP_CONTEXT_DONE:                             138                     
+PERF_CP_CACHE_FLUSH:                              6                       
+PERF_RBBM_ALWAYS_ON:                              19201527                
+PERF_RBBM_ALWAYS_ON:                              19201526                
+PERF_RBBM_TSE_BUSY:                               679944163                99.99%
+PERF_RBBM_RAS_BUSY:                               679962115                99.99%
+PERF_PC_BUSY_CYCLES:                              660286221                97.09%
+PERF_PC_IA_VERTICES:                              1349466                 
+PERF_PC_VS_INVOCATIONS:                           1349436                 
+PERF_PC_IA_PRIMITIVES:                            449822                  
+PERF_PC_TAG_CHECKED_VERTICES:                     0                       
+PERF_PC_VERTEX_HITS:                              0                       
+PERF_PC_STALL_CYCLES_VFD:                         658573956                96.84%
+PERF_PC_STALL_CYCLES_VPC:                         2692                     0.00%
+PERF_VFD_BUSY_CYCLES:                             7908174705               1162.89%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  7899217146               1161.57%
+PERF_VFD_DECODED_ATTRIBUTE_BYTES:                 172702592               
+PERF_VFD_NUM_ATTRIBUTES:                          10793912                
+PERF_VFD_TOTAL_VERTICES:                          1349348                 
+PERF_VFD_STARVE_CYCLES_UCHE:                      56828199                 8.36%
+PERF_VFD_RBUFFER_FULL:                            7892256020              
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_HLSQ_BUSY_CYCLES:                            679980422                99.99%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               1223995022               179.99%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    5754                     0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     24                      
+PERF_VPC_BUSY_CYCLES:                             679972304                99.99%
+PERF_VPC_WORKING_CYCLES:                          303993215                44.70%
+PERF_VPC_WIT_FULL_CYCLES:                         3954433221               581.50%
+PERF_VPC_VPCRAM_FULL_CYCLES:                      0                        0.00%
+PERF_VPC_LM_FULL_WAIT_FOR_INTP_END:               0                       
+PERF_VPC_NUM_VPCRAM_WRITE:                        2698350                 
+PERF_TSE_INPUT_PRIM:                              449715                  
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        679457726                99.91%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             679931939                99.98%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 55677538                 8.19%
+PERF_RAS_STALL_CYCLES_LRZ:                        623992544                91.76%
+PERF_RAS_STARVE_CYCLES_TSE:                       4296                     0.00%
+PERF_UCHE_BUSY_CYCLES:                            54614122                 8.03%
+PERF_UCHE_STALL_CYCLES_ARBITER:                   2146433                  0.32%
+PERF_UCHE_READ_REQUESTS_SP:                       0                       
+PERF_UCHE_WRITE_REQUESTS_VPC:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_TP:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_VFD:                    5396700                 
+PERF_UCHE_VBIF_READ_BEATS_HLSQ:                   168                     
+PERF_UCHE_VBIF_READ_BEATS_LRZ:                    0                       
+PERF_UCHE_VBIF_READ_BEATS_SP:                     0                       
+PERF_UCHE_READ_REQUESTS_TP:                       0                       
+PERF_UCHE_READ_REQUESTS_VFD:                      10793400                
+PERF_UCHE_READ_REQUESTS_HLSQ:                     336                     
+PERF_TP_BUSY_CYCLES:                              65286                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_TP_L1_CACHELINE_REQUESTS:                    0                       
+PERF_TP_L1_CACHELINE_MISSES:                      0                       
+PERF_TP_SP_TP_TRANS:                              0                       
+PERF_TP_TP_SP_TRANS:                              0                       
+PERF_TP_OUTPUT_PIXELS:                            0                       
+PERF_TP_FILTER_WORKLOAD_16BIT:                    0                       
+PERF_SP_BUSY_CYCLES:                              8099974104               1191.09%
+PERF_SP_ALU_WORKING_CYCLES:                       5143878523               756.40%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         1454                     0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          2709071586               398.37%
+PERF_SP_NON_EXECUTION_CYCLES:                     3714613637               546.23%
+PERF_SP_WAVE_CONTEXTS:                            115144338890            
+PERF_SP_WAVE_CONTEXT_CYCLES:                      8099976276               1191.09%
+PERF_SP_STAGE_WAVE_CYCLES:                        115123363273             16928.77%
+PERF_SP_STAGE_WAVE_SAMPLES:                       160695846               
+PERF_SP_VS_STAGE_WAVE_CYCLES:                     21027824                 3.09%
+PERF_SP_VS_STAGE_WAVE_SAMPLES:                    22294                   
+PERF_SP_FS_STAGE_DURATION_CYCLES:                 6348490817               933.54%
+PERF_SP_VS_STAGE_DURATION_CYCLES:                 5377364                  0.79%
+PERF_SP_WAVE_CTRL_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_LOAD_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_EMIT_CYCLES:                         101831435953             14974.21%
+PERF_SP_WAVE_NOP_CYCLES:                          0                        0.00%
+PERF_SP_WAVE_WAIT_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_FETCH_CYCLES:                        964515837                141.83%
+PERF_SP_WAVE_IDLE_CYCLES:                         484554538                71.25%
+PERF_SP_WAVE_END_CYCLES:                          0                        0.00%
+PERF_RB_BUSY_CYCLES:                              4079569873               599.90%
+PERF_RB_STALL_CYCLES_HLSQ:                        1228139157               180.60%
+PERF_RB_STALL_CYCLES_FIFO0_FULL:                  1252784624               184.22%
+PERF_RB_STALL_CYCLES_FIFO1_FULL:                  1694219755               249.13%
+PERF_RB_STALL_CYCLES_FIFO2_FULL:                  0                        0.00%
+PERF_RB_STARVE_CYCLES_SP:                         0                        0.00%
+PERF_RB_STARVE_CYCLES_LRZ_TILE:                   2305349210               339.00%
+PERF_RB_STARVE_CYCLES_CCU:                        0                        0.00%
+PERF_VSC_BUSY_CYCLES:                             812                      0.00%
+PERF_VSC_INPUT_TILES:                             0                       
+PERF_CCU_BUSY_CYCLES:                             4077788325               599.63%
+PERF_CCU_STALL_CYCLES_RB_DEPTH_RETURN:            0                        0.00%
+PERF_CCU_STALL_CYCLES_RB_COLOR_RETURN:            0                        0.00%
+PERF_CCU_DEPTH_BLOCKS:                            0                       
+PERF_CCU_COLOR_BLOCKS:                            1480527952              
+PERF_LRZ_BUSY_CYCLES:                             679954073                99.99%
+PERF_LRZ_STARVE_CYCLES_RAS:                       96570                    0.01%
+PERF_LRZ_STALL_CYCLES_RB:                         649248249                95.47%
+PERF_LRZ_STALL_CYCLES_VSC:                        228                      0.00%
+PERF_CMPDECMP_STALL_CYCLES_ARB:                   787515813                115.80%
+PERF_CMPDECMP_VBIF_LATENCY_CYCLES:                642236601                94.44%
+PERF_CMPDECMP_VBIF_LATENCY_SAMPLES:               2481542                 
+PERF_CMPDECMP_VBIF_READ_DATA_CCU:                 330526973               
+PERF_UFC_BUSY_CYCLES:                             662975456                97.49%
+PERF_UFC_READ_DATA_VBIF:                          1728                    
+PERF_UFC_WRITE_DATA_VBIF:                         1728                    
+PERF_UFC_READ_REQUEST_VBIF:                       864                     
+PERF_CP_ALWAYS_COUNT:                             680023289               
+PERF_CP_BUSY_GFX_CORE_IDLE:                       680012956                100.00%
+PERF_CP_BUSY_CYCLES:                              680023288                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_PC_BUSY_CYCLES:                              1176                     0.00%
+PERF_PC_WORKING_CYCLES:                           1758                     0.00%
+PERF_PC_STALL_CYCLES_VFD:                         0                        0.00%
+PERF_PC_RESERVED:                                 0                       
+PERF_PC_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_PC_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_PC_STALL_CYCLES_TESS:                        0                        0.00%
+PERF_PC_STALL_CYCLES_VFD_ONLY:                    0                        0.00%
+PERF_VFD_BUSY_CYCLES:                             3168                     0.00%
+PERF_VFD_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_INFO:                    0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_ATTR:                    0                        0.00%
+PERF_VFD_STARVE_CYCLES_UCHE:                      0                        0.00%
+PERF_VFD_RBUFFER_FULL:                            0                       
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_VPC_BUSY_CYCLES:                             8376                     0.00%
+PERF_VPC_WORKING_CYCLES:                          3062                     0.00%
+PERF_VPC_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VPC_STALL_CYCLES_VFD_WACK:                   0                        0.00%
+PERF_VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC:            0                        0.00%
+PERF_VPC_RESERVED_5:                              0                       
+PERF_TP_BUSY_CYCLES:                              65286                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_SP_BUSY_CYCLES:                              0                        0.00%
+PERF_SP_ALU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          0                        0.00%
+PERF_SP_NON_EXECUTION_CYCLES:                     0                        0.00%
+PERF_SP_WAVE_CONTEXTS:                            0                       
+PERF_SP_WAVE_CONTEXT_CYCLES:                      0                        0.00%
+PERF_SP_STAGE_WAVE_CYCLES:                        0                        0.00%
+PERF_SP_STAGE_WAVE_SAMPLES:                       0                       
+PERF_UFC_BUSY_CYCLES:                             662977920                97.49%
+PERF_UFC_READ_DATA_VBIF:                          662977720               
+PERF_TSE_BUSY_CYCLES:                             2568                     0.00%
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        132                      0.00%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             1056                     0.00%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 0                        0.00%
+PERF_RAS_STALL_CYCLES_LRZ:                        0                        0.00%
+PERF_RAS_STARVE_CYCLES_TSE:                       2310                     0.00%
+PERF_LRZ_BUSY_CYCLES:                             3043                     0.00%
+PERF_LRZ_STARVE_CYCLES_RAS:                       680026020                100.00%
+PERF_LRZ_STALL_CYCLES_RB:                         0                        0.00%
+PERF_LRZ_STALL_CYCLES_VSC:                        132                      0.00%
+PERF_HLSQ_BUSY_CYCLES:                            0                        0.00%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     0                       
+=== sample 1795417143.533 ===
+device: FD740
+min_freq=0, max_freq=680000000
+PERF_CP_ALWAYS_COUNT:                             679631120               
+PERF_CP_BUSY_CYCLES:                              679631120                100.00%
+PERF_CP_BUSY_CYCLES:                              679631120                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_CP_DEAD_DRAWS_IN_BIN_RENDER:                 0                       
+PERF_CP_PREDICATED_DRAWS_KILLED:                  0                       
+PERF_CP_MODE_SWITCH:                              0                       
+PERF_CP_ZPASS_DONE:                               0                       
+PERF_CP_CONTEXT_DONE:                             161                     
+PERF_CP_CACHE_FLUSH:                              7                       
+PERF_RBBM_ALWAYS_ON:                              19189578                
+PERF_RBBM_ALWAYS_ON:                              19189578                
+PERF_RBBM_TSE_BUSY:                               679502643                99.98%
+PERF_RBBM_RAS_BUSY:                               679523105                99.98%
+PERF_PC_BUSY_CYCLES:                              656669983                96.62%
+PERF_PC_IA_VERTICES:                              1349634                 
+PERF_PC_VS_INVOCATIONS:                           1349634                 
+PERF_PC_IA_PRIMITIVES:                            449878                  
+PERF_PC_TAG_CHECKED_VERTICES:                     0                       
+PERF_PC_VERTEX_HITS:                              0                       
+PERF_PC_STALL_CYCLES_VFD:                         654695099                96.33%
+PERF_PC_STALL_CYCLES_VPC:                         2721                     0.00%
+PERF_VFD_BUSY_CYCLES:                             7862299940               1156.85%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  7852107488               1155.35%
+PERF_VFD_DECODED_ATTRIBUTE_BYTES:                 172761280               
+PERF_VFD_NUM_ATTRIBUTES:                          10797580                
+PERF_VFD_TOTAL_VERTICES:                          1349679                 
+PERF_VFD_STARVE_CYCLES_UCHE:                      56869336                 8.37%
+PERF_VFD_RBUFFER_FULL:                            7845917728              
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_HLSQ_BUSY_CYCLES:                            679576663                99.99%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               1215373755               178.83%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    7381                     0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     28                      
+PERF_VPC_BUSY_CYCLES:                             679567702                99.99%
+PERF_VPC_WORKING_CYCLES:                          303766430                44.70%
+PERF_VPC_WIT_FULL_CYCLES:                         3931865901               578.53%
+PERF_VPC_VPCRAM_FULL_CYCLES:                      0                        0.00%
+PERF_VPC_LM_FULL_WAIT_FOR_INTP_END:               0                       
+PERF_VPC_NUM_VPCRAM_WRITE:                        2699524                 
+PERF_TSE_INPUT_PRIM:                              449891                  
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        679042897                99.91%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             679521793                99.98%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 55691638                 8.19%
+PERF_RAS_STALL_CYCLES_LRZ:                        623567794                91.75%
+PERF_RAS_STARVE_CYCLES_TSE:                       5011                     0.00%
+PERF_UCHE_BUSY_CYCLES:                            54381404                 8.00%
+PERF_UCHE_STALL_CYCLES_ARBITER:                   2164600                  0.32%
+PERF_UCHE_READ_REQUESTS_SP:                       0                       
+PERF_UCHE_WRITE_REQUESTS_VPC:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_TP:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_VFD:                    5398536                 
+PERF_UCHE_VBIF_READ_BEATS_HLSQ:                   196                     
+PERF_UCHE_VBIF_READ_BEATS_LRZ:                    0                       
+PERF_UCHE_VBIF_READ_BEATS_SP:                     0                       
+PERF_UCHE_READ_REQUESTS_TP:                       0                       
+PERF_UCHE_READ_REQUESTS_VFD:                      10797072                
+PERF_UCHE_READ_REQUESTS_HLSQ:                     392                     
+PERF_TP_BUSY_CYCLES:                              75745                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_TP_L1_CACHELINE_REQUESTS:                    0                       
+PERF_TP_L1_CACHELINE_MISSES:                      0                       
+PERF_TP_SP_TP_TRANS:                              0                       
+PERF_TP_TP_SP_TRANS:                              0                       
+PERF_TP_OUTPUT_PIXELS:                            0                       
+PERF_TP_FILTER_WORKLOAD_16BIT:                    0                       
+PERF_SP_BUSY_CYCLES:                              8094319755               1190.99%
+PERF_SP_ALU_WORKING_CYCLES:                       5145560263               757.11%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         1448                     0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          2704807847               397.98%
+PERF_SP_NON_EXECUTION_CYCLES:                     3709210212               545.77%
+PERF_SP_WAVE_CONTEXTS:                            114745769245            
+PERF_SP_WAVE_CONTEXT_CYCLES:                      8094319508               1190.99%
+PERF_SP_STAGE_WAVE_CYCLES:                        114724682308             16880.46%
+PERF_SP_STAGE_WAVE_SAMPLES:                       160749537               
+PERF_SP_VS_STAGE_WAVE_CYCLES:                     21071317                 3.10%
+PERF_SP_VS_STAGE_WAVE_SAMPLES:                    22293                   
+PERF_SP_FS_STAGE_DURATION_CYCLES:                 6346848466               933.87%
+PERF_SP_VS_STAGE_DURATION_CYCLES:                 5381255                  0.79%
+PERF_SP_WAVE_CTRL_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_LOAD_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_EMIT_CYCLES:                         101424632215             14923.51%
+PERF_SP_WAVE_NOP_CYCLES:                          0                        0.00%
+PERF_SP_WAVE_WAIT_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_FETCH_CYCLES:                        964837642                141.97%
+PERF_SP_WAVE_IDLE_CYCLES:                         484767352                71.33%
+PERF_SP_WAVE_END_CYCLES:                          0                        0.00%
+PERF_RB_BUSY_CYCLES:                              4077132517               599.90%
+PERF_RB_STALL_CYCLES_HLSQ:                        1219565926               179.45%
+PERF_RB_STALL_CYCLES_FIFO0_FULL:                  1230033416               180.99%
+PERF_RB_STALL_CYCLES_FIFO1_FULL:                  1667914562               245.42%
+PERF_RB_STALL_CYCLES_FIFO2_FULL:                  0                        0.00%
+PERF_RB_STARVE_CYCLES_SP:                         0                        0.00%
+PERF_RB_STARVE_CYCLES_LRZ_TILE:                   2326425202               342.31%
+PERF_RB_STARVE_CYCLES_CCU:                        0                        0.00%
+PERF_VSC_BUSY_CYCLES:                             929                      0.00%
+PERF_VSC_INPUT_TILES:                             0                       
+PERF_CCU_BUSY_CYCLES:                             4075374818               599.65%
+PERF_CCU_STALL_CYCLES_RB_DEPTH_RETURN:            0                        0.00%
+PERF_CCU_STALL_CYCLES_RB_COLOR_RETURN:            0                        0.00%
+PERF_CCU_DEPTH_BLOCKS:                            0                       
+PERF_CCU_COLOR_BLOCKS:                            1480974942              
+PERF_LRZ_BUSY_CYCLES:                             679550406                99.99%
+PERF_LRZ_STARVE_CYCLES_RAS:                       113634                   0.02%
+PERF_LRZ_STALL_CYCLES_RB:                         649076524                95.50%
+PERF_LRZ_STALL_CYCLES_VSC:                        266                      0.00%
+PERF_CMPDECMP_STALL_CYCLES_ARB:                   785444094                115.57%
+PERF_CMPDECMP_VBIF_LATENCY_CYCLES:                641721249                94.42%
+PERF_CMPDECMP_VBIF_LATENCY_SAMPLES:               2482505                 
+PERF_CMPDECMP_VBIF_READ_DATA_CCU:                 330569981               
+PERF_UFC_BUSY_CYCLES:                             662557208                97.49%
+PERF_UFC_READ_DATA_VBIF:                          2016                    
+PERF_UFC_WRITE_DATA_VBIF:                         2016                    
+PERF_UFC_READ_REQUEST_VBIF:                       1008                    
+PERF_CP_ALWAYS_COUNT:                             679630713               
+PERF_CP_BUSY_GFX_CORE_IDLE:                       679618679                100.00%
+PERF_CP_BUSY_CYCLES:                              679630713                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_PC_BUSY_CYCLES:                              1372                     0.00%
+PERF_PC_WORKING_CYCLES:                           2051                     0.00%
+PERF_PC_STALL_CYCLES_VFD:                         0                        0.00%
+PERF_PC_RESERVED:                                 0                       
+PERF_PC_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_PC_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_PC_STALL_CYCLES_TESS:                        0                        0.00%
+PERF_PC_STALL_CYCLES_VFD_ONLY:                    0                        0.00%
+PERF_VFD_BUSY_CYCLES:                             3696                     0.00%
+PERF_VFD_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_INFO:                    0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_ATTR:                    0                        0.00%
+PERF_VFD_STARVE_CYCLES_UCHE:                      0                        0.00%
+PERF_VFD_RBUFFER_FULL:                            0                       
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_VPC_BUSY_CYCLES:                             9754                     0.00%
+PERF_VPC_WORKING_CYCLES:                          3583                     0.00%
+PERF_VPC_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VPC_STALL_CYCLES_VFD_WACK:                   0                        0.00%
+PERF_VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC:            0                        0.00%
+PERF_VPC_RESERVED_5:                              0                       
+PERF_TP_BUSY_CYCLES:                              75745                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_SP_BUSY_CYCLES:                              0                        0.00%
+PERF_SP_ALU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          0                        0.00%
+PERF_SP_NON_EXECUTION_CYCLES:                     0                        0.00%
+PERF_SP_WAVE_CONTEXTS:                            0                       
+PERF_SP_WAVE_CONTEXT_CYCLES:                      0                        0.00%
+PERF_SP_STAGE_WAVE_CYCLES:                        0                        0.00%
+PERF_SP_STAGE_WAVE_SAMPLES:                       0                       
+PERF_UFC_BUSY_CYCLES:                             662557094                97.49%
+PERF_UFC_READ_DATA_VBIF:                          662556899               
+PERF_TSE_BUSY_CYCLES:                             2996                     0.00%
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        154                      0.00%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             1232                     0.00%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 0                        0.00%
+PERF_RAS_STALL_CYCLES_LRZ:                        0                        0.00%
+PERF_RAS_STARVE_CYCLES_TSE:                       2695                     0.00%
+PERF_LRZ_BUSY_CYCLES:                             3568                     0.00%
+PERF_LRZ_STARVE_CYCLES_RAS:                       679630288                100.00%
+PERF_LRZ_STALL_CYCLES_RB:                         0                        0.00%
+PERF_LRZ_STALL_CYCLES_VSC:                        154                      0.00%
+PERF_HLSQ_BUSY_CYCLES:                            0                        0.00%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     0                       
+=== sample 1795417145.657 ===
+device: FD740
+min_freq=0, max_freq=680000000
+PERF_CP_ALWAYS_COUNT:                             680457875               
+PERF_CP_BUSY_CYCLES:                              680457908                100.00%
+PERF_CP_BUSY_CYCLES:                              680457909                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_CP_DEAD_DRAWS_IN_BIN_RENDER:                 0                       
+PERF_CP_PREDICATED_DRAWS_KILLED:                  0                       
+PERF_CP_MODE_SWITCH:                              0                       
+PERF_CP_ZPASS_DONE:                               0                       
+PERF_CP_CONTEXT_DONE:                             138                     
+PERF_CP_CACHE_FLUSH:                              6                       
+PERF_RBBM_ALWAYS_ON:                              19212963                
+PERF_RBBM_ALWAYS_ON:                              19212963                
+PERF_RBBM_TSE_BUSY:                               680349194                99.98%
+PERF_RBBM_RAS_BUSY:                               680367005                99.99%
+PERF_PC_BUSY_CYCLES:                              660747801                97.10%
+PERF_PC_IA_VERTICES:                              1352112                 
+PERF_PC_VS_INVOCATIONS:                           1352112                 
+PERF_PC_IA_PRIMITIVES:                            450704                  
+PERF_PC_TAG_CHECKED_VERTICES:                     0                       
+PERF_PC_VERTEX_HITS:                              0                       
+PERF_PC_STALL_CYCLES_VFD:                         659034278                96.85%
+PERF_PC_STALL_CYCLES_VPC:                         2675                     0.00%
+PERF_VFD_BUSY_CYCLES:                             7913745865               1163.00%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  7904832402               1161.69%
+PERF_VFD_DECODED_ATTRIBUTE_BYTES:                 173070592               
+PERF_VFD_NUM_ATTRIBUTES:                          10816912                
+PERF_VFD_TOTAL_VERTICES:                          1352105                 
+PERF_VFD_STARVE_CYCLES_UCHE:                      56922522                 8.37%
+PERF_VFD_RBUFFER_FULL:                            7898169884              
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_HLSQ_BUSY_CYCLES:                            680415850                99.99%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               1218307021               179.04%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    5736                     0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     24                      
+PERF_VPC_BUSY_CYCLES:                             680407967                99.99%
+PERF_VPC_WORKING_CYCLES:                          304327712                44.72%
+PERF_VPC_WIT_FULL_CYCLES:                         3957398738               581.58%
+PERF_VPC_VPCRAM_FULL_CYCLES:                      0                        0.00%
+PERF_VPC_LM_FULL_WAIT_FOR_INTP_END:               0                       
+PERF_VPC_NUM_VPCRAM_WRITE:                        2704230                 
+PERF_TSE_INPUT_PRIM:                              450694                  
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        679892530                99.92%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             680367853                99.99%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 55793517                 8.20%
+PERF_RAS_STALL_CYCLES_LRZ:                        624311809                91.75%
+PERF_RAS_STARVE_CYCLES_TSE:                       4338                     0.00%
+PERF_UCHE_BUSY_CYCLES:                            54633829                 8.03%
+PERF_UCHE_STALL_CYCLES_ARBITER:                   2102837                  0.31%
+PERF_UCHE_READ_REQUESTS_SP:                       0                       
+PERF_UCHE_WRITE_REQUESTS_VPC:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_TP:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_VFD:                    5408202                 
+PERF_UCHE_VBIF_READ_BEATS_HLSQ:                   168                     
+PERF_UCHE_VBIF_READ_BEATS_LRZ:                    0                       
+PERF_UCHE_VBIF_READ_BEATS_SP:                     0                       
+PERF_UCHE_READ_REQUESTS_TP:                       0                       
+PERF_UCHE_READ_REQUESTS_VFD:                      10816404                
+PERF_UCHE_READ_REQUESTS_HLSQ:                     336                     
+PERF_TP_BUSY_CYCLES:                              64872                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_TP_L1_CACHELINE_REQUESTS:                    0                       
+PERF_TP_L1_CACHELINE_MISSES:                      0                       
+PERF_TP_SP_TP_TRANS:                              0                       
+PERF_TP_TP_SP_TRANS:                              0                       
+PERF_TP_OUTPUT_PIXELS:                            0                       
+PERF_TP_FILTER_WORKLOAD_16BIT:                    0                       
+PERF_SP_BUSY_CYCLES:                              8105252508               1191.15%
+PERF_SP_ALU_WORKING_CYCLES:                       5154830281               757.55%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         1403                     0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          2708301175               398.01%
+PERF_SP_NON_EXECUTION_CYCLES:                     3711934656               545.51%
+PERF_SP_WAVE_CONTEXTS:                            115025109712            
+PERF_SP_WAVE_CONTEXT_CYCLES:                      8105246877               1191.15%
+PERF_SP_STAGE_WAVE_CYCLES:                        115003897964             16900.98%
+PERF_SP_STAGE_WAVE_SAMPLES:                       161038064               
+PERF_SP_VS_STAGE_WAVE_CYCLES:                     21087717                 3.10%
+PERF_SP_VS_STAGE_WAVE_SAMPLES:                    22341                   
+PERF_SP_FS_STAGE_DURATION_CYCLES:                 6358830565               934.49%
+PERF_SP_VS_STAGE_DURATION_CYCLES:                 5392043                  0.79%
+PERF_SP_WAVE_CTRL_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_LOAD_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_EMIT_CYCLES:                         101681904938             14943.18%
+PERF_SP_WAVE_NOP_CYCLES:                          0                        0.00%
+PERF_SP_WAVE_WAIT_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_FETCH_CYCLES:                        966564173                142.05%
+PERF_SP_WAVE_IDLE_CYCLES:                         485618139                71.37%
+PERF_SP_WAVE_END_CYCLES:                          0                        0.00%
+PERF_RB_BUSY_CYCLES:                              4082170154               599.92%
+PERF_RB_STALL_CYCLES_HLSQ:                        1222477645               179.66%
+PERF_RB_STALL_CYCLES_FIFO0_FULL:                  1235262883               181.53%
+PERF_RB_STALL_CYCLES_FIFO1_FULL:                  1673245630               245.90%
+PERF_RB_STALL_CYCLES_FIFO2_FULL:                  0                        0.00%
+PERF_RB_STARVE_CYCLES_SP:                         0                        0.00%
+PERF_RB_STARVE_CYCLES_LRZ_TILE:                   2325114385               341.70%
+PERF_RB_STARVE_CYCLES_CCU:                        0                        0.00%
+PERF_VSC_BUSY_CYCLES:                             812                      0.00%
+PERF_VSC_INPUT_TILES:                             0                       
+PERF_CCU_BUSY_CYCLES:                             4080429021               599.66%
+PERF_CCU_STALL_CYCLES_RB_DEPTH_RETURN:            0                        0.00%
+PERF_CCU_STALL_CYCLES_RB_COLOR_RETURN:            0                        0.00%
+PERF_CCU_DEPTH_BLOCKS:                            0                       
+PERF_CCU_COLOR_BLOCKS:                            1483658386              
+PERF_LRZ_BUSY_CYCLES:                             680390039                99.99%
+PERF_LRZ_STARVE_CYCLES_RAS:                       95990                    0.01%
+PERF_LRZ_STALL_CYCLES_RB:                         649987362                95.52%
+PERF_LRZ_STALL_CYCLES_VSC:                        228                      0.00%
+PERF_CMPDECMP_STALL_CYCLES_ARB:                   784982149                115.36%
+PERF_CMPDECMP_VBIF_LATENCY_CYCLES:                642483817                94.42%
+PERF_CMPDECMP_VBIF_LATENCY_SAMPLES:               2495161                 
+PERF_CMPDECMP_VBIF_READ_DATA_CCU:                 331196343               
+PERF_UFC_BUSY_CYCLES:                             663471256                97.50%
+PERF_UFC_READ_DATA_VBIF:                          1728                    
+PERF_UFC_WRITE_DATA_VBIF:                         1728                    
+PERF_UFC_READ_REQUEST_VBIF:                       864                     
+PERF_CP_ALWAYS_COUNT:                             680458282               
+PERF_CP_BUSY_GFX_CORE_IDLE:                       680447939                100.00%
+PERF_CP_BUSY_CYCLES:                              680458205                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_PC_BUSY_CYCLES:                              1176                     0.00%
+PERF_PC_WORKING_CYCLES:                           1758                     0.00%
+PERF_PC_STALL_CYCLES_VFD:                         0                        0.00%
+PERF_PC_RESERVED:                                 0                       
+PERF_PC_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_PC_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_PC_STALL_CYCLES_TESS:                        0                        0.00%
+PERF_PC_STALL_CYCLES_VFD_ONLY:                    0                        0.00%
+PERF_VFD_BUSY_CYCLES:                             3168                     0.00%
+PERF_VFD_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_INFO:                    0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_ATTR:                    0                        0.00%
+PERF_VFD_STARVE_CYCLES_UCHE:                      0                        0.00%
+PERF_VFD_RBUFFER_FULL:                            0                       
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_VPC_BUSY_CYCLES:                             8346                     0.00%
+PERF_VPC_WORKING_CYCLES:                          3064                     0.00%
+PERF_VPC_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VPC_STALL_CYCLES_VFD_WACK:                   0                        0.00%
+PERF_VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC:            0                        0.00%
+PERF_VPC_RESERVED_5:                              0                       
+PERF_TP_BUSY_CYCLES:                              64872                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_SP_BUSY_CYCLES:                              0                        0.00%
+PERF_SP_ALU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          0                        0.00%
+PERF_SP_NON_EXECUTION_CYCLES:                     0                        0.00%
+PERF_SP_WAVE_CONTEXTS:                            0                       
+PERF_SP_WAVE_CONTEXT_CYCLES:                      0                        0.00%
+PERF_SP_STAGE_WAVE_CYCLES:                        0                        0.00%
+PERF_SP_STAGE_WAVE_SAMPLES:                       0                       
+PERF_UFC_BUSY_CYCLES:                             663469879                97.50%
+PERF_UFC_READ_DATA_VBIF:                          663469832               
+PERF_TSE_BUSY_CYCLES:                             2568                     0.00%
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        132                      0.00%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             1056                     0.00%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 0                        0.00%
+PERF_RAS_STALL_CYCLES_LRZ:                        0                        0.00%
+PERF_RAS_STARVE_CYCLES_TSE:                       2310                     0.00%
+PERF_LRZ_BUSY_CYCLES:                             3045                     0.00%
+PERF_LRZ_STARVE_CYCLES_RAS:                       680456027                100.00%
+PERF_LRZ_STALL_CYCLES_RB:                         0                        0.00%
+PERF_LRZ_STALL_CYCLES_VSC:                        132                      0.00%
+PERF_HLSQ_BUSY_CYCLES:                            0                        0.00%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     0                       
+=== sample 1795417147.771 ===
+device: FD740
+min_freq=0, max_freq=680000000
+PERF_CP_ALWAYS_COUNT:                             680053687               
+PERF_CP_BUSY_CYCLES:                              680053659                100.00%
+PERF_CP_BUSY_CYCLES:                              680053642                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_CP_DEAD_DRAWS_IN_BIN_RENDER:                 0                       
+PERF_CP_PREDICATED_DRAWS_KILLED:                  0                       
+PERF_CP_MODE_SWITCH:                              0                       
+PERF_CP_ZPASS_DONE:                               0                       
+PERF_CP_CONTEXT_DONE:                             161                     
+PERF_CP_CACHE_FLUSH:                              7                       
+PERF_RBBM_ALWAYS_ON:                              19201515                
+PERF_RBBM_ALWAYS_ON:                              19201515                
+PERF_RBBM_TSE_BUSY:                               679926913                99.98%
+PERF_RBBM_RAS_BUSY:                               679947593                99.98%
+PERF_PC_BUSY_CYCLES:                              657128002                96.63%
+PERF_PC_IA_VERTICES:                              1352226                 
+PERF_PC_VS_INVOCATIONS:                           1352196                 
+PERF_PC_IA_PRIMITIVES:                            450742                  
+PERF_PC_TAG_CHECKED_VERTICES:                     0                       
+PERF_PC_VERTEX_HITS:                              0                       
+PERF_PC_STALL_CYCLES_VFD:                         655159181                96.34%
+PERF_PC_STALL_CYCLES_VPC:                         2994                     0.00%
+PERF_VFD_BUSY_CYCLES:                             7867842827               1156.94%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  7857662449               1155.45%
+PERF_VFD_DECODED_ATTRIBUTE_BYTES:                 173086720               
+PERF_VFD_NUM_ATTRIBUTES:                          10817920                
+PERF_VFD_TOTAL_VERTICES:                          1352229                 
+PERF_VFD_STARVE_CYCLES_UCHE:                      56906422                 8.37%
+PERF_VFD_RBUFFER_FULL:                            7851484950              
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_HLSQ_BUSY_CYCLES:                            680000696                99.99%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               1214478791               178.59%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    6915                     0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     28                      
+PERF_VPC_BUSY_CYCLES:                             679992774                99.99%
+PERF_VPC_WORKING_CYCLES:                          304201535                44.73%
+PERF_VPC_WIT_FULL_CYCLES:                         3934617938               578.57%
+PERF_VPC_VPCRAM_FULL_CYCLES:                      0                        0.00%
+PERF_VPC_LM_FULL_WAIT_FOR_INTP_END:               0                       
+PERF_VPC_NUM_VPCRAM_WRITE:                        2704350                 
+PERF_TSE_INPUT_PRIM:                              450739                  
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        679467396                99.91%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             679946888                99.98%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 55796026                 8.20%
+PERF_RAS_STALL_CYCLES_LRZ:                        623887959                91.74%
+PERF_RAS_STARVE_CYCLES_TSE:                       5011                     0.00%
+PERF_UCHE_BUSY_CYCLES:                            54409855                 8.00%
+PERF_UCHE_STALL_CYCLES_ARBITER:                   2168085                  0.32%
+PERF_UCHE_READ_REQUESTS_SP:                       0                       
+PERF_UCHE_WRITE_REQUESTS_VPC:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_TP:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_VFD:                    5408700                 
+PERF_UCHE_VBIF_READ_BEATS_HLSQ:                   196                     
+PERF_UCHE_VBIF_READ_BEATS_LRZ:                    0                       
+PERF_UCHE_VBIF_READ_BEATS_SP:                     0                       
+PERF_UCHE_READ_REQUESTS_TP:                       0                       
+PERF_UCHE_READ_REQUESTS_VFD:                      10817400                
+PERF_UCHE_READ_REQUESTS_HLSQ:                     392                     
+PERF_TP_BUSY_CYCLES:                              75874                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_TP_L1_CACHELINE_REQUESTS:                    0                       
+PERF_TP_L1_CACHELINE_MISSES:                      0                       
+PERF_TP_SP_TP_TRANS:                              0                       
+PERF_TP_TP_SP_TRANS:                              0                       
+PERF_TP_OUTPUT_PIXELS:                            0                       
+PERF_TP_FILTER_WORKLOAD_16BIT:                    0                       
+PERF_SP_BUSY_CYCLES:                              8099893099               1191.07%
+PERF_SP_ALU_WORKING_CYCLES:                       5155158211               758.05%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         1443                     0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          2704979896               397.76%
+PERF_SP_NON_EXECUTION_CYCLES:                     3707222366               545.14%
+PERF_SP_WAVE_CONTEXTS:                            114847547911            
+PERF_SP_WAVE_CONTEXT_CYCLES:                      8099892113               1191.07%
+PERF_SP_STAGE_WAVE_CYCLES:                        114826411764             16884.90%
+PERF_SP_STAGE_WAVE_SAMPLES:                       161049209               
+PERF_SP_VS_STAGE_WAVE_CYCLES:                     21139643                 3.11%
+PERF_SP_VS_STAGE_WAVE_SAMPLES:                    22339                   
+PERF_SP_FS_STAGE_DURATION_CYCLES:                 6357249920               934.82%
+PERF_SP_VS_STAGE_DURATION_CYCLES:                 5393280                  0.79%
+PERF_SP_WAVE_CTRL_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_LOAD_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_EMIT_CYCLES:                         101503436538             14925.80%
+PERF_SP_WAVE_NOP_CYCLES:                          0                        0.00%
+PERF_SP_WAVE_WAIT_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_FETCH_CYCLES:                        966632235                142.14%
+PERF_SP_WAVE_IDLE_CYCLES:                         485664508                71.42%
+PERF_SP_WAVE_END_CYCLES:                          0                        0.00%
+PERF_RB_BUSY_CYCLES:                              4079685510               599.91%
+PERF_RB_STALL_CYCLES_HLSQ:                        1218752425               179.21%
+PERF_RB_STALL_CYCLES_FIFO0_FULL:                  1235092036               181.62%
+PERF_RB_STALL_CYCLES_FIFO1_FULL:                  1674884035               246.29%
+PERF_RB_STALL_CYCLES_FIFO2_FULL:                  0                        0.00%
+PERF_RB_STARVE_CYCLES_SP:                         0                        0.00%
+PERF_RB_STARVE_CYCLES_LRZ_TILE:                   2322883062               341.57%
+PERF_RB_STARVE_CYCLES_CCU:                        0                        0.00%
+PERF_VSC_BUSY_CYCLES:                             928                      0.00%
+PERF_VSC_INPUT_TILES:                             0                       
+PERF_CCU_BUSY_CYCLES:                             4077901620               599.64%
+PERF_CCU_STALL_CYCLES_RB_DEPTH_RETURN:            0                        0.00%
+PERF_CCU_STALL_CYCLES_RB_COLOR_RETURN:            0                        0.00%
+PERF_CCU_DEPTH_BLOCKS:                            0                       
+PERF_CCU_COLOR_BLOCKS:                            1483738461              
+PERF_LRZ_BUSY_CYCLES:                             679973017                99.99%
+PERF_LRZ_STARVE_CYCLES_RAS:                       110921                   0.02%
+PERF_LRZ_STALL_CYCLES_RB:                         650001238                95.58%
+PERF_LRZ_STALL_CYCLES_VSC:                        266                      0.00%
+PERF_CMPDECMP_STALL_CYCLES_ARB:                   784946418                115.42%
+PERF_CMPDECMP_VBIF_LATENCY_CYCLES:                642146122                94.43%
+PERF_CMPDECMP_VBIF_LATENCY_SAMPLES:               2490222                 
+PERF_CMPDECMP_VBIF_READ_DATA_CCU:                 331178220               
+PERF_UFC_BUSY_CYCLES:                             663264072                97.53%
+PERF_UFC_READ_DATA_VBIF:                          2016                    
+PERF_UFC_WRITE_DATA_VBIF:                         2016                    
+PERF_UFC_READ_REQUEST_VBIF:                       1008                    
+PERF_CP_ALWAYS_COUNT:                             680040594               
+PERF_CP_BUSY_GFX_CORE_IDLE:                       680028528                100.00%
+PERF_CP_BUSY_CYCLES:                              680040548                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_PC_BUSY_CYCLES:                              1372                     0.00%
+PERF_PC_WORKING_CYCLES:                           2051                     0.00%
+PERF_PC_STALL_CYCLES_VFD:                         0                        0.00%
+PERF_PC_RESERVED:                                 0                       
+PERF_PC_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_PC_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_PC_STALL_CYCLES_TESS:                        0                        0.00%
+PERF_PC_STALL_CYCLES_VFD_ONLY:                    0                        0.00%
+PERF_VFD_BUSY_CYCLES:                             3696                     0.00%
+PERF_VFD_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_INFO:                    0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_ATTR:                    0                        0.00%
+PERF_VFD_STARVE_CYCLES_UCHE:                      0                        0.00%
+PERF_VFD_RBUFFER_FULL:                            0                       
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_VPC_BUSY_CYCLES:                             9762                     0.00%
+PERF_VPC_WORKING_CYCLES:                          3572                     0.00%
+PERF_VPC_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VPC_STALL_CYCLES_VFD_WACK:                   0                        0.00%
+PERF_VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC:            0                        0.00%
+PERF_VPC_RESERVED_5:                              0                       
+PERF_TP_BUSY_CYCLES:                              75874                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_SP_BUSY_CYCLES:                              0                        0.00%
+PERF_SP_ALU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          0                        0.00%
+PERF_SP_NON_EXECUTION_CYCLES:                     0                        0.00%
+PERF_SP_WAVE_CONTEXTS:                            0                       
+PERF_SP_WAVE_CONTEXT_CYCLES:                      0                        0.00%
+PERF_SP_STAGE_WAVE_CYCLES:                        0                        0.00%
+PERF_SP_STAGE_WAVE_SAMPLES:                       0                       
+PERF_UFC_BUSY_CYCLES:                             663257670                97.53%
+PERF_UFC_READ_DATA_VBIF:                          663257605               
+PERF_TSE_BUSY_CYCLES:                             2997                     0.00%
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        154                      0.00%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             1232                     0.00%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 0                        0.00%
+PERF_RAS_STALL_CYCLES_LRZ:                        0                        0.00%
+PERF_RAS_STARVE_CYCLES_TSE:                       2695                     0.00%
+PERF_LRZ_BUSY_CYCLES:                             3550                     0.00%
+PERF_LRZ_STARVE_CYCLES_RAS:                       680032425                100.00%
+PERF_LRZ_STALL_CYCLES_RB:                         0                        0.00%
+PERF_LRZ_STALL_CYCLES_VSC:                        154                      0.00%
+PERF_HLSQ_BUSY_CYCLES:                            0                        0.00%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     0                       
+=== sample 1795417149.870 ===
+device: FD740
+min_freq=0, max_freq=680000000
+PERF_CP_ALWAYS_COUNT:                             680039246               
+PERF_CP_BUSY_CYCLES:                              680039249                100.00%
+PERF_CP_BUSY_CYCLES:                              680039076                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_CP_DEAD_DRAWS_IN_BIN_RENDER:                 0                       
+PERF_CP_PREDICATED_DRAWS_KILLED:                  0                       
+PERF_CP_MODE_SWITCH:                              0                       
+PERF_CP_ZPASS_DONE:                               0                       
+PERF_CP_CONTEXT_DONE:                             138                     
+PERF_CP_CACHE_FLUSH:                              6                       
+PERF_RBBM_ALWAYS_ON:                              19201112                
+PERF_RBBM_ALWAYS_ON:                              19201116                
+PERF_RBBM_TSE_BUSY:                               679931572                99.98%
+PERF_RBBM_RAS_BUSY:                               679949668                99.99%
+PERF_PC_BUSY_CYCLES:                              660078398                97.06%
+PERF_PC_IA_VERTICES:                              1349640                 
+PERF_PC_VS_INVOCATIONS:                           1349700                 
+PERF_PC_IA_PRIMITIVES:                            449880                  
+PERF_PC_TAG_CHECKED_VERTICES:                     0                       
+PERF_PC_VERTEX_HITS:                              0                       
+PERF_PC_STALL_CYCLES_VFD:                         658104754                96.77%
+PERF_PC_STALL_CYCLES_VPC:                         2797                     0.00%
+PERF_VFD_BUSY_CYCLES:                             7903111296               1162.16%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  7893204856               1160.70%
+PERF_VFD_DECODED_ATTRIBUTE_BYTES:                 172864000               
+PERF_VFD_NUM_ATTRIBUTES:                          10804000                
+PERF_VFD_TOTAL_VERTICES:                          1349743                 
+PERF_VFD_STARVE_CYCLES_UCHE:                      56880446                 8.36%
+PERF_VFD_RBUFFER_FULL:                            7886691726              
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_HLSQ_BUSY_CYCLES:                            679994972                99.99%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               1212844479               178.35%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    5767                     0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     24                      
+PERF_VPC_BUSY_CYCLES:                             679988782                99.99%
+PERF_VPC_WORKING_CYCLES:                          304102455                44.72%
+PERF_VPC_WIT_FULL_CYCLES:                         3952301284               581.19%
+PERF_VPC_VPCRAM_FULL_CYCLES:                      0                        0.00%
+PERF_VPC_LM_FULL_WAIT_FOR_INTP_END:               0                       
+PERF_VPC_NUM_VPCRAM_WRITE:                        2701568                 
+PERF_TSE_INPUT_PRIM:                              450571                  
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        679474661                99.92%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             679950248                99.99%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 55776899                 8.20%
+PERF_RAS_STALL_CYCLES_LRZ:                        623910926                91.75%
+PERF_RAS_STARVE_CYCLES_TSE:                       4294                     0.00%
+PERF_UCHE_BUSY_CYCLES:                            54582036                 8.03%
+PERF_UCHE_STALL_CYCLES_ARBITER:                   2095111                  0.31%
+PERF_UCHE_READ_REQUESTS_SP:                       0                       
+PERF_UCHE_WRITE_REQUESTS_VPC:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_TP:                     0                       
+PERF_UCHE_VBIF_READ_BEATS_VFD:                    5401680                 
+PERF_UCHE_VBIF_READ_BEATS_HLSQ:                   168                     
+PERF_UCHE_VBIF_READ_BEATS_LRZ:                    0                       
+PERF_UCHE_VBIF_READ_BEATS_SP:                     0                       
+PERF_UCHE_READ_REQUESTS_TP:                       0                       
+PERF_UCHE_READ_REQUESTS_VFD:                      10802848                
+PERF_UCHE_READ_REQUESTS_HLSQ:                     336                     
+PERF_TP_BUSY_CYCLES:                              65648                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_TP_L1_CACHELINE_REQUESTS:                    0                       
+PERF_TP_L1_CACHELINE_MISSES:                      0                       
+PERF_TP_SP_TP_TRANS:                              0                       
+PERF_TP_TP_SP_TRANS:                              0                       
+PERF_TP_OUTPUT_PIXELS:                            0                       
+PERF_TP_FILTER_WORKLOAD_16BIT:                    0                       
+PERF_SP_BUSY_CYCLES:                              8098861333               1190.94%
+PERF_SP_ALU_WORKING_CYCLES:                       5153456787               757.82%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         1382                     0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          2703928569               397.61%
+PERF_SP_NON_EXECUTION_CYCLES:                     3708001215               545.26%
+PERF_SP_WAVE_CONTEXTS:                            114706267833            
+PERF_SP_WAVE_CONTEXT_CYCLES:                      8098861549               1190.94%
+PERF_SP_STAGE_WAVE_CYCLES:                        114685123549             16864.50%
+PERF_SP_STAGE_WAVE_SAMPLES:                       160996901               
+PERF_SP_VS_STAGE_WAVE_CYCLES:                     21089676                 3.10%
+PERF_SP_VS_STAGE_WAVE_SAMPLES:                    22317                   
+PERF_SP_FS_STAGE_DURATION_CYCLES:                 6354041939               934.36%
+PERF_SP_VS_STAGE_DURATION_CYCLES:                 5383094                  0.79%
+PERF_SP_WAVE_CTRL_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_LOAD_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_EMIT_CYCLES:                         101364581572             14905.71%
+PERF_SP_WAVE_NOP_CYCLES:                          0                        0.00%
+PERF_SP_WAVE_WAIT_CYCLES:                         0                        0.00%
+PERF_SP_WAVE_FETCH_CYCLES:                        966324579                142.10%
+PERF_SP_WAVE_IDLE_CYCLES:                         485523291                71.40%
+PERF_SP_WAVE_END_CYCLES:                          0                        0.00%
+PERF_RB_BUSY_CYCLES:                              4079673366               599.92%
+PERF_RB_STALL_CYCLES_HLSQ:                        1217128512               178.98%
+PERF_RB_STALL_CYCLES_FIFO0_FULL:                  1232358012               181.22%
+PERF_RB_STALL_CYCLES_FIFO1_FULL:                  1670109256               245.59%
+PERF_RB_STALL_CYCLES_FIFO2_FULL:                  0                        0.00%
+PERF_RB_STARVE_CYCLES_SP:                         0                        0.00%
+PERF_RB_STARVE_CYCLES_LRZ_TILE:                   2325915460               342.03%
+PERF_RB_STARVE_CYCLES_CCU:                        0                        0.00%
+PERF_VSC_BUSY_CYCLES:                             812                      0.00%
+PERF_VSC_INPUT_TILES:                             0                       
+PERF_CCU_BUSY_CYCLES:                             4077846366               599.65%
+PERF_CCU_STALL_CYCLES_RB_DEPTH_RETURN:            0                        0.00%
+PERF_CCU_STALL_CYCLES_RB_COLOR_RETURN:            0                        0.00%
+PERF_CCU_DEPTH_BLOCKS:                            0                       
+PERF_CCU_COLOR_BLOCKS:                            1483250145              
+PERF_LRZ_BUSY_CYCLES:                             679973860                99.99%
+PERF_LRZ_STARVE_CYCLES_RAS:                       93636                    0.01%
+PERF_LRZ_STALL_CYCLES_RB:                         649947692                95.58%
+PERF_LRZ_STALL_CYCLES_VSC:                        228                      0.00%
+PERF_CMPDECMP_STALL_CYCLES_ARB:                   784503249                115.36%
+PERF_CMPDECMP_VBIF_LATENCY_CYCLES:                642157311                94.43%
+PERF_CMPDECMP_VBIF_LATENCY_SAMPLES:               2488046                 
+PERF_CMPDECMP_VBIF_READ_DATA_CCU:                 331070082               
+PERF_UFC_BUSY_CYCLES:                             663061281                97.50%
+PERF_UFC_READ_DATA_VBIF:                          1728                    
+PERF_UFC_WRITE_DATA_VBIF:                         1728                    
+PERF_UFC_READ_REQUEST_VBIF:                       864                     
+PERF_CP_ALWAYS_COUNT:                             680041428               
+PERF_CP_BUSY_GFX_CORE_IDLE:                       680031092                100.00%
+PERF_CP_BUSY_CYCLES:                              680041426                100.00%
+PERF_CP_NUM_PREEMPTIONS:                          0                       
+PERF_CP_PREEMPTION_REACTION_DELAY:                0                       
+PERF_CP_PREEMPTION_SWITCH_OUT_TIME:               0                       
+PERF_CP_PREEMPTION_SWITCH_IN_TIME:                0                       
+PERF_PC_BUSY_CYCLES:                              1176                     0.00%
+PERF_PC_WORKING_CYCLES:                           1758                     0.00%
+PERF_PC_STALL_CYCLES_VFD:                         0                        0.00%
+PERF_PC_RESERVED:                                 0                       
+PERF_PC_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_PC_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_PC_STALL_CYCLES_TESS:                        0                        0.00%
+PERF_PC_STALL_CYCLES_VFD_ONLY:                    0                        0.00%
+PERF_VFD_BUSY_CYCLES:                             3168                     0.00%
+PERF_VFD_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VFD_STALL_CYCLES_VPC_ALLOC:                  0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_INFO:                    0                        0.00%
+PERF_VFD_STALL_CYCLES_SP_ATTR:                    0                        0.00%
+PERF_VFD_STARVE_CYCLES_UCHE:                      0                        0.00%
+PERF_VFD_RBUFFER_FULL:                            0                       
+PERF_VFD_ATTR_INFO_FIFO_FULL:                     0                       
+PERF_VPC_BUSY_CYCLES:                             8380                     0.00%
+PERF_VPC_WORKING_CYCLES:                          3065                     0.00%
+PERF_VPC_STALL_CYCLES_UCHE:                       0                        0.00%
+PERF_VPC_STALL_CYCLES_VFD_WACK:                   0                        0.00%
+PERF_VPC_STALL_CYCLES_HLSQ_PRIM_ALLOC:            0                        0.00%
+PERF_VPC_RESERVED_5:                              0                       
+PERF_TP_BUSY_CYCLES:                              65648                    0.01%
+PERF_TP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_TP_LATENCY_CYCLES:                           0                        0.00%
+PERF_TP_LATENCY_TRANS:                            0                       
+PERF_TP_FLAG_FIFO_DELAY_SAMPLES:                  0                       
+PERF_TP_FLAG_FIFO_DELAY_CYCLES:                   0                        0.00%
+PERF_SP_BUSY_CYCLES:                              0                        0.00%
+PERF_SP_ALU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_EFU_WORKING_CYCLES:                       0                        0.00%
+PERF_SP_STALL_CYCLES_VPC:                         0                        0.00%
+PERF_SP_STALL_CYCLES_TP:                          0                        0.00%
+PERF_SP_STALL_CYCLES_UCHE:                        0                        0.00%
+PERF_SP_STALL_CYCLES_RB:                          0                        0.00%
+PERF_SP_NON_EXECUTION_CYCLES:                     0                        0.00%
+PERF_SP_WAVE_CONTEXTS:                            0                       
+PERF_SP_WAVE_CONTEXT_CYCLES:                      0                        0.00%
+PERF_SP_STAGE_WAVE_CYCLES:                        0                        0.00%
+PERF_SP_STAGE_WAVE_SAMPLES:                       0                       
+PERF_UFC_BUSY_CYCLES:                             663063600                97.50%
+PERF_UFC_READ_DATA_VBIF:                          663063579               
+PERF_TSE_BUSY_CYCLES:                             2562                     0.00%
+PERF_TSE_CLIPPING_CYCLES:                         0                        0.00%
+PERF_TSE_STALL_CYCLES_RAS:                        132                      0.00%
+PERF_TSE_STALL_CYCLES_LRZ_BARYPLANE:              0                        0.00%
+PERF_RAS_BUSY_CYCLES:                             1056                     0.00%
+PERF_RAS_SUPERTILE_ACTIVE_CYCLES:                 0                        0.00%
+PERF_RAS_STALL_CYCLES_LRZ:                        0                        0.00%
+PERF_RAS_STARVE_CYCLES_TSE:                       2310                     0.00%
+PERF_LRZ_BUSY_CYCLES:                             3038                     0.00%
+PERF_LRZ_STARVE_CYCLES_RAS:                       680041898                100.00%
+PERF_LRZ_STALL_CYCLES_RB:                         0                        0.00%
+PERF_LRZ_STALL_CYCLES_VSC:                        132                      0.00%
+PERF_HLSQ_BUSY_CYCLES:                            0                        0.00%
+PERF_HLSQ_STALL_CYCLES_UCHE:                      0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_STATE:                  0                        0.00%
+PERF_HLSQ_STALL_CYCLES_SP_FS_STAGE:               0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_CYCLES:                    0                        0.00%
+PERF_HLSQ_UCHE_LATENCY_COUNT:                     0                       
+# end=2026-11-23T14:59:12+08:00

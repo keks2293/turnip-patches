@@ -53,9 +53,10 @@ The ten names with no reading anywhere: `PERF_UCHE_EVICTS`, `PERF_UCHE_CCHE_TPH_
 `PERF_UCHE_CCHE_DPH_QUEUE_FULL`, `PERF_PC_VPC_PRIMITIVES`, `PERF_RBBM_PC_DCALL_BUSY`,
 `PERF_RBBM_PC_VSD_BUSY`, `PERF_LRZ_LRZ_WRITE`, `PERF_CCU_2D_RD_REQ`, `PERF_CCU_2D_WR_REQ`,
 `PERF_CMPDECMP_VBIF_WRITE_REQUEST`. Four of them are things this repository has argued around without:
-`PC_VPC_PRIMITIVES` is the denominator 40.33 could not find for the pixel side (its substitute,
-`PC_TAG_CHECKED_VERTICES` id 19, reads 0 - 40.35's smoke run gave the same 0 in a mesh of 24576
-independent triangles), `UCHE_EVICTS` is the only direct eviction counter on the block while the "L2
+`PC_VPC_PRIMITIVES` is the denominator 40.33 could not find for the pixel side (its substitute
+`PC_TAG_CHECKED_VERTICES` is programmed by no committed dump and reads 0 in the one run that asked for it,
+40.35, whose mesh of 24576 independent triangles has no vertex reuse to check - see the correction at the
+end of this section), `UCHE_EVICTS` is the only direct eviction counter on the block while the "L2
 caches ~73 % of the vertex bytes" figure is an inference from what does not reach DRAM, and the two
 `*_QUEUE_FULL` are the only client-side back-pressure counters on UCHE while the traffic summary quotes a
 fixed ~220 ns DRAM latency. `scripts/fdperf-analyze.py` already *has* columns for three of them
@@ -132,3 +133,9 @@ per-client set fills it, which is why `cfg-traffic` exists.
 data, an id that selected something else for six weeks, a column that was always empty) were invisible to
 a reader and visible to a check that reads config, dump and register XML against each other. That is the
 cheapest kind of check this repository can own: no run, no GPU, minutes to re-run.
+
+> Correction 23.11 (40.36): the sentence "its substitute, `PC_TAG_CHECKED_VERTICES` id 19, reads 0" named
+> the wrong selector: id 19 is `PC_VERTEX_HITS`, which is alive in 2644 of 2645 windows that have it, while
+> id 39 is `PC_TAG_CHECKED_VERTICES`. The claim itself - no committed reading of TAG_CHECKED - stands, and
+> the "mesh where every vertex must pass the cache" premise is dropped with it: independent triangles share
+> no vertices, so a zero there is the expected value, not a defect.

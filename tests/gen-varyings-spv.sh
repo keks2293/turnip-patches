@@ -1,0 +1,156 @@
+#!/bin/bash
+# Generate varyings_spv.h: five vertex/fragment pairs that differ ONLY in how many vec4 varyings
+# the vertex shader exports - 1, 2, 4, 8, 16.  Queue 34 (what unit do VPC id 10 and SP id 48
+# have), journal entry to follow.
+#
+# Run in the glslang container, the way tests/gen-vpc-attrbuf-spv.sh does:
+#   podman run --rm -v "$PWD/tests:/work:Z" \
+#       localhost/mesa-build-fedora44-wsi-glslang-vulkan bash -c 'cd /work && bash gen-varyings-spv.sh'
+#
+# Why five compiled variants instead of one shader with a loop over the outputs: the thing under
+# test is the *interface*, and an interface is fixed before the pipeline exists.  On this tree the
+# VPC location the fragment shader reads is an immediate inside the compiled FS binary
+# (pack_inlocs rewrites `instr->srcs[0]->iim_val`, ir3_compiler_nir.c:5274-5290), a spec constant
+# would change how many outputs the VS writes while the interface stayed 16 wide - the work, not
+# the interface.  An indirectly indexed output is worse: nir_opt_varyings skips indirectly indexed
+# slots (nir_opt_varyings.c:21-23) and ir3 asserts constant offsets for VS output stores
+# (ir3_compiler_nir.c:5300).
+#
+# WHAT EVERY VARIANT SHARES, and what the Mesa optimizers would take away if it did not:
+#   * all nine vec4 inputs (aPos plus eight payload attributes, 144 B per vertex) are read in every
+#     variant, the payload folded into v0.  Without the fold the N=1 arm would read one attribute
+#     and the N=16 arm eight, and the VFD denominators
+#     (VFD_NUM_ATTRIBUTES, VFD_DECODED_ATTRIBUTE_BYTES) - the only per-vertex denominators that are
+#     not zero here - would differ between arms.  This is the constant the whole comparison rests
+#     on, so it is stated in the shader and not assumed.
+#   * every output derived from an attribute, and each with a different value.  nir_opt_varyings
+#     runs here with promotion limits of UINT32_MAX (tu_shader.cc:3878), which means a
+#     uniform-valued output is promoted out of the interface (nir_opt_varyings.c:2889-2947) and
+#     duplicate outputs are deduplicated (the same pass, doc at :86-93) - either one silently
+#     changes an arm's interface.
+#   * the same gl_Position in every variant, so the same pixels are covered.
+#   * a fragment shader that reads every output, all four components, into the colour
+#     unconditionally: pack_inlocs drops any component the compiled FS stops fetching
+#     (ir3_compiler_nir.c:5249-5267), so a varying the FS does not read is a varying that never
+#     existed as far as the hardware is concerned.
+#
+# WHAT IS DELIBERATELY NOT EQUAL: the picture (the FS sums what it is given, so colour differs by
+# construction once the count differs), and the fragment shader's own ALU work - 16 `bary.f` plus
+# 16 adds against 1 of each.  That is the quantity being measured, not an artefact; the arms are
+# therefore compared per delivered vertex (VFD_TOTAL_VERTICES) on the VPC's own counters, and
+# SP_FS_INSTRUCTIONS is recorded as a moving column so nobody attributes an FS cost to the VPC.
+# `--loop=N` (the uLoop spec constant) is there to make the pixel side the limiter on purpose.
+#
+# THE HARDWARE STATE EACH ARM MUST PRODUCE, so that a build can be checked rather than trusted.
+# With N vec4 outputs, no psize/layer/view/clip distances, the interface is decided by
+# ir3_link_shaders from the FS's inputs (tu_pipeline.cc:802; the FS owns the layout, the comment at
+# ir3_shader.h:746-753), and tu6_emit_vpc writes it:
+#
+#   N    SP_VS_OUTPUT_CNTL.OUT    VPC_VS_CNTL.STRIDE_IN_VPC    VPC_VS_CNTL.POSITIONLOC
+#   1    2                        8                            4
+#   2    3                        12                           8
+#   4    5                        20                           16
+#   8    9                        36                           32
+#   16   17                       68                           64
+#
+# (OUT counts POSITION as an entry too - "number of VS outputs including pos", a6xx.xml:3677-3680,
+# tu_pipeline.cc:1092; STRIDE is `linkage.max_loc`, 4 components per vec4 plus 4 for position,
+# tu_pipeline.cc:926-931; PC_VS_CNTL.STRIDE_IN_VPC carries the same stride again at :1043.)
+# Check it on a built probe with the disassembler, which prints the FS's bary immediates - the
+# largest `vappro.x + N` plus 4 is the stride:
+#   IR3_SHADER_DEBUG=fs ../build/vpc-varyings --varyings=4 --seconds=1 2>&1 | grep -o 'vappro.x + [0-9]*' | sort -u | tail -1
+# IR3_SHADER_DEBUG does not perturb codegen (the disasm flag is excluded from the shader cache key,
+# ir3_compiler.h:379-382).
+set -euo pipefail
+cd /work
+
+SIZES="1 2 4 8 16"
+
+emit() {   # $1 = spv file, $2 = C symbol
+    echo "static const uint32_t $2[] = {"
+    od -A n -t u4 -v "$1" | tr -s ' \t' ' ' | sed 's/^ //; s/ $//; s/ /, /g; s/$/,/' | sed '$ s/,$//'
+    echo "};"
+}
+
+for n in $SIZES; do
+    {
+        echo "#version 450"
+        echo "/* Generated by tests/gen-varyings-spv.sh: $n vec4 varyings exported; position plus"
+        echo " * eight payload attributes read in every variant.  Do not edit - edit the script. */"
+        echo
+        cat <<'EOF'
+layout(location = 0) in vec4 aPos;
+layout(location = 1) in vec4 a0;
+layout(location = 2) in vec4 a1;
+layout(location = 3) in vec4 a2;
+layout(location = 4) in vec4 a3;
+layout(location = 5) in vec4 a4;
+layout(location = 6) in vec4 a5;
+layout(location = 7) in vec4 a6;
+layout(location = 8) in vec4 a7;
+EOF
+        echo
+        for ((i = 0; i < n; i++)); do
+            echo "layout(location = $i) out vec4 v$i;"
+        done
+        echo
+        echo "void main()"
+        echo "{"
+        echo "   gl_Position = vec4(aPos.xy, aPos.z, 1.0);"
+        echo
+        # v0 carries the whole attribute set in every arm: identical expression across arms, and
+        # the reason VFD's per-vertex denominators are comparable between them.
+        echo "   v0 = (((a0 + a1) + (a2 + a3)) + ((a4 + a5) + (a6 + a7))) * 0.0009765625;"
+        # the remaining outputs are each distinct (no dedup) and each attribute-derived (no
+        # promotion): the index enters the value, so no two outputs can be equal by construction.
+        for ((i = 1; i < n; i++)); do
+            echo "   v$i = a$((i & 7)).zyxw * float($i) + a$(((i + 4) & 7)) * float($((i + 1)));"
+        done
+        echo "}"
+    } > "/tmp/varyings_${n}.vert"
+
+    {
+        echo "#version 450"
+        echo "/* Generated by tests/gen-varyings-spv.sh: reads the $n vec4 varyings of the"
+        echo " * matching vertex shader and nothing else.  Do not edit. */"
+        echo
+        echo "layout(constant_id = 0) const uint uLoop = 0u;"
+        echo
+        for ((i = 0; i < n; i++)); do
+            echo "layout(location = $i) in vec4 v$i;"
+        done
+        echo
+        echo "layout(location = 0) out vec4 fragColor;"
+        echo
+        echo "void main()"
+        echo "{"
+        echo "   vec4 acc = vec4(0.0);"
+        for ((i = 0; i < n; i++)); do
+            echo "   acc += v$i * float($((i + 1)));"
+        done
+        echo
+        echo "   for (uint i = 0u; i < uLoop; ++i)"
+        echo "      acc = fract(acc * 1.0009) + acc * 0.5;"
+        echo
+        echo "   fragColor = acc;"
+        echo "}"
+    } > "/tmp/varyings_${n}.frag"
+
+    glslangValidator -V "/tmp/varyings_${n}.vert" -o "/tmp/varyings_${n}_vert.spv" >/dev/null
+    glslangValidator -V "/tmp/varyings_${n}.frag" -o "/tmp/varyings_${n}_frag.spv" >/dev/null
+done
+
+{
+    echo "/* Generated by tests/gen-varyings-spv.sh from the GLSL that script writes out"
+    echo " * (glslangValidator -V; the uLoop spec constant is left unset, the probe supplies it)."
+    echo " * Five interface widths - 1, 2, 4, 8, 16 vec4 - as varyingsN_vert_spv / varyingsN_frag_spv."
+    echo " * The interface each arm must produce (SP_VS_OUTPUT_CNTL.OUT / VPC_VS_CNTL.STRIDE_IN_VPC):"
+    echo " * 1 -> 2/8, 2 -> 3/12, 4 -> 5/20, 8 -> 9/36, 16 -> 17/68.  Do not edit. */"
+    for n in $SIZES; do
+        emit "/tmp/varyings_${n}_vert.spv" "varyings${n}_vert_spv"
+        emit "/tmp/varyings_${n}_frag.spv" "varyings${n}_frag_spv"
+    done
+} > /work/varyings_spv.h
+
+wc -c /work/varyings_spv.h
+grep -c "^static const uint32_t" /work/varyings_spv.h

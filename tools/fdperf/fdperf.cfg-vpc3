@@ -103,7 +103,7 @@ FD740 = {
 
   SP = {
     counter0 = 0;    // PERF_SP_BUSY_CYCLES
-    counter1 = 48;   // PERF_SP_EXPORT_VPC_TRANS (unit undescribed; measured equal to VPC id 10 in every
-                     // window of the 33 arms that carry both - one signal, not two sides, 40.34)
+    counter1 = 48;   // PERF_SP_EXPORT_VPC_TRANS (unit undescribed; equal to VPC id 10 in 2.4 % of windows, within 0.003 %
+                     // of its median otherwise; the "one signal" of 40.34 was medians - see 40.36)
   }
 }

@@ -1003,7 +1003,7 @@
     "results/games/re4/mesa27-vertex/fdperf-raw.txt",
     "results/games/re4/game-patched-algopg.log"
    ],
-   "lines": 2066,
+   "lines": 2171,
    "headings": [
     "## 40.1 What was run",
     "## 40.2 The discard, and what kind of discard it is",
@@ -1039,7 +1039,8 @@
     "## 40.32 `TSE_INPUT_PRIM` and `PC_IA_PRIMITIVES` are two readings, not one counter twice (queue 18(a), no run)",
     "## 40.33 The vertex-cache hit rate has never been measured: the cfgs carry `PC_VERTEX_HITS` without its denominator, and `tu_pipeline.cc` has no cache or restart state to check (no run)",
     "## 40.34 The VPC spends half a core with its attribute RAM full on both frames, the two export counters are one signal, and the attribute-buffer size is not a knob on this chip (queues 30 and 31, no run)",
-    "## 40.35 The gen2 zeros are not hidden by inheritance, and the chip-variant list does not describe this tree (queue 35, no run)"
+    "## 40.35 The gen2 zeros are not hidden by inheritance, and the chip-variant list does not describe this tree (queue 35, no run)",
+    "## 40.36 Window by window the two export counters are not one signal, and the denominator that holds still is VPC RAM writes (23.11)"
    ],
    "verdict_quote": "on the ship stack, in the same 1 s sample, PERF_TSE_INPUT_PRIM equals",
    "verdict_source": "journal 40"
@@ -1052,7 +1053,7 @@
    "date": "23.11",
    "status": "closed",
    "decision": "",
-   "verdict_first_line": "the fifteen `tools/fdperf/fdperf.cfg` cannot be merged into one config, because the union",
+   "verdict_first_line": "the fifteen `tools/fdperf/fdperf.cfg` the audit read (sixteen counting `fdperf.cfg-gaps`,",
    "artifacts": [
     "scripts/fdperf-cfg-check.py",
     "tools/fdperf/a7xx-budgets.json",
@@ -1064,13 +1065,13 @@
     "results/games/re4/tr-base",
     "scripts/fdperf_sections.py"
    ],
-   "lines": 134,
+   "lines": 142,
    "headings": [
     "## 41.1 The audit: what the budgets are, what is lost, what has never been measured",
     "## 41.2 Two slots have selected the wrong SP counters since the cfgs were written",
     "## 41.3 The \"UBWC cannot be checked with counters\" passage was stale"
    ],
-   "verdict_quote": "the fifteen tools/fdperf/fdperf.cfg cannot be merged into one config, because the union",
+   "verdict_quote": "the fifteen tools/fdperf/fdperf.cfg the audit read (sixteen counting fdperf.cfg-gaps,",
    "verdict_source": "journal 41"
   }
  ]

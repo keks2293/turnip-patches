@@ -15,6 +15,14 @@ arms, e.g. `cb21/fps.txt`), `dbg-flip-and-messages.txt` (journal 40.16), `traffi
 `fdperf-<tag>.txt` before curation, `shot-<tag>.png`); it is not per-game because it is deleted and
 regenerated, and the curated copy under `games/<title>/` is what a claim cites.
 
+`results/synthetics/<probe>/<arm>/` is the same rule for work that is not a game: one directory per
+arm of a probe under `tests/`, with `run.txt` (the probe's own stdout), `fdperf-raw.txt` and a `meta.txt`
+naming the probe source, the driver hash, the cfg, the environment and the workload. A synthetic is a
+different workload class from a game run and is never put in a table with one, and a synthetic counter
+reading is never quoted as "the game does X" - the two PC caching counters, alive in every loaded RE4
+window, read exactly 0 in the attribute-buffer probe (journal 40.36), which is why that separation is a
+rule and not a filing habit.
+
 Everything else directly in `results/` is not a game measurement: `test-*.log` and the probe dumps
 (`imginv-*`, `tp8bpp-*`, `sparse-*`, `xr64-*`) come from `turnip-test` on the rig, `vkmark-*` from the
 vkmark benchmark, `vulkaninfo-*` from device enumeration. A rig result is never quoted as "the game

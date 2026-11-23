@@ -1024,15 +1024,29 @@ instead of against a build.
     if it moves with geometry, 40.30 is reopened. Recorded as a control, not as a measurement.
 
 34. **Give `VPC_SP_COMPONENTS` and `SP_EXPORT_VPC_TRANS` a unit, or take both names out of the documents**
-    (journal 40.34: they are equal in every window of the 33 arms that program both, so they are one signal
-    and the per-vertex 0.63-1.04 is in a unit nothing describes). The cfg comments that explained them as
-    "components handed to the FS" and "the other side of the varyings traffic" are corrected in place. Arm: a
-    probe with a known interface - one vertex shader writing 1, 2, 4 and 8 vec4 outputs to the same fragment
-    shader, same geometry, run once per setting outside the game (vkmark's framework or the vkcube rig), both
-    selectors programmed. Decide: if the counter moves by 4 per added vec4 the unit is components and the
-    reading means RE4's interface is tiny; by 1 per vec4 it is a vec4-shaped transaction; by nothing, the
-    selector is inert and both names are retired like `UCHE_GMEM_*_BEATS`. Until then no document here may
-    quote a per-vertex varying count, which is what question 24's evidence silently lacked.
+    (journal 40.34 asked it; 40.36 re-read the same dumps window by window). The state of the question: the
+    pair is **not** one signal in the way 40.34 said - bit-identical in 2.41 % of 1823 windows, difference
+    sign-flipping inside all 34 arms, median magnitude 0.003 % - so a comparison of the two below 1 % means
+    nothing, and neither name has a unit. What 40.36 adds is the denominator the queue lacked:
+    `id10 / VPC_NUM_VPCRAM_WRITE` is flat to 1.24x across arms while its own denominator moves 2.28x, pixel
+    duty is a negative control (1.4 % at most), render mode is the named confound (0.685x inside one session
+    of `dbg-file`), and on a synthetic mesh the PC caching counters are unusable (both read 0 in 11/11
+    windows of `results/synthetics/attrbuf/smoke`). Nothing in git can name the unit, because no committed
+    arm changes the number of vertex-shader outputs.
+
+    Arm, built as far as files go: `tests/gen-varyings-spv.sh` (five vertex/fragment pairs, 1, 2, 4, 8, 16
+    vec4 outputs, nine inputs read in every arm so the VFD denominators match; the expected
+    `SP_VS_OUTPUT_CNTL.OUT` / `VPC_VS_CNTL.STRIDE_IN_VPC` per arm is written in the script header -
+    2/8, 3/12, 5/20, 9/36, 17/68) and its output `tests/varyings_spv.h`. Missing: the probe itself, which is
+    `tests/vpc-attrbuf.c` with a `--varyings=N` selector instead of the GMEM-register one (same rig, same
+    hash check, `scripts/build-test.sh`), programmed with `tools/fdperf/fdperf.cfg-vpc` plus
+    `VPC_WORKING_CYCLES` - the one VPC-budget slot 40.36 shows was never co-sampled with id 10. Verify the
+    interface of each arm before trusting a ratio (`IR3_SHADER_DEBUG=disasm`, largest `vappro.x + N` plus 4,
+    the command in the generator's header), and keep the mesh the same non-indexed one the smoke run used:
+    reuse would move VFD and the PC counters between arms.
+    Decide: if id 10 moves by 4 per added vec4 the unit is components; by 1 it is a vec4-shaped transaction;
+    by nothing it is inert and both names are retired like `UCHE_GMEM_*_BEATS`. Until then no document here
+    may quote a per-vertex varying count, which is what question 24's evidence silently lacked.
 
 35. **Does A740 hardware honour the VPC attribute-buffer registers, or does it drop them** - the question
     behind "are the gen2 sizes 0 because the block is absent or because nobody wrote them" (operator 23.11).
@@ -1075,9 +1089,11 @@ instead of against a build.
     clock - the profile of a vertex-dominated synthetic that never bins. Two more columns came out of
     that dump and belong to queue 31, not here: `VPC_WIT_FULL` is 5.79x the clock while
     `VPC_LM_FULL_WAIT_FOR_INTP_END` is 0 (the probe's stall has a different name than the game's), and
-    `PC_TAG_CHECKED_VERTICES` reads **0** in a mesh of 24576 independent triangles where every vertex
-    must pass the cache - the same nothing-as-a-denominator that 40.33 complained about, now measured
-    against its own control.
+    `PC_TAG_CHECKED_VERTICES` (id 39, not 19 - id 19 is `PC_VERTEX_HITS`, which is alive in 2644 of 2645
+    loaded game windows) reads **0** in 11 of 11 windows of the probe's smoke run, along with id 19, while
+    `PC_VS_INVOCATIONS` counts 1.352 M/s: the mesh is non-indexed, so there is no vertex reuse for a tag to
+    find and the zero is the expected value rather than a defect. Corrected 23.11 by 40.36, which also shows
+    the two selectors are not a usable denominator on any synthetic.
 
 36. **Find out why `DRM_IOCTL_MSM_GET_PARAM` answers EINVAL to userspace while the driver's own init,
     which fails hard if it fails, succeeds** (found building the queue-35 probe, 23.11). Measured:
