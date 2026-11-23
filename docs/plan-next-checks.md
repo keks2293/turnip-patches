@@ -565,6 +565,12 @@ until a title that can choose its API is on this machine.
     (no new patch: one hand-made build without `0014` in a copy of the tree, one game session with the
     sampler; shares the machine with 12/13/14/15 and with the 7.32 GiB memory wall).
 
+    Status 23.11: **run and accepted** (chain37, journal 40.29). B is the pre-`0014` inventory (0 MiB
+    tiled), A the with-`0014` one (1450 creates / 2450.3 MiB, 60.0 %) - both on dedicated builds, to the
+    tenth of a MiB. fps does not separate A from B at this frame's resolution, so the value of the patch
+    is the tiled volume and the bandwidth behind it, not a frame-rate lever. The file itself is now the
+    one-decision text (journal 40.29, `patches/0014-*.patch` header).
+
     Journal 39 closed the half of the no-list question that wanted *more*: the 1024 creates /
     1630.8 MiB left in linear are required linear by the Vulkan compatibility-class rule (the class of
     an uncompressed colour format is its texel block, `src/vulkan/registry/vk.xml` `class=` rows quoted
@@ -768,9 +774,18 @@ arms; what stays open there is exactly the same thing, the meaning of `PS_BUSY`/
     and the "+9…13 % for a non-geometry fix" ceiling of 40.10/40.15 still applies to this frame.
 
 26. **The never-forceable gen3 properties: `has_alias_rt` is the one candidate worth a build** (needs
-    queue 16's build; the audit is journals 40.24 and `docs/a7xx-gen-props.md`). Of the properties only
-    `a7xx_gen3`/A8XX set, ten are in the `TU_FORCE_PROPS` table and were swept in journals 15.7 and 34;
-    the rest cannot be raised at runtime (`tu_device.cc:1750-1770` is a fixed list): `has_alias_rt`,
+    queue 16's build; the audit is journals 40.24 and `docs/a7xx-gen-props.md`).
+
+    Status 23.11: **run, counters only** - the operator's decision for this arm (journal 40.29):
+    `exp-25` is built into both queue-16 trees, `TU_FORCE_PROPS=has_alias_rt` is applied (the delivery
+    line is in the run log) and moves nothing on `cfg-vertex`: the largest counter delta against the
+    same-build control is 1.8 % on TSE input, VPC busy differs by 0.06 %. The `cfg-vpc` preamble-mov
+    signature this item asked for and the picture check are NOT MEASURED, so the column that would
+    separate "the pass does not engage" from "it engages and is free" is still open.
+
+    Of the properties only `a7xx_gen3`/A8XX set, ten are in the `TU_FORCE_PROPS` table and were swept
+    in journals 15.7 and 34; the rest cannot be raised at runtime (`tu_device.cc:1750-1770` is a fixed
+    list): `has_alias_rt`,
     `has_sw_fuse`, `new_control_regs`, `subpass_fence_cleans_resolve`, `gs_vpc_adjacency_quirk`. The
     last four are a raytracing fuse, a crashdec register rename, a resolve-wait behaviour and an A750
     hardware bug - none is a feature A740 is losing. `has_alias_rt` is different: the two registers its
