@@ -1,0 +1,62 @@
+# The VPC attribute-buffer carve-out on A740: prop(S) against a TU_GMEM control of the
+# same usable GMEM (scripts/run-attrbuf-sweep.sh, tools/fdperf/fdperf.cfg-attrbuf).
+# regenerate: scripts/attrbuf-table.py [arm dirs] | tee results/synthetics/attrbuf/table.txt
+# arms:       smoke
+# values:     cycles/clock = counter / that window's CP_ALWAYS_COUNT; /vtx = counter /
+#               VFD_TOTAL_VERTICES in the same window; M/s = medians of per-second
+#               deltas; per-frame = rate / the arm's own fps.  MISSING = not programmed.
+# noise:      each arm is one run; `spread` is (max-min)/median over its windows and is
+#               a LOWER bound on the noise.  A difference inside it is not a measurement.
+
+arms - the pair is checked against these two lines, not against the directory names
+arm               fps     loop    driver            prop S TU_GMEM  gmem_kernel  paired with             
+smoke             6.89    0       4c3cdb210082      -      unset    MISSING      -                       
+  no verified pair in these directories; only the profile below is printable
+
+mode - a sysmem pass never allocates a bin, so the GMEM registers under test are not in
+play and VPC_VPCRAM_FULL read 0 in the 23.11 smoke run (journal 40.35, queue 35)
+  smoke             SYSMEM (tiles 0 in 11/11 windows)
+
+the profile - medians in each column's own unit.  cyc/clk = counter / that window's
+CP_ALWAYS_COUNT, so busy columns are 0..1 and counters that count across lanes exceed 1
+(VFD 11.6, SP 11.9 here); /vtx = per delivered vertex; M/s = per wall second.
+
+the vertex tract
+arm               fps      VPC busy   VPC work   WIT full VPCRAMfull    LM full VPCRAM/vtx VFDstallVPC   VFD busy  attrB/vtx   attr/vtx
+                            cyc/clk    cyc/clk    cyc/clk    cyc/clk    cyc/clk       /vtx    cyc/clk    cyc/clk       /vtx       /vtx
+---------------------------------------------------------------------------------------------------------------------------------------
+smoke             6.89        1.000      0.447      5.787      0.000      0.000      2.000     11.557     11.571    128.001      8.000
+
+who waits, and whether the L2 or the pixel side is involved
+arm               fps    PCstallVFD PCstallVPC  UCHE busy  UCHE arbt UCHESPread  UCHEVPCwr    SP busy
+                            cyc/clk    cyc/clk    cyc/clk    cyc/clk        M/s        M/s    cyc/clk
+-----------------------------------------------------------------------------------------------------
+smoke             6.89        0.964      0.000      0.080      0.003      0.000      0.000     11.911
+
+within-run spread of the six tested columns - (max-min)/median over the arm's windows, %.
+Between-run scatter is not measurable here; a prop-ctrl difference inside this is not a
+measurement.
+arm                VPCRAM full     WIT full      LM full  VPC working   VPCRAM/vtx VFD stallVPC
+--------------------------------------------------------------------------------------------
+smoke                    all 0         0.54        all 0         1.35         0.09         0.56
+
+prop - ctrl, per pair.  Cycles columns are the absolute difference of two cycles/clock
+ratios (1.000 = one whole core); /vtx and fps are relative, % of the control.  A pair
+marked UNPAIRED has no same-TU_GMEM control and is deliberately not computed.
+pair                     VPCRAMfull    WITfull     LMfull VPCworking VPCRAM/vtx VFDstallVPC       fps
+                            cyc/clk    cyc/clk    cyc/clk    cyc/clk  % vs ctrl    cyc/clk % vs ctrl
+-----------------------------------------------------------------------------------------------------
+  no pair to print
+
+controls - per FRAME, in millions per frame (M/s / the arm's own fps): the arms must agree
+or the differences above are the picture, not the registers.  `spread` is max/min over the
+arms, 1.00 = equal.
+arm                   verts   ia_vert    vs_inv   ia_prim   in_prim     tiles    tag_ck      hits
+----------------------------------------------------------------------------------------------
+smoke                   0.2       0.2       0.2       0.1       0.1       0.0       0.0       0.0
+spread                    -         -         -         -         -         -         -         -
+
+PC 19 and 39 - the probe's mesh is non-indexed, so the honest reading is checked ~ all IA
+vertices and hits ~ 0 (journal 40.33, queue 31); anything else means the names do not
+mean what they say.  Per frame, in millions, as in the controls table.
+  smoke             checked 0.0        hits 0.0      ia 0.2        hits/checked MISSING

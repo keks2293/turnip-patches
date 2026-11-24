@@ -1186,6 +1186,24 @@ instead of against a build.
     one. Decides nothing; it is a broken pointer in a runner's own output, and the cost of leaving it is that a
     later reader re-runs a sweep that is already curated.
 
+    **Closed 24.11 by `scripts/attrbuf-table.py`** (table `results/synthetics/attrbuf/table.txt`). It reads
+    the arms as pairs and prints the decision columns only as `prop - ctrl` - the one thing this sweep needs
+    that a generic reader cannot do - checks the pair's arithmetic against `meta.txt`, and prints
+    `UNPAIRED`/`UNVERIFIED` rather than a difference. Validated on the smoke run: its profile reproduces
+    40.35. The pointer now names a file that exists.
+
+43. **The slow-drain arm of `run-attrbuf-sweep.sh` has no control** - `prop-128k-loop64` is called half of a
+    pair in the script header, but the only other `--loop=64` arm is `base-loop64`, which has 768 KiB more
+    usable GMEM. Their difference mixes the register writes with the carve the control exists to remove. Arm:
+    add `ctrl-768k-loop64`, or drop the loop64 arms until it exists. Decides nothing while queue 35 is parked;
+    `scripts/attrbuf-table.py` prints the arm `UNPAIRED` rather than subtracting it.
+
+44. **`run-attrbuf-sweep.sh` cannot start on this kernel, and the artifact row said it needs no kernel read** -
+    the script takes `MSM_PARAM_GMEM_SIZE` from the probe and exits when it is 0, which is what queue 36
+    records (`EINVAL`); queue 35's 23.11 note instead describes an absolute budget (`TU_GMEM=B` control,
+    `TU_GMEM=B+6S` prop), which needs no kernel value. Arm: implement that form (or a `--gmem B`), and keep the
+    artifacts row in step. Decides whether the sweep can run at all when 35 un-parks; nothing today.
+
 ## Open questions
 
 | # | question | status |
