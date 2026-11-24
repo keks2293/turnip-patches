@@ -30,7 +30,7 @@ Swap values are read from fd6_format_table.c, the same table the driver compiles
 macro scan scripts/fmt-list-gate-check.py uses.
 
 Run:
-  scripts/class-order-check.py [PIPE_FORMAT ...]     # default: the no-list residue of 0014 v1
+  scripts/class-order-check.py [PIPE_FORMAT ...]     # default: the no-list residue of 0014
 """
 
 import json
@@ -42,7 +42,7 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLASSES = os.path.join(REPO, "tests", "vk-fmt-classes.json")
 TABLE = "/var/home/armada/opencode/mesa27-src/src/freedreno/fdl/fd6_format_table.c"
 
-# The pipe formats 0014 v1 leaves in linear in the RE4 run (results/nolist-residue-p14.log); command
+# The pipe formats 0014 leaves in linear in the RE4 run (results/nolist-residue-p14.log); command
 # line arguments replace this list.
 DEFAULT_PIPE = [
     "R8G8_UNORM", "R11G11B10_FLOAT", "R32_UINT", "R32_FLOAT", "R8G8B8A8_SNORM", "R16G16_FLOAT",

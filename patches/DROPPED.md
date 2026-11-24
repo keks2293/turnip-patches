@@ -69,7 +69,7 @@ in the table.
 | `0011` UBWC compat R16/10-bit | stays | removing it under the flag turns `T` into 261120/262144 mismatches, and in RE4 it has measured volume (journal 25): 53 creates / **115 MiB** of `R10G10B10A2_UNORM → {UINT,UNORM}` lists get UBWC only because of it |
 | `0012` UBWC compat sfloat/int | stays | same file and probe as `0011`; measured volume 26 creates / **43 MiB** (`R32_UINT → {FLOAT,SINT,UINT}`). Its BC half is documented as completeness, not a perf lever — RE4 BC textures are sparse and sparse excludes UBWC (journal 21.11) |
 | `0013` b2i CCU clean | stays | correctness of copy-to-image (journal 21.10, ADR-0005) |
-| `0014` mutable no-list tiling | stays in the shipped form (v1) | see below for the v2 that was dropped |
+| `0014` mutable no-list tiling | stays in the shipped form | see below for the block-rule v2 that was dropped |
 
 ## Numbers 0015 and 0016: retired, no file
 

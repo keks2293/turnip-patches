@@ -1229,7 +1229,7 @@ instead of against a build.
 - Verification of each step: the patch is in the binary, the loaded driver = the built one
   (hash/mtime), CEIL controls; RC=0 from ninja is not proof of a build.
 
-## Status (19.11, corrected 20.11): 0014 - the shipped form is v1, not the block rule
+## Status (19.11, corrected 20.11): 0014 - the shipped form is the class synthesis, not the block rule
 
 *Written 19.11, corrected 20.11. The text below used to say that on this branch `0014` is
 the block-only rule and that the `XV` probe was the remaining gate. That was true at

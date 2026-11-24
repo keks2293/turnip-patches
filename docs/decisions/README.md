@@ -14,7 +14,7 @@ a queue bullet and a plan file - which is how a correction failed to reach all o
 | [ADR-0003](ADR-0003-tiled-layout-depends-on-block-size.md) | the tiled layout is a function of the block size; 0005/0006/0010/0011/0012 stay | accepted |
 | [ADR-0004](ADR-0004-bc-ubwc-is-not-a-perf-lever.md) | BC + UBWC is not an RE4 performance lever | accepted |
 | [ADR-0005](ADR-0005-r2d-fix-is-lazy-ccu-bits.md) | the r2d readback fix is deferred CCU bits (0013, exp-15 mode 7) | accepted |
-| [ADR-0006](ADR-0006-mutable-no-list-synthesize-the-compat-class.md) | mutable with no list: synthesize the class (0014 v1); v2 dropped | accepted |
+| [ADR-0006](ADR-0006-mutable-no-list-synthesize-the-compat-class.md) | mutable with no list: synthesize the class (0014); the block-rule v2 was dropped | accepted |
 | [ADR-0007](ADR-0007-keep-has-8bpp-ubwc-false.md) | `has_8bpp_ubwc` stays False, no 8bpp patch | accepted |
 | [ADR-0008](ADR-0008-no-driver-side-fps-lever-for-re4.md) | no driver-side fps lever for RE4 on this device | accepted |
 | [ADR-0009](ADR-0009-withdraw-0015-mutableen-on-gen2.md) | 0015 (MUTABLEEN on gen2) withdrawn as a game fix | accepted |

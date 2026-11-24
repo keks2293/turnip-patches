@@ -1,7 +1,10 @@
 # Direction: linear deposition of mutable images without a format list
 
-**State: active - this is the current front.** `0014` v1 shipped (ADR-0006); the next
+**State: active - this is the current front.** `0014` shipped (ADR-0006); the next
 item is the UBWC half of the same branch, `exp-18`, which has no patch file yet.
+(Older records say `0014` v1 - the ADR, journals 21.12 and 27, and the label of
+`results/nolist-residue-p14.log` before 24.11. The numeral existed only to name the
+block-rule v2 that ADR-0006 records as dropped; the patch itself has been `0014`.)
 
 Believed, with the evidence:
 

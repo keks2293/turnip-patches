@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Residue of MUTABLE images created without a format list, per base format.
 
-Question it answers: 0014 v1 moves the no-list images whose assumed view set is
+Question it answers: 0014 moves the no-list images whose assumed view set is
 order- and layout-homogeneous into the tiled layout; what is left in linear, and
 what does that remainder carry in its usage mask?  The answer decides how large a
 problem any further no-list rule would be solving.
@@ -102,7 +102,7 @@ def report(path, rows):
     print(f'=== {path} ===')
     print(f'  MUTABLE without a list : {len(nolist)} creates, '
           f'{sum(r["size"] for r in nolist) / MiB:.1f} MiB')
-    for name, grp in (('tiled by 0014 v1', tiled), ('linear residue', lin)):
+    for name, grp in (('tiled by 0014', tiled), ('linear residue', lin)):
         print(f'  {name:23}: {len(grp)} creates, {sum(r["size"] for r in grp) / MiB:.1f} MiB')
 
     by = defaultdict(lambda: [0, 0.0, 0.0, 0.0, 0.0, 0, 0.0])

@@ -34,7 +34,7 @@
   (results/raw/game-patched-imginv5.log: 1 inventory lines cut by foreign stderr, not counted)
 === results/raw/game-patched-imginv5.log ===
   MUTABLE without a list : 2474 creates, 4081.1 MiB
-  tiled by 0014 v1       : 1450 creates, 2450.3 MiB
+  tiled by 0014          : 1450 creates, 2450.3 MiB
   linear residue         : 1024 creates, 1630.8 MiB
 
   base vkfmt                         n      MiB   SAMPLED   STORAGE     xfer  small  smallMiB
