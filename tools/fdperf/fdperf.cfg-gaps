@@ -42,8 +42,8 @@
 // Denominators kept, deliberately, so each arm is readable on its own: CP id 0 (the clock) and
 // id 2 (CP busy), RBBM id 1 (ALWAYS_ON, the duty-cycle divisor), UCHE ids 0/1/27/28 (busy,
 // arbiter stall, VBIF read beats - the DRAM denominator used elsewhere in this repo), PC id 0
-// (PC busy), CCU id 0 (CCU busy), LRZ id 0 (LRZ busy), CMP id 3 (the read-data bytes, so
-// 5 and 6 have a per-request size to divide into).
+// (PC busy), CCU id 0 (CCU busy), LRZ id 0 (LRZ busy), CMP id 3 (the read-data side, so 5 and 6
+// have something to divide into - it is NOT bytes, see the run note at the bottom).
 //
 // BUDGETS SPENT: CP 2/14 (the JSON marks CP 14 with id 0 reserved; the doc's "13" is that
 // minus the reserved one - no cfg here uses a slot above 11, so nothing depends on it),
@@ -51,12 +51,24 @@
 // a run of this cfg is meant to be paired with `fdperf.cfg-traffic` or `fdperf.cfg-vertex`,
 // not to replace them.
 //
-// NOT RUN.  Nothing in `results/` comes from this file.  Run it as
+// RUN 24.11, once, on the RE4 ship frame with `fdperf.cfg-traffic` beside it as the control
+// (two 140 s samplings in one session).  How it is sampled, for the record:
 //   scripts/fdperf-sample.sh 140 1000 /tmp/opencode/fdperf-gaps.txt tools/fdperf/fdperf.cfg-gaps
-// with the game already in the scene, the way the other cfgs are sampled, and note that
-// `EVICTS` and `*_QUEUE_FULL` are new names: their unit is undescribed in the XML, so the
-// first run's job is to establish that they move at all (a counter that reads 0 in a scene
-// where it must not is dead, the way `UCHE_GMEM_*_BEATS` are - see docs/fdperf-a7xx.md).
+// Artifacts: results/games/re4/gaps37/ (both dumps, meta.txt, table.txt); the reading is
+// scripts/fdperf-gaps-table.py, the verdict journal 43.  What this file's premises were worth:
+//   * `EVICTS` and `*_QUEUE_FULL` do move, so they are not dead - but neither has a unit, and
+//     `EVICTS` cannot be turned into a cache share: UCHE has no fill counter, only this
+//     eviction one.  The ~73 % figure stays an inference.
+//   * `PC_VSD_BUSY` reads 0 in every window.  Dead here, like `UCHE_GMEM_*_BEATS`.
+//   * `CCU_2D_RD_REQ` and `CCU_2D_WR_REQ` are identical to the unit in every window, so the
+//     plan of telling a 2D copy from a 3D one through them (the 8bpp/NV12 question) is out.
+//   * `RBBM_PC_DCALL_BUSY` equals this cfg's own `PC_BUSY` to 0.007 % in every window, so it
+//     carries no information the PC block's counter does not already carry.
+//   * `VPC_PRIMITIVES` agrees with journal 40.19's `PC_IA_PRIMITIVES` figure to 1.9 %, so it
+//     is a usable primitive denominator.
+//   * CMP id 3 is not bytes: against the request half the quotient is 1.71, so no burst size
+//     for GMEM<->LLC follows from these two names (the parenthetical below used to say
+//     "bytes"; corrected 24.11, journal 43).
 
 FD740 = {
   CP = {
@@ -91,7 +103,8 @@ FD740 = {
     counter1 = 8;    // PERF_LRZ_LRZ_WRITE          <- never measured on this machine
   }
   CMP = {
-    counter0 = 3;    // PERF_CMPDECMP_VBIF_READ_DATA_CCU (bytes, the denominator)
+    counter0 = 3;    // PERF_CMPDECMP_VBIF_READ_DATA_CCU (the denominator; NOT bytes - 1.71 per
+                     // request against id 5, which is why no burst size is quoted, journal 43)
     counter1 = 5;    // PERF_CMPDECMP_VBIF_READ_REQUEST  <- never measured on this machine
     counter2 = 6;    // PERF_CMPDECMP_VBIF_WRITE_REQUEST <- never measured (fdperf.cfg slot 6
                      // of 4, so it was dropped: see that cfg's note and cfg-traffic's header)

@@ -1,0 +1,85 @@
+# The ten counters that had never been read on this machine, from tools/fdperf/fdperf.cfg-gaps
+# run 24.11: RE4 ship frame, D3D12, driver 4c3cdb210082, no env delta; journal 43
+# regenerate: scripts/fdperf-gaps-table.py --fps 15.57 | tee results/games/re4/gaps37/table.txt
+#             (--fps is the mean of `scripts/fps-window.py results/games/re4/fps-gaps37.csv 60 200`)
+# read with:  scripts/fdperf_sections.py (BV half discarded, wrapped deltas dropped);
+#             n = steady windows (--lo), nonzero = windows where the counter is not 0;
+#             MISSING = the dump does not carry the name at all, 0 = it does and reads 0
+# transient:  the first ~10 s of the sample are a different state and are excluded by --lo
+# x clock:    divided by that window's CP_ALWAYS_COUNT; only the two UCHE queue rows have
+#             it, and a value above 1 means the counter is not a core-domain duty
+
+== results/games/re4/gaps37/fdperf-raw.txt
+   windows 65 (56 after 20 s), dropped {}
+   clock 680 MHz (CP_ALWAYS_COUNT median)
+   counter              n nonzero     median/s        min/s        max/s   x clock
+   EVICTS              56      56      2814622      2645299      2834580         -
+   CCHE_TPH_QFULL      56      56    933114240    915814715    951943827     1.372
+   CCHE_DPH_QFULL      56      56      1158268      1059134      1244462     0.002
+   PC_VPC_PRIM         56      56    254812487    253016538    257952598         -
+   RBBM_PC_DCALL       56      56    646583919    645737993    648318637         -
+   RBBM_PC_VSD         56       0            0            0            0         -
+   LRZ_LRZ_WRITE       56      56         4421         4332         4503         -
+   CCU_2D_RD_REQ       56      56      5038992      4879703      5170064         -
+   CCU_2D_WR_REQ       56      56      5038992      4879703      5170064         -
+   CMP_VBIF_WR_REQ     56      56      2150780      2044065      2227990         -
+   denominators: all present
+
+== results/games/re4/gaps37/fdperf-traffic.txt
+   windows 63 (53 after 20 s), dropped {}
+   clock 665 MHz (CP_ALWAYS_COUNT median)
+   control run: carries none of the ten names.  Its own rates, for the cross-run lines:
+     DRAM read beats/s    474261502
+     DRAM write beats/s   8744880
+     UBWC read beats/s    19535344
+     UBWC write beats/s   2219280
+   (a second channel of each is programmed too; the ratios below add them)
+
+what each new counter is worth; only same-window quotients are called ratios
+   line                                   value   what it means
+   EVICTS / read beat (same win)        0.00287   one eviction per 348 of this window's 16-B read beats
+   DRAM read                              15.20   GB/s, traffic control (2 x 16 B/beat)
+   DRAM write                              0.28   GB/s, traffic control; scaled to the gaps window, 0.29
+                                                  GB/s
+   bytes per eviction, max                  102   B.  Cross-run bound (write traffic / EVICTS), and it
+                                                  assumes every eviction writes back.  A line is 64 B, which
+                                                  would be 62% of all DRAM write, while 128 B would be 125%
+                                                  - more than the machine writes, so the event is no bigger
+                                                  than a line.  It is still not a miss count: UCHE has no
+                                                  fill counter, so what L2 keeps stays an inference.
+   VPC_PRIM / CP_CONTEXT_DONE              6516   primitives per context-done, same window
+   VPC_PRIM / frame                       16.37   M primitives/frame at 15.57 mean fps.  Journal 40.19 had
+                                                  16.69 M/frame from PC_IA_PRIMITIVES, a counter this cfg
+                                                  does not program: -1.9% from an independent name for the
+                                                  same quantity, so VPC_PRIMITIVES is a usable primitive
+                                                  denominator when the PC budget has no slot left for IA
+   LRZ_BUSY / LRZ_WRITE                  127272   LRZ busy cycles per mask write (4421 write events/s).  LRZ
+                                                  itself is busy 83% of the clock, so the depth path writes
+                                                  the mask but rarely.  LRZ's units are undescribed (journal
+                                                  40), so this rate cannot be compared with LRZ_READ's
+   RBBM_PC_DCALL / PC_BUSY              1.00007   in every window, so the new column repeats PC busy, a
+                                                  counter this cfg also programs (PC id 0).  It is also
+                                                  0.951 x the core clock, consistent with that but not proof
+                                                  of a domain: docs/fdperf-a7xx.md keeps RBBM counters out
+                                                  of the core domain, so no duty is printed for it
+   RBBM_PC_VSD_BUSY                           0   non-zero in 0/56 steady windows: dead here, the way
+                                                  UCHE_GMEM_*_BEATS are.  The only reading that
+                                                  distinguishes 'dead counter' from 'path unused' would be a
+                                                  synthetic that exercises the vertex dispatch, and nothing
+                                                  here does
+   CCHE_TPH_QFULL / clock                 1.372   more events per second than there are core cycles, so it
+                                                  is not a count of cycles the queue was full; no unit in
+                                                  the XML, so this is a rate only
+   CCHE_DPH_QFULL / clock                 0.002   the depth client's queue is barely full: 1.7 events per
+                                                  1000 core cycles; no unit in the XML, so this is a rate
+                                                  only
+   CMP read data / request                 1.71   raw quotient, NOT a burst size: the two cannot be bytes and requests
+
+CCU 2D read == write: 56/56 steady windows, max |diff| 0.  The XML names selectors 10
+and 11 separately, and the block does program distinct counters (GMEM read and write
+differ by 4x in cfg-vertex dumps), so the two are indistinguishable here: either one
+selector aliases the other, or both count CCU requests of either direction.  Their
+value is 5.0 M/s, 96% of the CMP read+write request count in the same windows
+(5.2 M/s), which is a 3D-path rate and not a blitter's - so these are not the 2D
+engine's counters and cannot tell a 2D copy from a 3D one, which is what the cfg
+header wanted them for.  A write-only 2D op would separate them; nothing here can.

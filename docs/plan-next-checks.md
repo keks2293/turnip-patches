@@ -1144,6 +1144,24 @@ instead of against a build.
     is the corrected id of 41.2, so they should fill in on the first run and an empty column afterwards
     means dead, not missing.
 
+    **Answered 24.11 by journal 43, on the rig this item asked for** (one 140 s sample plus the traffic
+    control in the same session, `results/games/re4/gaps37/`). (a) `EVICTS` is alive - 56/56 windows,
+    2.81 M/s, one event per 348 same-window read beats - and still cannot do the job: UCHE has an eviction
+    counter and no fill counter, so the L2 share stays an inference. What the control buys is a size
+    **bound** of 102 B per event (DRAM writes 0.28 GB/s against it), which rules out a unit above a line.
+    (b) `PC_VPC_PRIMITIVES` is a primitive denominator and not a vertex one: 16.37 M/frame at this run's
+    mean fps against journal 40.19's 16.69 M through `PC_IA_PRIMITIVES`, so -1.9 % between two independent
+    names; 42.2 had already closed queue 34 without it. (c) LRZ does write its mask, 4421 events/s, one
+    per 127,000 LRZ busy cycles. Two findings the item did not ask for and both cost a claim: `RBBM_PC_VSD_BUSY`
+    is dead (0 in 56/56 next to an RBBM neighbour at 0.951 of the clock), and the `CCU_2D_RD/WR_REQ` pair is
+    bit-identical in every window and 96 % of the CMP request count, so it is not a read/write split and the
+    plan of using it for the 2D-vs-3D copy question is withdrawn (queue 45). The analyzer-column prediction
+    above was wrong in one of its three: `RBBM_PCDC` fills with a number the PC block already gave, `RBBM_PCVSD`
+    fills with 0, and `SP_GM` does not fill at all, because this cfg has no SP section - the name lives in
+    `fdperf.cfg` and `fdperf.cfg-vertex`, and those have not been re-run since the id was corrected (queue 46).
+    `RBBM_PCDC` also turned out to carry no new fact: it equals
+    `PC_BUSY` to 0.007 % in every window.
+
 38. **Separate "one event per 8 components" from "one event per 2 vec4 outputs"** (journal 42.2's "does not
     show"). All six arms ship full vec4 outputs, where the two readings predict the same numbers, so nothing
     in the sweep can tell them apart. Arm: a `vec2` (or `vec3`) variant of the same generated pairs - same N,
@@ -1203,6 +1221,31 @@ instead of against a build.
     records (`EINVAL`); queue 35's 23.11 note instead describes an absolute budget (`TU_GMEM=B` control,
     `TU_GMEM=B+6S` prop), which needs no kernel value. Arm: implement that form (or a `--gmem B`), and keep the
     artifacts row in step. Decides whether the sweep can run at all when 35 un-parks; nothing today.
+
+45. **`CCU_2D_RD_REQ` and `CCU_2D_WR_REQ` are one counter in every window RE4 has ever given** (journal 43:
+    bit-identical in 56/56, max |diff| 0, while the same block's GMEM read and write differ by 4x). The pair was
+    written into `fdperf.cfg` and reused by `fdperf.cfg-gaps` on the assumption that it separates a 2D copy from
+    a 3D one - the question the 8bpp/NV12 work wanted. Separating them needs traffic that is write-only through
+    the CCU's 2D client, and no workload here produces any: turnip has no 2D path, and the pair's value (5.0 M/s,
+    96 % of the CMP request count) is a 3D-path rate. Decide: write the synthetic, or declare the pair unusable
+    and remove the read/write reading from `fdperf.cfg`'s comment. Default is the second; nothing waits for the
+    first.
+
+46. **`SP_GM_LOAD_LATENCY_CYCLES` is the last name in the audit with no reading, and closing it costs no run**
+    (journal 43's residual line in `results/fdperf-cfg-budgets.txt`). The id was corrected 23.11 from 83 to 82
+    (41.2) in `fdperf.cfg` and `fdperf.cfg-vertex`, and neither has been sampled since, so the analyzer's
+    `SP_GM_CYC` column is empty because of the missing run and not because the counter is dead - which is exactly
+    the distinction the gaps run was for. Arm: on the next `cfg-vertex` game sample, read the two `SP_GM` columns;
+    non-zero closes the audit's list, zero moves the name to the dead list beside `UCHE_GMEM_*_BEATS` and
+    `RBBM_PC_VSD_BUSY`. Nothing else in the queue needs it.
+
+47. **The queue's live-list table stopped being true on 23.11 and the file's own text says it is the only
+    place that says what is left** - it ends at 31-34 ("Nothing else is open beyond 31-34"), while the numbered
+    items below it run to 46, and three of its rows are answered: 34 by 42.2, 37 by journal 43, and 31's note
+    still calls `cfg-vpc4` the only unrun cfg when 42's sweep has since been sampled. Arm: regenerate the table
+    from the numbered list (every open item one row, every answered item deleted), or delete the table and let
+    the numbered list own the queue. Decides what a reader who opens this file first believes is left. No
+    measurement.
 
 ## Open questions
 

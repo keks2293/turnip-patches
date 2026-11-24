@@ -15,7 +15,7 @@ or geometry/vertices" with per-block kernel counters (not `VK_KHR_performance_qu
 | `tools/fdperf/fdperf.cfg-vpc3` | "is the VPC's own RAM the limit": `VPCRAM_FULL`, `WIT_FULL`, `STALL_CYCLES_VPCRAM_POS`, `STALL_CYCLES_LM_ACK`, `NUM_LM_REQ_HIT`. First runs 21.11 23:14 (`vpc3base`, `attrbuf`, queue 19) |
 | `tools/fdperf/fdperf.cfg-tse`, `tools/fdperf/fdperf.cfg-tse2`, `tools/fdperf/fdperf.cfg-tse3` | the TSE question in three cuts of one **4-counter** TSE budget plus the 2-counter VSC budget: how much geometry TSE throws away (`INPUT_PRIM`, `OUTPUT_VISIBLE_PRIM`, `ZERO_PIXEL_PRIM`), why (`TRIVAL_REJ`, `ZERO_AREA`, `FACENNESS_CULLED`, `CLIPPED`), and whether a binning pass exists at all (`VSC_BUSY` + `VSC_INPUT_TILES`). They cannot be merged into one run, and each header says so. Run 21.11 as `cbbase`, `cbforce`, and 22.11 as `tse3cb2`, `tse3cb3` |
 | `tools/fdperf/fdperf.cfg-bv`, `tools/fdperf/fdperf.cfg-bv2`, `tools/fdperf/fdperf.cfg-bv3` | written 22.11 for queue 20: the first cfgs in this repository to name the `BV_*` groups (`BV_VPC`, `BV_TSE`, and in `-bv` also `BV_PC`, `BV_TP`) instead of leaving them at their defaults, so the binning/visibility thread's own counters become readable. `-bv2` (no `BV_PC`/`BV_TP`) and `-bv3` (`BV_VPC` alone) were the trim test for why the VSC tile counter read 0 in those runs - the answer was the session, not the cfg (journal 40.12). Run 22.11 as `bvbase`, `bvforce`, `bvforce2`, `bvforce3`, `bvforce4`, `bvforce5` |
-| `tools/fdperf/fdperf.cfg-gaps` | written 23.11 from the budget audit: the ten counters that no dump in this repository has ever carried (`UCHE_EVICTS`, the two `UCHE_CCHE_*_QUEUE_FULL`, `PC_VPC_PRIMITIVES`, `RBBM_PC_DCALL/VSD_BUSY`, `LRZ_LRZ_WRITE`, `CCU_2D_RD/WR_REQ`, `CMPDECMP_VBIF_WRITE_REQUEST`), each placed inside its block's budget with a denominator kept beside it. **NOT RUN**; journal 41.1 |
+| `tools/fdperf/fdperf.cfg-gaps` | written 23.11 from the budget audit: the ten counters that no dump in this repository has ever carried (`UCHE_EVICTS`, the two `UCHE_CCHE_*_QUEUE_FULL`, `PC_VPC_PRIMITIVES`, `RBBM_PC_DCALL/VSD_BUSY`, `LRZ_LRZ_WRITE`, `CCU_2D_RD/WR_REQ`, `CMPDECMP_VBIF_WRITE_REQUEST`), each placed inside its block's budget with a denominator kept beside it. **Ran 24.11** on the RE4 ship frame with `fdperf.cfg-traffic` beside it: nine of the ten move, `RBBM_PC_VSD_BUSY` reads 0 in every window, and `CCU_2D_RD_REQ` cannot be told from `CCU_2D_WR_REQ` at all - `results/games/re4/gaps37/table.txt`, journal 43; budgets journal 41.1 |
 | `tools/fdperf/fdperf-windowed-delta.patch` | fix for the `-d` window in `fdperf.c` (see section Windows) |
 | `scripts/fdperf-sample.sh [sec] [window-ms] [file] [cfg]` | background sampler: loop `sudo fdperf -r <window> -d` |
 | `scripts/fdperf_sections.py` | the one loader for dumps, shared by every script that reads one: splits the ordinary groups from their `BV_*` twins (`load_sections()`; `load()` is the same call with the BV half discarded), drops `u64`-wrapped window deltas and `[invalid]`, and reports which names came only from the BV half |
@@ -250,7 +250,11 @@ any dump in `results/` has the name), and its output is
   `LRZ_TOTAL_PIXEL` from `fdperf.cfg-vertex`, `CCU_DEPTH/COLOR_BLOCKS` and
   `LRZ_PRIM_KILLED_BY_LRZ` from the BV and LRZ sets); ten have **no reading in any
   dump on this machine**, and they are listed in 41.1 and allocated inside the
-  budgets by `tools/fdperf/fdperf.cfg-gaps` (NOT RUN).
+  budgets by `tools/fdperf/fdperf.cfg-gaps`, which was run on 24.11 - so the audit's
+  cross-check now resolves every one of them, and the residual list in
+  `results/fdperf-cfg-budgets.txt` is one name, `SP_GM_LOAD_LATENCY_CYCLES`, whose id
+  was corrected but which no run has selected since.  What the ten readings are worth is
+  journal 43.
 * "Past the budget in one cfg" and "never measured" are different claims, and only
   the second one closes a question. That is the reason the script cross-checks
   dumps instead of reporting overruns.
@@ -259,7 +263,11 @@ any dump in `results/` has the name), and its output is
   never been selected, because the id written for it belongs to the next counter in
   the enum (journal 41.2; corrected 23.11).
 
-Within budget, but actually reading 0: `UCHE_GMEM_READ/WRITE_BEATS`.
+Within budget, but actually reading 0: `UCHE_GMEM_READ/WRITE_BEATS`, and since 24.11
+`RBBM_PC_VSD_BUSY` (0 in 56/56 windows of a running RE4 frame whose neighbouring RBBM
+counter is alive - journal 43).  Reading a constant is its own failure mode: the two
+`CCU_2D_RD/WR_REQ` selectors are bit-identical in every window, so a pair of names is not
+yet a pair of counters (journal 43).
 
 Two rules about the names themselves, both added 23.11 after a question could not be answered from
 the dumps (evidence: journal 40.33):

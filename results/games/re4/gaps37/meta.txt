@@ -1,0 +1,36 @@
+# game:    Resident Evil 4 Gold Edition - /run/media/armada/Slim/Games/Resident.Evil.4.Gold.Edition-InsaneRamZes/re4.exe
+# title:   re4
+# tag:     gaps37
+# date:    2026-11-24T09:13:58+08:00
+# driver:  /var/home/armada/opencode/build/out/libvulkan_freedreno.so sha256=4c3cdb210082
+# cfg:     tools/fdperf/fdperf.cfg-gaps          -> results/games/re4/gaps37/fdperf-raw.txt
+#          tools/fdperf/fdperf.cfg-traffic      -> results/games/re4/gaps37/fdperf-traffic.txt
+#          (two 140 s samplings inside one game session, back to back: the traffic run is the
+#           control, because EVICTS and the two UCHE_CCHE_*_QUEUE_FULL have no unit in the XML and
+#           a first reading means nothing without the DRAM rates beside it)
+# env:     no delta against the ship stack.  MangoHud on for fps only (MANGOHUD=1,
+#          log_interval=1000, log_duration=400); HUDINTERVAL=1000 because this arm's product is
+#          counters, not the fps table - the fps number is a control for the scene being the usual
+#          one, and p25 15.26 in the 40-50 s window says it is.
+# api:     DirectX12 (Capability= in local_config.ini), vkd3d-proton 3.1.0, 2560x1440
+# chain:   game launched by scripts/run-game.sh patched 400, samplers by scripts/fdperf-sample.sh:
+#            sleep 60                                      # into the scene, past the intro
+#            scripts/fdperf-sample.sh 140 1000 /tmp/opencode/fdperf-gaps.txt \
+#                tools/fdperf/fdperf.cfg-gaps
+#            scripts/fdperf-sample.sh 140 1000 /tmp/opencode/fdperf-gaps-control.txt \
+#                tools/fdperf/fdperf.cfg-traffic
+#          The game was killed by run-game.sh's timeout (rc=124), which is how every arm ends.
+# windows: gaps 65 (56 after 20 s), traffic 63 (53).  The sampler's period is 1000 ms and fdperf
+#          prints one window per ~2.1 s, so 140 s is ~65 windows, not 140.
+# steady:  the first ~10 s of the sampling is a different state (EVICTS 6-12 M/s against 2.8 M/s
+#          after, CCU_2D_* 20-43 M/s against 5 M/s), so the table's medians start at t_rel 20 s;
+#          --lo 0 shows the transient.
+# table:   results/games/re4/gaps37/table.txt, regenerate:
+#          scripts/fdperf-gaps-table.py --fps 15.57 | tee results/games/re4/gaps37/table.txt
+# source:  results/games/re4/game-patched-gaps37.log (full: results/raw/, gitignored),
+#          fps: results/games/re4/fps-gaps37.csv
+# fps:     p25 15.26 / mean 15.68 in 40-50 s (the committed window); p25 15.31 / mean 15.57 in
+#          60-200 s, the window the counters were taken in; clocks [680], gpu_load 98%
+# shot:    none.  This arm changes no driver behaviour, so the content check is the counter
+#          reproduction between the two runs instead: their DRAM read differs by 3 %.
+# asks:    queue 37 - the first reading of the ten counters no committed dump on this machine had.

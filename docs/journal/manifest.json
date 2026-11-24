@@ -1104,6 +1104,37 @@
    ],
    "verdict_quote": "queue 34's two unnamed units have one - PERF_VPC_SP_COMPONENTS (VPC selector 10) and",
    "verdict_source": "journal 42"
+  },
+  {
+   "id": "43",
+   "title": "Nine of the ten counters that had never been read do move; one is dead, one pair is one counter, and none of them moves the frame rate (24.11)",
+   "question": "Nine of the ten counters that had never been read do move; one is dead, one pair is one counter, and none of them moves the frame rate (24.11)",
+   "file": "journal/43-ten-counters-never-read-before-nine-move-one-is-dead-and-one.md",
+   "date": "24.11",
+   "status": "closed",
+   "decision": "",
+   "verdict_first_line": "queue 37 asked for a first reading of the ten counter names that no committed dump on this",
+   "artifacts": [
+    "tools/fdperf/fdperf.cfg-gaps",
+    "build/out/libvulkan_freedreno.so",
+    "scripts/run-game.sh",
+    "scripts/fdperf-sample.sh",
+    "tools/fdperf/fdperf.cfg-traffic",
+    "results/games/re4/gaps37/table.txt",
+    "scripts/fdperf-gaps-table.py",
+    "results/games/re4/fps-gaps37.csv",
+    "results/fdperf-cfg-budgets.txt"
+   ],
+   "lines": 128,
+   "headings": [
+    "## 43.1 Question, method, and the window the medians are taken over",
+    "## 43.2 The three things queue 37 said it would decide",
+    "## 43.3 What the other readings say, including the two that say nothing new",
+    "## Verdict",
+    "## What this does not show"
+   ],
+   "verdict_quote": "queue 37 asked for a first reading of the ten counter names that no committed dump on this",
+   "verdict_source": "journal 43"
   }
  ]
 }

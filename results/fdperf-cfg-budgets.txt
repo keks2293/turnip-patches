@@ -11,15 +11,18 @@
 #     docs said this about fdperf.cfg in prose; here it is for every cfg in the tree;
 #   * whether a lost line was measured by some other cfg, or has no reading in any dump on
 #     this machine ("NEVER MEASURED"): those ten names are what tools/fdperf/fdperf.cfg-gaps
-#     is written for (that cfg is NOT RUN, so it contributes nothing to the cross-check);
+#     is written for, and they are what that cfg existed for until it was run on 24.11
+#     (journal 43, results/games/re4/gaps37/).  Every one of the ten now resolves to
+#     "measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt"; what each reading
+#     is worth - dead, aliased, or a rate with no unit - is journal 43's, not this file's;
 #   * how far one cfg is from holding everything (last table): the union needs 29 of 12 UCHE
 #     selectors and 19 of 6 VPC ones, so the cfgs cannot be merged into one.
 #
-# Written 23.11, journal 41.1.
+# Written 23.11, journal 41.1; header corrected 24.11 after journal 43 ran the cfg.
 # fdperf cfg against hardware selection-counter budgets
 # budgets: tools/fdperf/a7xx-budgets.json (chip A7XX, 28 groups)  rule: slot >= block's num is never read
-# cfgs: 16
-# dumps scanned: 72, distinct names seen: 213
+# cfgs: 17
+# dumps scanned: 80, distinct names seen: 237
 
 == fdperf.cfg
 block       lines  num   ids kept              note
@@ -43,26 +46,26 @@ VPC         6      6     0,1,2,16,18,27
 VSC         2      2     0,2
    lines past the budget, which fdperf will not read:
       counter4  = 4   PERF_CMPDECMP_VBIF_WRITE_DATA_CCU measured by another cfg: results/games/re4/tr-base/fdperf-raw.txt
-      counter4  = 4   PERF_RBBM_PC_DCALL_BUSY          NEVER MEASURED on this machine
-      counter4  = 8   PERF_LRZ_LRZ_WRITE               NEVER MEASURED on this machine
+      counter4  = 4   PERF_RBBM_PC_DCALL_BUSY          measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt
+      counter4  = 8   PERF_LRZ_LRZ_WRITE               measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt
       counter5  = 3   PERF_CCU_DEPTH_BLOCKS            measured by another cfg: results/games/re4/bv-bvbase/fdperf-raw.txt
-      counter5  = 5   PERF_CMPDECMP_VBIF_READ_REQUEST  measured by another cfg: results/games/re4/tr-base/fdperf-raw.txt
-      counter5  = 5   PERF_RBBM_PC_VSD_BUSY            NEVER MEASURED on this machine
+      counter5  = 5   PERF_CMPDECMP_VBIF_READ_REQUEST  measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt
+      counter5  = 5   PERF_RBBM_PC_VSD_BUSY            measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt
       counter5  = 12  PERF_LRZ_PRIM_KILLED_BY_LRZ      measured by another cfg: results/games/re4/lrz-base/fdperf-raw.txt
       counter6  = 4   PERF_CCU_COLOR_BLOCKS            measured by another cfg: results/games/re4/bv-bvbase/fdperf-raw.txt
-      counter6  = 6   PERF_CMPDECMP_VBIF_WRITE_REQUEST NEVER MEASURED on this machine
+      counter6  = 6   PERF_CMPDECMP_VBIF_WRITE_REQUEST measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt
       counter6  = 17  PERF_LRZ_TOTAL_PIXEL             measured by another cfg: results/games/re4/0014ab-a/fdperf-raw.txt
-      counter7  = 10  PERF_CCU_2D_RD_REQ               NEVER MEASURED on this machine
-      counter8  = 11  PERF_CCU_2D_WR_REQ               NEVER MEASURED on this machine
+      counter7  = 10  PERF_CCU_2D_RD_REQ               measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt
+      counter8  = 11  PERF_CCU_2D_WR_REQ               measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt
       counter8  = 28  PERF_PC_3D_DRAWCALLS             measured by another cfg: results/games/re4/0014ab-a/fdperf-raw.txt
-      counter9  = 16  PERF_PC_VPC_PRIMITIVES           NEVER MEASURED on this machine
-      counter12 = 18  PERF_UCHE_EVICTS                 NEVER MEASURED on this machine
+      counter9  = 16  PERF_PC_VPC_PRIMITIVES           measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt
+      counter12 = 18  PERF_UCHE_EVICTS                 measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt
       counter13 = 43  PERF_UCHE_READ_REQUESTS_TP_UBWC  measured by another cfg: results/games/re4/tr-base/fdperf-raw.txt
       counter14 = 44  PERF_UCHE_READ_REQUESTS_TP_NONUBWC measured by another cfg: results/games/re4/tr-base/fdperf-raw.txt
       counter15 = 57  PERF_UCHE_UBWC_READ_BEATS        measured by another cfg: results/games/re4/tr-base/fdperf-raw.txt
       counter16 = 58  PERF_UCHE_UBWC_WRITE_BEATS       measured by another cfg: results/games/re4/tr-base/fdperf-raw.txt
-      counter17 = 54  PERF_UCHE_CCHE_TPH_QUEUE_FULL    NEVER MEASURED on this machine
-      counter18 = 55  PERF_UCHE_CCHE_DPH_QUEUE_FULL    NEVER MEASURED on this machine
+      counter17 = 54  PERF_UCHE_CCHE_TPH_QUEUE_FULL    measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt
+      counter18 = 55  PERF_UCHE_CCHE_DPH_QUEUE_FULL    measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt
    names this cfg asks for that no committed dump carries (1):
       PERF_SP_GM_LOAD_LATENCY_CYCLES
 
@@ -78,8 +81,6 @@ UCHE        4      12    0,1,13,16             uses 4 of 12 slots
 VFD         5      8     0,2,8,9,17            uses 5 of 8 slots
 VPC         6      6     0,1,22,23,24,25
 VSC         2      2     0,4
-   names this cfg asks for that no committed dump carries (1):
-      PERF_PC_TAG_CHECKED_VERTICES
 
 == fdperf.cfg-bv
 block       lines  num   ids kept              note
@@ -137,17 +138,6 @@ LRZ         2      4     0,8                   uses 2 of 4 slots
 PC          2      8     0,16                  uses 2 of 8 slots
 RBBM        3      4     1,4,5                 uses 3 of 4 slots
 UCHE        7      12    0,1,27,28,18,54,55    uses 7 of 12 slots
-   names this cfg asks for that no committed dump carries (10):
-      PERF_CCU_2D_RD_REQ
-      PERF_CCU_2D_WR_REQ
-      PERF_CMPDECMP_VBIF_WRITE_REQUEST
-      PERF_LRZ_LRZ_WRITE
-      PERF_PC_VPC_PRIMITIVES
-      PERF_RBBM_PC_DCALL_BUSY
-      PERF_RBBM_PC_VSD_BUSY
-      PERF_UCHE_CCHE_DPH_QUEUE_FULL
-      PERF_UCHE_CCHE_TPH_QUEUE_FULL
-      PERF_UCHE_EVICTS
 
 == fdperf.cfg-lrz
 block       lines  num   ids kept              note
@@ -170,7 +160,7 @@ RBBM        3      4     1,9,12                uses 3 of 4 slots
 TP          2      12    0,1                   uses 2 of 12 slots
 UCHE        12     12    0,1,27,28,52,53,57,58,43,44,38,39
    lines past the budget, which fdperf will not read:
-      counter4  = 6   PERF_CMPDECMP_VBIF_WRITE_REQUEST NEVER MEASURED on this machine
+      counter4  = 6   PERF_CMPDECMP_VBIF_WRITE_REQUEST measured by another cfg: results/games/re4/gaps37/fdperf-raw.txt
 
 == fdperf.cfg-tse
 block       lines  num   ids kept              note
@@ -209,6 +199,20 @@ TSE         4      4     0,6,14,12
 UCHE        12     12    0,1,2,3,27,28,4,9,8,13,15,16
 VFD         6      8     0,2,5,8,9,17          uses 6 of 8 slots
 VPC         6      6     0,16,17,10,25,24
+VSC         2      2     0,4
+
+== fdperf.cfg-varyings
+block       lines  num   ids kept              note
+----------  -----  ----  --------------------  ----------------------------------
+CCU         1      5     4                     uses 1 of 5 slots
+CP          2      14    0,2                   uses 2 of 14 slots; keeps id 0, which the JSON marks reserved
+PC          7      8     0,16,20,21,25,2,4     uses 7 of 8 slots
+RBBM        1      4     1                     uses 1 of 4 slots
+SP          19     24    0,3,14,15,42,43,44,46,48,49,50,74,76,97,98,99,101,108,115  uses 19 of 24 slots
+TSE         2      4     6,14                  uses 2 of 4 slots
+UCHE        3      12    0,1,16                uses 3 of 12 slots
+VFD         5      8     0,2,8,9,17            uses 5 of 8 slots
+VPC         6      6     0,1,10,16,17,25
 VSC         2      2     0,4
 
 == fdperf.cfg-vertex
@@ -281,9 +285,8 @@ TSE         1      4     6                     uses 1 of 4 slots
 UCHE        12     12    0,1,2,3,27,28,4,9,8,13,15,16
 VFD         6      8     0,2,5,8,9,17          uses 6 of 8 slots
 VPC         6      6     0,16,17,10,25,24
-   names this cfg asks for that no committed dump carries (2):
+   names this cfg asks for that no committed dump carries (1):
       PERF_PC_DEAD_PRIM
-      PERF_PC_TAG_CHECKED_VERTICES
 
 == one cfg cannot carry everything: the union over cfgs per block ==
 block       distinct   num    excess    note
@@ -301,7 +304,7 @@ PC          14         8      6         over budget by 6: needs a cfg of its own
 RAS         4          4      0         fits one cfg
 RB          8          8      0         fits one cfg
 RBBM        6          4      2         over budget by 2: needs a cfg of its own
-SP          16         24     0         fits one cfg
+SP          31         24     7         over budget by 7: needs a cfg of its own
 TP          8          12     0         fits one cfg
 TSE         10         4      6         over budget by 6: needs a cfg of its own
 UCHE        29         12     17        over budget by 17: needs a cfg of its own
@@ -310,17 +313,7 @@ VFD         8          8      0         fits one cfg
 VPC         19         6      13        over budget by 13: needs a cfg of its own
 VSC         4          2      2         over budget by 2: needs a cfg of its own
 
-lines past a budget, all cfgs: 22, 10 of them distinct names that no dump carries (lost in 11 places)
-   NEVER MEASURED  PERF_CCU_2D_RD_REQ
-   NEVER MEASURED  PERF_CCU_2D_WR_REQ
-   NEVER MEASURED  PERF_CMPDECMP_VBIF_WRITE_REQUEST
-   NEVER MEASURED  PERF_LRZ_LRZ_WRITE
-   NEVER MEASURED  PERF_PC_VPC_PRIMITIVES
-   NEVER MEASURED  PERF_RBBM_PC_DCALL_BUSY
-   NEVER MEASURED  PERF_RBBM_PC_VSD_BUSY
-   NEVER MEASURED  PERF_UCHE_CCHE_DPH_QUEUE_FULL
-   NEVER MEASURED  PERF_UCHE_CCHE_TPH_QUEUE_FULL
-   NEVER MEASURED  PERF_UCHE_EVICTS
+lines past a budget, all cfgs: 22, 0 of them distinct names that no dump carries (lost in 0 places)
 
 What this does NOT decide: whether a counter that fits the budget means what its
 comment says (that is a unit question, see docs/fdperf-a7xx.md and queue 34), and
